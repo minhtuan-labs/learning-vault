@@ -1,7 +1,7 @@
 # 🤖 TinyChatBot — Modular RAG Chatbot Framework
 
-**TinyChatBot** is a lightweight, modular project that demonstrates how to build a **Retrieval-Augmented Generation (RAG)**–based chatbot using modern open-source tools.  
-It is designed for self-learning, experimentation, and fast prototyping with multiple model backends.
+**TinyChatBot** is a lightweight, modular project demonstrating how to build a **Retrieval-Augmented Generation (RAG)** chatbot using **Python**, **FastAPI**, and **Streamlit**.  
+It’s designed for self-learning, rapid experimentation, and flexible integration with multiple model backends such as **Ollama**, **LM Studio**, or **OpenAI GPT**.
 
 > “Flexible. Portable. Understandable.” — TinyChatBot helps you learn how modern AI chat systems are built.
 
@@ -9,10 +9,10 @@ It is designed for self-learning, experimentation, and fast prototyping with mul
 
 ## 🧠 Core Idea
 
-The goal of **TinyChatBot** is to explore **how RAG pipelines work**:
-1. 🧩 *Retrieve* relevant context from your local knowledge base  
-2. 💬 *Augment* user queries with the retrieved context  
-3. 🧠 *Generate* a contextualized answer via your chosen LLM backend  
+The project demonstrates the logic behind a modern **RAG pipeline**:
+1. 🧩 *Retrieve* relevant context from your knowledge base  
+2. 💬 *Augment* user queries with that context  
+3. 🧠 *Generate* responses using your chosen LLM backend  
 
 ---
 
@@ -20,11 +20,11 @@ The goal of **TinyChatBot** is to explore **how RAG pipelines work**:
 
 | Layer | Technology | Description |
 |-------|-------------|-------------|
-| 🧠 **Backend** | **Python**, **FastAPI** | RESTful API layer for query handling, retrieval, and response generation |
-| 💬 **Models** | **Ollama**, **LM Studio**, or **OpenAI GPT** | Switch between model providers easily |
-| 🔍 **Retrieval** | RAG pipeline with embeddings & vector database | Provides contextual grounding for chatbot answers |
-| 🐳 **Deployment** | **Docker**, **docker-compose** | Simple and reproducible deployment across environments |
-| 🧩 **Architecture** | Modular design (backend + frontend) | Easy to extend and customize |
+| 🧠 **Backend** | **Python**, **FastAPI** | Core RAG API — retrieval, context management, and generation |
+| 💬 **Frontend** | **Streamlit** | Interactive chat interface built in Python |
+| 🧩 **Models** | **Ollama**, **LM Studio**, **OpenAI GPT** | Switch between LLM providers easily |
+| 🔍 **Retrieval** | Embedding-based RAG pipeline | Contextual grounding for answers |
+| 🐳 **Deployment** | **Docker**, **docker-compose** | One-command containerized setup |
 
 ---
 
@@ -32,9 +32,9 @@ The goal of **TinyChatBot** is to explore **how RAG pipelines work**:
 
 ```
 TinyChatBot/
-├── tinyrag-backend/       # FastAPI backend service (RAG logic, model integration)
-├── tinyrag-frontend/      # Frontend UI (React/Vite chat interface)
-├── docker-compose.yml     # Orchestrates backend + frontend services
+├── tinyrag-backend/       # FastAPI backend (RAG logic, model integration)
+├── tinyrag-frontend/      # Streamlit UI for chatting and visualization
+├── docker-compose.yml     # Orchestrates backend + frontend
 └── README.md              # This file
 ```
 
@@ -51,8 +51,8 @@ docker-compose up --build
 ```
 
 Then open:
-- Frontend → http://localhost:3000  
-- Backend API → http://localhost:8000/docs
+- Frontend → http://localhost:8501  
+- Backend API → http://localhost:8000/docs  
 
 ---
 
@@ -65,15 +65,18 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
-API available at http://localhost:8000/docs
+
+Access API at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 #### Frontend
 ```bash
 cd tinyrag-frontend
-npm install
-npm run dev
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
 ```
-Frontend available at http://localhost:3000
+
+Then open: [http://localhost:8501](http://localhost:8501)
 
 ---
 
@@ -81,12 +84,12 @@ Frontend available at http://localhost:3000
 
 | Feature | Description |
 |----------|--------------|
-| **RAG Architecture** | Retrieve → Augment → Generate pipeline |
-| **Pluggable Models** | Easily switch between Ollama, LM Studio, or GPT-based APIs |
-| **FastAPI Backend** | Async API endpoints for chat and retrieval |
-| **Dockerized Setup** | 1-command environment replication |
-| **Custom Data Sources** | Extend retrieval logic to local files, docs, or databases |
-| **Frontend Chat UI** | Simple web interface for chatting and visualizing context |
+| **RAG Pipeline** | Retrieve → Augment → Generate structure |
+| **Dual Python Stack** | Backend (FastAPI) + Frontend (Streamlit) — no Node required |
+| **Multi-Model Support** | Switch between Ollama, LM Studio, and OpenAI APIs |
+| **Dockerized Setup** | Portable, reproducible environment |
+| **Simple UI** | Chat interface in Streamlit with context visualization |
+| **Extensible Design** | Add your own retrievers, embeddings, or UI logic |
 
 ---
 
@@ -94,10 +97,10 @@ Frontend available at http://localhost:3000
 
 | File | Purpose |
 |------|----------|
-| `.env` | Define API keys, model settings, and backend ports |
-| `docker-compose.yml` | Container orchestration |
+| `.env` | API keys, model backend, and config |
+| `docker-compose.yml` | Defines backend + frontend containers |
 | `requirements.txt` | Python dependencies |
-| `vite.config.js` | Frontend build configuration |
+| `app.py` | Streamlit frontend entry point |
 
 Example `.env`:
 ```
@@ -112,10 +115,10 @@ OPENAI_API_KEY=your-key-here
 ## 🧠 Learning Focus
 
 This project is ideal for:
-- Practicing **FastAPI** + **LLM integration**
-- Understanding **RAG (retrieval-augmented generation)** concepts
-- Experimenting with **embeddings, vector stores**, and **contextual prompts**
-- Learning how to **containerize AI microservices**
+- Practicing **FastAPI** + **Streamlit** integration  
+- Understanding **Retrieval-Augmented Generation (RAG)**  
+- Experimenting with **embeddings, vector stores**, and **model orchestration**  
+- Learning how to **Dockerize AI applications**
 
 ---
 
@@ -124,25 +127,24 @@ This project is ideal for:
 | Category | Tool |
 |-----------|------|
 | Language | Python 3.10+ |
-| API Framework | FastAPI |
-| LLM Integration | Ollama / LM Studio / OpenAI |
-| Vector Store | FAISS / Chroma (optional) |
-| Containerization | Docker / docker-compose |
-| Frontend | React + Vite |
-| Platform | Cross-platform (macOS / Linux / Windows) |
+| Backend | FastAPI |
+| Frontend | Streamlit |
+| LLM Backends | Ollama / LM Studio / OpenAI |
+| Vector Store | FAISS / Chroma |
+| Deployment | Docker / docker-compose |
+| Platform | macOS / Linux / Windows |
 
 ---
 
 ## 🧭 Future Enhancements
-- Add **vector database persistence** (Chroma / FAISS / PostgreSQL)  
-- Support for **RAG streaming responses**  
-- Add **multi-model orchestration layer**  
-- Integrate **embedding pipeline for PDF / text ingestion**
+- Persistent vector store (Chroma / FAISS / PostgreSQL)  
+- Streaming responses from models  
+- Multi-document context retrieval  
+- Advanced UI with conversation history and analytics  
 
 ---
 
 ## 📜 License
-
 MIT License — for learning, research, and experimentation.
 
 ---
