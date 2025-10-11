@@ -1,0 +1,66 @@
+[
+    {
+        "id": "b689859c-5fd2-46e6-adde-6fe180f4fddc",
+        "title": "A Survey of Scientific Large Language Models - From Data Foundations to Agent Frontiers",
+        "description": "A Survey of Scientific Large Language Models - From Data Foundations to Agent Frontiers",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "1. A Survey of Scientific Large Language Models - From Data Foundations to Agent Frontiers.pdf"
+    },
+    {
+        "id": "3a5a4815-81d4-43d5-af9d-34395f605a30",
+        "title": "A Comprehensive Overview of Large Language Models",
+        "description": "A Comprehensive Overview of Large Language Models",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "2. A Comprehensive Overview of Large Language Models.pdf"
+    },
+    {
+        "id": "a91bd74a-d303-44f2-9a1f-64f73bdd0d9a",
+        "title": "AgentFly - Fine-tuning LLM Agents without Fine-tuning LLMs",
+        "description": "AgentFly - Fine-tuning LLM Agents without Fine-tuning LLMs",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "3. AgentFly - Fine-tuning LLM Agents without Fine-tuning LLMs.pdf"
+    },
+    {
+        "id": "3380b22c-52dd-4a10-b658-584919bd4c65",
+        "title": "Anemoi - A Semi-Centralized Multi-agent Systems Based on Agent-to-Agent Communication MCP server from Coral Protocol",
+        "description": "Anemoi - A Semi-Centralized Multi-agent Systems Based on Agent-to-Agent Communication MCP server from Coral Protocol",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "4. Anemoi - A Semi-Centralized Multi-agent Systems Based on Agent-to-Agent Communication MCP server from Coral Protocol.pdf"
+    },
+    {
+        "id": "ba4633eb-c3e4-4ac7-98e7-2a7c5dbab34b",
+        "title": "Introduction to LLMs",
+        "description": "Introduction to LLMs",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "5. Introduction-to-LLMs.pdf"
+    },
+    {
+        "id": "e2d6a1dd-217c-41d3-8d97-9b21079732bf",
+        "title": "On the Theoretical Limitations of Embedding-Based Retrieval",
+        "description": "On the Theoretical Limitations of Embedding-Based Retrieval",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "6. On the Theoretical Limitations of Embedding-Based Retrieval.pdf"
+    },
+    {
+        "id": "401371b5-5047-406f-aabf-6e31180edbc9",
+        "title": "Chain-of-Alpha - Unleashing the Power of Large Language Models for Alpha Mining in Quantitative Trading",
+        "description": "Chain-of-Alpha - Unleashing the Power of Large Language Models for Alpha Mining in Quantitative Trading",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "7. Chain-of-Alpha - Unleashing the Power of Large Language Models for Alpha Mining in Quantitative Trading.pdf"
+    },
+    {
+        "id": "f7e6c54e-5366-4d1a-86db-fd85f12852c3",
+        "title": "Survey of Specialized Large Language Model",
+        "description": "Survey of Specialized Large Language Model",
+        "status": "indexed",
+        "source_type": "file",
+        "source_name": "8. Survey of Specialized Large Language Model.pdf"
+    }
+]
