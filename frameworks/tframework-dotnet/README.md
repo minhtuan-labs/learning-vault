@@ -22,7 +22,7 @@ tframework-dotnet/
 
 ---
 
-## 🧩 **1️⃣  The Core Framework** — `TFramework`
+## **1️⃣  The Core Framework** — `TFramework` 🧩
 
 ### SampleServer
 - Implements a **Thrift‑based RPC server** in .NET
@@ -38,7 +38,7 @@ Together, these projects demonstrate how to build and connect Thrift‑based ser
 
 ---
 
-## 💬 **2️⃣  Demo Application** `P2PChatSystem`
+## **2️⃣  Demo Application** `P2PChatSystem` 💬
 
 A simple **peer‑to‑peer chat** demo built on top of `TFramework`.
 
