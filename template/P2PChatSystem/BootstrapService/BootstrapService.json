@@ -1,0 +1,7 @@
+{
+    "ServiceSettings": {
+        "Name": "BootstrapService",
+        "Host": "localhost",
+        "Port": 6868
+    }
+}
