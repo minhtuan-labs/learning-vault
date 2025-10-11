@@ -1,0 +1,52 @@
+# Định nghĩa khối chung
+x-environment: &common-env
+  LLM_API_URL: http://host.docker.internal:11434/v1
+  MODEL_NAME: gpt-oss:20b # llama3:8b # openai/gpt-oss-20b
+  API_KEY: ollama
+  PAGE_SIZE: 10
+  LOG_LEVEL: "DEBUG" # "DEBUG" / "INFO" / "WARNING" / "ERROR" / "CRITICAL"
+  BACKEND_URL_BASE: "http://tinyrag-backend:8000/api/v1"
+  PROMPT_CONTEXT_KEY: "context"
+  PROMPT_INPUT_KEY: "question"
+  RETRIEVER_SEARCH_TYPE: "mmr" # or "similarity"
+  RETRIEVER_SEARCH_KWARGS_K: 5 # or 7
+  PROMPT_CHAT_HISTORY_KEY: "chat_history"
+  MEMORY_OUTPUT_KEY: "answer"
+
+services:
+  tinyrag-backend:
+    container_name: tinyrag-backend-container
+    build:
+      context: ./tinyrag-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./tinyrag-backend:/app
+      - chroma_data:/app/db
+    environment:
+      <<: *common-env
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  tinyrag-frontend:
+    container_name: tinyrag-frontend-container
+    build:
+      context: ./tinyrag-frontend
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./tinyrag-frontend:/app
+    depends_on:
+      tinyrag-backend:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+
+volumes:
+  chroma_data:
+

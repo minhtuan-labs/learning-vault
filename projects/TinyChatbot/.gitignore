@@ -1,0 +1,59 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+develop-eggs/
+dist/
+downloads/
+wheels/
+pip-wheel-metadata/
+.tox/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+__pypackages__/
+.venv/
+env/
+venv/
+ENV/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Logs & temp
+*.log
+*.tmp
+*.bak
+
+# Jupyter / Notebooks
+.ipynb_checkpoints/
+
+# Docker
+docker-compose.override.yml
+*.pid
+*.sock
+
+# Data / Models
+data/
+models/
+*.pt
+*.ckpt
+*.bin
+
+# Secrets
+*.env
+.env.*
+
+# Other caches
+.cache/
+.DS_Store
