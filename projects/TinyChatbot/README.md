@@ -104,10 +104,13 @@ Then open: [http://localhost:8501](http://localhost:8501)
 
 Example `.env`:
 ```
-MODEL_BACKEND=ollama
-MODEL_NAME=llama3
-VECTOR_DB_PATH=./data/vectorstore
-OPENAI_API_KEY=your-key-here
+LLM_API_URL: http://host.docker.internal:11434/v1
+MODEL_NAME: gpt-oss:20b (or llama3:8b)
+API_KEY: ollama
+
+volumes:
+   - ./tinyrag-backend:/app
+   - chroma_data:/app/db
 ```
 
 ---
