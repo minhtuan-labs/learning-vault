@@ -1,0 +1,12 @@
+{
+    "ServiceSettings": {
+        "Name": "PeerService",
+        "Host": "localhost",
+        "Port": 8989,
+        "Username": "tuan",
+        "BootstrapService": {
+            "Host": "localhost",
+            "Port": 6868
+        }
+    }
+}
