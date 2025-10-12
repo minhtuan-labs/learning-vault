@@ -18,7 +18,7 @@ This repository serves as a *central hub* for my learning journey in:
 - 🧱 **Personal Frameworks and Tools**
 
 It connects directly to my personal site:  
-👉 [**minhtuan2024.github.io**](https://minhtuan2024.github.io)
+👉 [**minhtuan-labs.github.io**](https://minhtuan-labs.github.io)
 
 ---
 
@@ -70,7 +70,7 @@ you can navigate, clone, or explore each part independently.
 
 You can browse each folder directly on GitHub, or clone the repo locally:
 ```bash
-git clone https://github.com/minhtuan2024/learning-vault.git
+git clone https://github.com/minhtuan-labs/learning-vault.git
 cd learning-vault
 ```
 
