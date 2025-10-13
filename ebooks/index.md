@@ -1,8 +1,3 @@
----
-
-## 📚 `index.md` — danh sách ebook + ghi chú ngắn gọn
-
-```markdown
 # 📚 Ebook Library Index
 
 Quick catalog of my personal ebooks and learning references.
