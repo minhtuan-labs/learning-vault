@@ -49,5 +49,5 @@ Quick catalog of my personal ebooks and learning references.
 ## 🗂️ Miscellaneous
 | Title | Author(s) | Year | Status | Note |
 |:-------|:-----------|:----:|:------:|:-----|
-| [30 năm sóng gió](misc/30-nam-song-gio.pdf) | Wu Xiaobo | 2006-2007 | 📥 | Thành tựu phi thường và số phận bi kịch của tầng lớp doanh nhân Trung Quốc trong cải cách kinh tế 1978 - 2008 |
+| [30 năm sóng gió](misc/30-nam-song-gio.pdf) | Wu Xiaobo | 2007 | 📥 | Thành tựu phi thường và số phận bi kịch của tầng lớp doanh nhân Trung Quốc trong cải cách kinh tế 1978 - 2008 |
 | [Nhà đầu tư thông minh trên thị trường chứng khoán](misc/nha-dau-tu-thong-minh-tren-thi-truong-chung-khoan.pdf) | Charlie Munger | 2017 | 📥 | Quyển sách gối đầu giường cho những nhà đầu tư |
