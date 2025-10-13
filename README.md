@@ -27,7 +27,7 @@ It connects directly to my personal site:
 ```text
 learning-vault/
 ├── ebooks/             # Curated ebooks, references, and reading materials
-├── research_notes/     # Study notes and concept explorations
+├── [research-notes/](http://github.com/minhtuan-labs/learning-vault/research-notes)     # Study notes and concept explorations
 ├── projects/           # Self-built experiments and learning projects
 │   └── TinyChatBot/    # Example: RAG chatbot with FastAPI + Streamlit
 ├── frameworks/         # Personal frameworks (e.g. tframework-dotnet)
