@@ -81,7 +81,7 @@ Each subdirectory (especially under `projects/` or `frameworks/`) contains its o
 ## 🧰 Tech Focus
 
 | Domain | Tools / Languages |
-|--------|-------------------|
+|:-------|:------------------|
 | Programming | Python, C#, JavaScript |
 | Backend | FastAPI, .NET, Flask |
 | Frontend | Streamlit |
