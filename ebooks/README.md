@@ -25,7 +25,7 @@ Quick catalog of my personal ebooks and learning references.
 | Title | Author(s) | Year | Status | Note |
 |:-------|:-----------|:----:|:------:|:-----|
 | [An Introduction to Statistical Learning with Applications in Python](ai-ml/an-introduction-to-statistical-learning-with-applications-in-python.pdf) | Gareth James, Daniel Witten, Trevor Hastie, Robert Tibshirani, Jonathan Taylor | 2023 | ✅ | Very first reference to Statistical Learning |
-| [Hands-on Machine Learning](ai-ml/HandsOnML-Geron.pdf) | Aurélien Géron | 2022 | 🕓 | Practical ML with Scikit-Learn & TensorFlow |
+| [Hands-on Machine Learning](ai-ml/hands-on-machine-learning-with-scikit-learn-and-tensorflow.pdf) | Aurélien Géron | 2022 | 🕓 | Practical ML with Scikit-Learn & TensorFlow |
 | [Practical Deep Learning for Coders](ai-ml/link-fast-ai.md) | fast.ai | - | 📎 | Read online — https://course.fast.ai |
 
 ---
