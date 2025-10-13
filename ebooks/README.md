@@ -33,16 +33,16 @@ Quick catalog of my personal ebooks and learning references.
 ## 💻 Software Engineering
 | Title | Author(s) | Year | Status | Note |
 |--------|------------|------|--------|------|
-| [Clean Code](software-engineering/CleanCode.pdf) | Robert C. Martin | 2008 | ✅ | Simple, timeless coding principles |
-| [Design Patterns Explained](software-engineering/DesignPatterns.pdf) | Shalloway & Trott | 2002 | 📥 | Reference for architecture patterns |
+| [Clean Code](software-engineering/clean-code.pdf) | Robert C. Martin | 2008 | ✅ | Simple, timeless coding principles |
+| [Design Patterns Explained](software-engineering/design-patterns-explained.pdf) | Shalloway & Trott | 2002 | 📥 | Reference for architecture patterns |
 
 ---
 
 ## 💰 Finance / Fintech
 | Title | Author(s) | Year | Status | Note |
 |--------|------------|------|--------|------|
-| [AI in Finance](finance-tech/AI-in-Finance.pdf) | Yves Hilpisch | 2020 | 🕓 | Python-based modeling examples |
-| [Machine Learning for Asset Managers](finance-tech/link-machine-learning-for-asset-managers.md) | Marcos López de Prado | 2020 | 📎 | Online reference only |
+| [Artificial Intelligence in Finance - A Python-Based Guide](finance-tech/artificial-intelligence-in-finance-a-python-based-guide.pdf) | Yves Hilpisch | 2020 | 🕓 | Python-based modeling examples |
+| [Machine Learning for Asset Managers](finance-tech/machine-learning-for-asset-managers.pdf) | Marcos López de Prado | 2020 | 📥 | N/A |
 
 ---
 
