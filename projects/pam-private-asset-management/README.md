@@ -100,7 +100,7 @@ pam-private-asset-management/
 5.  **Build and run with Docker Compose:**
     From the project's root directory, run:
     ```bash
-    docker-compose up --build -d
+    docker-compose.yml up --build -d
     ```
     * **Frontend** will be available at: `http://localhost:6868` 💰
     * **Backend API docs** will be available at: `http://localhost:8000/docs`
