@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, ForeignKey, Text, UniqueC
 from sqlalchemy.orm import relationship
 from .base import Base
 
+
 class FundPortfolio(Base):
     __tablename__ = "fund_portfolios"
     id = Column(Integer, primary_key=True, index=True)

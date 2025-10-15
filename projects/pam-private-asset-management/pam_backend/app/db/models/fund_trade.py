@@ -4,6 +4,7 @@ from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Enum as SQL
 from sqlalchemy.orm import relationship
 from .base import Base
 
+
 class FundTradeTypeEnum(enum.Enum):
     BUY = "buy"
     SELL = "sell"
