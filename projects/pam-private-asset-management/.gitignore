@@ -1,116 +1,98 @@
-# ============================
-# 🧠 TinyChatBot .gitignore
-# Supports: macOS + Python + Docker + IDEs
-# ============================
-
-# --- macOS system files ---
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon?
-._*
-.Spotlight-V100
-.Trashes
-
-# --- Python bytecode & cache ---
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
-# --- Virtual environments ---
-.venv/
-venv/
-env/
-ENV/
-venv.bak/
-env.bak/
+# C extensions
+*.so
 
-# --- Python packaging / build ---
-*.egg-info/
-.eggs/
+# Distribution / packaging
+.Python
 build/
 develop-eggs/
 dist/
 downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
 wheels/
-pip-wheel-metadata/
+*.egg-info/
+.installed.cfg
+*.egg
 MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
-# --- Logs / temp / debug ---
-*.log
-*.tmp
-*.bak
-*.swp
-*.swo
-*.pid
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# --- Jupyter notebooks ---
-.ipynb_checkpoints/
-
-# --- Coverage / test artifacts ---
-.coverage
-coverage.xml
+# Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
 .pytest_cache/
+.hypothesis/
 
-# --- Docker ---
-docker-compose.override.yml
-*.pid
-*.sock
+# Translations
+*.mo
+*.pot
 
-# --- IDE / Editor settings ---
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+# DO NOT commit .env files containing secrets
+*.env
+# Instead, commit a template file
+!*.env.example
+
+# IDE / Editor specific files
 .idea/
 .vscode/
-*.sublime-project
-*.sublime-workspace
+*.project
+*.pydevproject
+.sublime-project
+.sublime-workspace
 
-# --- Data / Models / Artifacts ---
-data/
-datasets/
-models/
-checkpoints/
-*.pt
-*.ckpt
-*.bin
-*.h5
-*.pkl
-*.joblib
-
-# --- Cache / temporary dirs ---
-.cache/
-.mypy_cache/
-.pyre/
-.pytype/
-__pypackages__/
-
-# --- Environment / secrets ---
-.env
-.env.*
-secrets.json
-config.local.json
-
-# --- Miscellaneous ---
-*.bak
-*.orig
-*.rej
-
-# --- OS backup files ---
-*.bak
-*.tmp
-*.old
+# OS-specific files
+.DS_Store
 Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# --- Local run outputs ---
-*.out
-logs/
-tmp/
-runs/
-output/
-
-
