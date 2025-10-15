@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # The Backend API service (FastAPI)
+  backend:
+    build:
+      context: ./pam_backend # Path to the backend's source code and Dockerfile
+    ports:
+      - "8000:8000" # Map port 8000 of your computer to port 8000 in the container
+    volumes:
+      - ./pam_backend/app:/app/app # Mount the local app folder into the container for live-reloading
+    env_file:
+      - ./pam_backend/.env # Pass environment variables from the .env file
+    depends_on:
+      - db # Tell Docker to start the 'db' service before starting the 'backend'
+
+  # The Database service (PostgreSQL)
+  db:
+    image: postgres:15-alpine # Use the official PostgreSQL 15 image
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ # Persist database data
+    expose:
+      - 5432 # Expose port 5432 for other services in the same network
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_DB=pam_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pam_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data: # Define the named volume for data persistence
