@@ -1,0 +1,116 @@
+# ============================
+# 🧠 TinyChatBot .gitignore
+# Supports: macOS + Python + Docker + IDEs
+# ============================
+
+# --- macOS system files ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Python bytecode & cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+venv.bak/
+env.bak/
+
+# --- Python packaging / build ---
+*.egg-info/
+.eggs/
+build/
+develop-eggs/
+dist/
+downloads/
+wheels/
+pip-wheel-metadata/
+MANIFEST
+*.manifest
+*.spec
+
+# --- Logs / temp / debug ---
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.pid
+
+# --- Jupyter notebooks ---
+.ipynb_checkpoints/
+
+# --- Coverage / test artifacts ---
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+
+# --- Docker ---
+docker-compose.override.yml
+*.pid
+*.sock
+
+# --- IDE / Editor settings ---
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# --- Data / Models / Artifacts ---
+data/
+datasets/
+models/
+checkpoints/
+*.pt
+*.ckpt
+*.bin
+*.h5
+*.pkl
+*.joblib
+
+# --- Cache / temporary dirs ---
+.cache/
+.mypy_cache/
+.pyre/
+.pytype/
+__pypackages__/
+
+# --- Environment / secrets ---
+.env
+.env.*
+secrets.json
+config.local.json
+
+# --- Miscellaneous ---
+*.bak
+*.orig
+*.rej
+
+# --- OS backup files ---
+*.bak
+*.tmp
+*.old
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Local run outputs ---
+*.out
+logs/
+tmp/
+runs/
+output/
+
+
