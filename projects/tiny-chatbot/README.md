@@ -31,7 +31,7 @@ The project demonstrates the logic behind a modern **RAG pipeline**:
 ## 🧭 Project Structure
 
 ```
-TinyChatBot/
+tiny-chatbot/
 ├── tinyrag-backend/       # FastAPI backend (RAG logic, model integration)
 ├── tinyrag-frontend/      # Streamlit UI for chatting and visualization
 ├── docker-compose.yml     # Orchestrates backend + frontend

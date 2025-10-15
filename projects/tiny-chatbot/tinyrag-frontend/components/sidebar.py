@@ -22,4 +22,4 @@ def render_sidebar():
 		)
 		st.markdown("---")
 		st.markdown("""<style>div[data-testid="stAlert"] div[data-testid="stMarkdownContainer"] {text-align: center;}</style>""", unsafe_allow_html=True)
-		st.info("Made by **@TuanPM13**")
+		st.info("Made by **Pham Minh Tuan**")

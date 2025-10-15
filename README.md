@@ -29,7 +29,8 @@ learning-vault/
 ├── ebooks/             # Curated ebooks, references, and reading materials
 ├── research-notes/     # Study notes and concept explorations
 ├── projects/           # Self-built experiments and learning projects
-│   └── TinyChatBot/    # Example: RAG chatbot with FastAPI + Streamlit
+│   ├── tiny-chatbot/    # Sample RAG chatbot with FastAPI + Streamlit
+│   └── pam-private-asset-management/    # Private Asset Management System
 ├── frameworks/         # Personal frameworks (e.g. tframework-dotnet)
 ├── oj.vnoi.info/       # Competitive programming practice notes
 ├── snippets/           # Code snippets and useful patterns
