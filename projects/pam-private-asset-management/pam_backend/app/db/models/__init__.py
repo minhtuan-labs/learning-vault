@@ -1,8 +1,10 @@
-# This file makes the 'models' folder a Python package.
-# It imports all the models so they are registered with SQLAlchemy's Base
-# and can be easily imported from other parts of the application.
-
 from .base import Base
 from .user import User
-from .asset import Asset, StockDetail, SavingDetail, AssetTypeEnum
+from .asset import Asset, AssetTypeEnum
+from .stock_portfolio import StockPortfolio
+from .stock_trade import StockTrade, StockTradeTypeEnum
+from .fund_portfolio import FundPortfolio
+from .fund_trade import FundTrade, FundTradeTypeEnum
+from .saving import SavingDetail, SavingTypeEnum
 from .transaction import Transaction, TransactionTypeEnum
+

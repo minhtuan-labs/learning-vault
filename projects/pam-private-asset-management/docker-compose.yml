@@ -23,7 +23,7 @@ services:
       - 5432 # Expose port 5432 for other services in the same network
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_PASSWORD=mypam2025
       - POSTGRES_DB=pam_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d pam_db"]
@@ -33,3 +33,4 @@ services:
 
 volumes:
   postgres_data: # Define the named volume for data persistence
+
