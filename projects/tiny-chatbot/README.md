@@ -1,9 +1,9 @@
-# 🤖 TinyChatBot — Modular RAG Chatbot Framework
+# 🤖 TinyChatbot — Modular RAG Chatbot Framework
 
-**TinyChatBot** is a lightweight, modular project demonstrating how to build a **Retrieval-Augmented Generation (RAG)** chatbot using **Python**, **FastAPI**, and **Streamlit**.  
+**TinyChatbot** is a lightweight, modular project demonstrating how to build a **Retrieval-Augmented Generation (RAG)** chatbot using **Python**, **FastAPI**, and **Streamlit**.  
 It’s designed for self-learning, rapid experimentation, and flexible integration with multiple model backends such as **Ollama**, **LM Studio**, or **OpenAI GPT**.
 
-> “Flexible. Portable. Understandable.” — TinyChatBot helps you learn how modern AI chat systems are built.
+> “Flexible. Portable. Understandable.” — TinyChatbot helps you learn how modern AI chat systems are built.
 
 ---
 
