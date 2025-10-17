@@ -18,6 +18,7 @@ services:
     container_name: tinyrag-backend-container
     build:
       context: ./tinyrag-backend
+    image: tinyrag-backend:lastest
     ports:
       - "8000:8000"
     volumes:
@@ -25,7 +26,6 @@ services:
       - chroma_data:/app/db
     environment:
       <<: *common-env
-
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -37,6 +37,7 @@ services:
     container_name: tinyrag-frontend-container
     build:
       context: ./tinyrag-frontend
+    image: tinyrag-frontend:lastest
     ports:
       - "8501:8501"
     volumes:
