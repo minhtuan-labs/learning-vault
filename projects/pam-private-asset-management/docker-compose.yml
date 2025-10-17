@@ -1,0 +1,34 @@
+services:
+  # Service cho Database PostgreSQL
+  pam-db-service:
+    image: postgres:15-alpine
+    container_name: pam-db-service-container
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Service cho Backend FastAPI
+  pam-backend-service:
+    container_name: pam-backend-service-container
+    build: ./pam-backend
+    image: pam-backend:latest
+    volumes:
+      - ./pam-backend:/app
+    ports:
+      - "6138:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      - pam-db-service
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
