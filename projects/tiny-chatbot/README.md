@@ -1,5 +1,5 @@
 
-![[Pasted image 20251017182545.png]]
+![[tiny-chatbot-ui.png]]
 
 # 🤖 TinyChatbot — Modular RAG Chatbot Framework
 
