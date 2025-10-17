@@ -14,6 +14,4 @@ COPY . .
 # Mở port 8501 cho Streamlit
 EXPOSE 8501
 
-# --- THAY ĐỔI CHÍNH Ở ĐÂY ---
-# Lệnh để chạy ứng dụng, trỏ đến file Home.py mới
 CMD ["streamlit", "run", "Home.py", "--server.port=8501", "--server.address=0.0.0.0"]

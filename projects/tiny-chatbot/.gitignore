@@ -72,6 +72,7 @@ docker-compose.override.yml
 data/
 datasets/
 models/
+db/
 checkpoints/
 *.pt
 *.ckpt

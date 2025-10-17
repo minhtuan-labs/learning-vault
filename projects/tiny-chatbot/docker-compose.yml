@@ -20,7 +20,7 @@ services:
       context: ./tinyrag-backend
     image: tinyrag-backend:lastest
     ports:
-      - "8000:8000"
+      - "6161:8000"
     volumes:
       - ./tinyrag-backend:/app
       - chroma_data:/app/db
