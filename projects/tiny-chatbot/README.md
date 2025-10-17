@@ -1,5 +1,5 @@
 
-![[tiny-chatbot-ui.png]]
+![Tiny Chatbot's UI](assets/tiny-chatbot-ui.png)
 
 # 🤖 TinyChatbot — Modular RAG Chatbot Framework
 
