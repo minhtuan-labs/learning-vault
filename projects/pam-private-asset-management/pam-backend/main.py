@@ -33,3 +33,17 @@ app.include_router(
     tags=["Assets"]
 )
 
+
+app.include_router(
+    stock_portfolio_router.router,
+    prefix="/api/v1", # Tiền tố chung, vì các URL đầy đủ đã được định nghĩa trong file endpoint
+    tags=["Stock Portfolios"]
+)
+
+
+app.include_router(
+    stock_trade_router.router,
+    prefix="/api/v1", # Tiền tố chung
+    tags=["Stock Trades"]
+)
+

@@ -14,3 +14,4 @@ class StockPortfolio(Base):
 	asset = relationship("Asset", back_populates="stock_portfolios")
 	trades = relationship("StockTrade", back_populates="portfolio", cascade="all, delete-orphan")
 	__table_args__ = (UniqueConstraint('asset_id', 'ticker', name='_asset_ticker_uc'), )
+
