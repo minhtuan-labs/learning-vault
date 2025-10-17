@@ -66,7 +66,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Access API at: [http://localhost:8000/docs](http://localhost:6138/docs)
+Access API at: [http://localhost:6138/docs](http://localhost:6138/docs)
 
 #### Frontend
 ```bash
