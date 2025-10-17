@@ -80,6 +80,8 @@ checkpoints/
 *.h5
 *.pkl
 *.joblib
+db/*.sqlite3
+db/*.pickle
 
 # --- Cache / temporary dirs ---
 .cache/
