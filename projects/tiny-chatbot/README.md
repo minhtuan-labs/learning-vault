@@ -1,3 +1,6 @@
+
+![[Pasted image 20251017182545.png]]
+
 # 🤖 TinyChatbot — Modular RAG Chatbot Framework
 
 **TinyChatbot** is a lightweight, modular project demonstrating how to build a **Retrieval-Augmented Generation (RAG)** chatbot using **Python**, **FastAPI**, and **Streamlit**.  
