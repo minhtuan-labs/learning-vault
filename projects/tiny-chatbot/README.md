@@ -52,7 +52,7 @@ docker-compose up --build
 
 Then open:
 - Frontend → http://localhost:8501  
-- Backend API → http://localhost:8000/docs  
+- Backend API → http://localhost:6138/docs  
 
 ---
 
@@ -66,7 +66,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Access API at: [http://localhost:8000/docs](http://localhost:8000/docs)
+Access API at: [http://localhost:8000/docs](http://localhost:6138/docs)
 
 #### Frontend
 ```bash
