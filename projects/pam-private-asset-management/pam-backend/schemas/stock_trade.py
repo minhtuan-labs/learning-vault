@@ -14,7 +14,7 @@ class StockTradeBase(BaseModel):
 
 
 class StockTradeCreate(StockTradeBase):
-	pass # portfolio_id sẽ được cung cấp trong logic của API
+	pass
 
 
 class StockTradeUpdate(BaseModel):

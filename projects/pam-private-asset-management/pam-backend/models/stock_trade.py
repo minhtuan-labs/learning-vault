@@ -14,7 +14,7 @@ class StockTrade(Base):
 	id = Column(Integer, primary_key=True, index=True)
 	portfolio_id = Column(Integer, ForeignKey("stock_portfolios.id"), nullable=False)
 	trade_type = Column(SQLAlchemyEnum(StockTradeTypeEnum), nullable=False)
-	trade_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+	trade_date = Column(DateTime, nullable=False)
 	quantity = Column(Float, nullable=False)
 	price = Column(Float, nullable=False)
 	fee = Column(Float, default=0.0)

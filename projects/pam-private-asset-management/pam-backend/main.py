@@ -9,6 +9,7 @@ from api.v1.endpoints import stock_trade as stock_trade_router
 from api.v1.endpoints import fund_portfolio as fund_portfolio_router
 from api.v1.endpoints import fund_trade as fund_trade_router
 from api.v1.endpoints import saving as saving_router
+from api.v1.endpoints import transaction as transaction_router
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -75,5 +76,13 @@ app.include_router(
 	saving_router.router,
 	prefix="/api/v1",
 	tags=["Savings"]
+)
+
+
+# Router cho Transaction
+app.include_router(
+    transaction_router.router,
+    prefix="/api/v1",
+    tags=["Transactions"]
 )
 

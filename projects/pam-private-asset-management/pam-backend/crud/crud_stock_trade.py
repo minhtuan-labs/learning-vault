@@ -2,6 +2,10 @@ from sqlalchemy.orm import Session
 
 import models
 from schemas.stock_trade import StockTradeCreate, StockTradeUpdate
+from . import crud_transaction
+from schemas.transaction import TransactionCreate
+from models.transaction import TransactionTypeEnum
+from models.stock_trade import StockTradeTypeEnum
 
 
 def get_stock_trade(db: Session, trade_id: int):
@@ -13,6 +17,29 @@ def create_portfolio_stock_trade(db: Session, trade: StockTradeCreate, portfolio
 	db.add(db_trade)
 	db.commit()
 	db.refresh(db_trade)
+
+	total_amount = trade.quantity * trade.price
+	transaction_type = None
+	transaction_amount = 0
+
+	if trade.trade_type == StockTradeTypeEnum.BUY:
+		transaction_type = TransactionTypeEnum.STOCK_BUY
+		transaction_amount = -(total_amount + trade.fee)
+	elif trade.trade_type == StockTradeTypeEnum.SELL:
+		transaction_type = TransactionTypeEnum.STOCK_SELL
+		transaction_amount = total_amount - trade.fee
+
+	if transaction_type:
+		transaction_schema = TransactionCreate(
+			amount=transaction_amount,
+			transaction_type=transaction_type,
+			transaction_date=trade.trade_date,
+			description=f"{trade.trade_type.value.upper()} {trade.quantity} shares of {db_trade.portfolio.ticker} @ {trade.price}"
+		)
+		crud_transaction.create_asset_transaction(
+			db=db, transaction=transaction_schema, asset_id=cash_asset_id
+		)
+
 	return db_trade
 
 

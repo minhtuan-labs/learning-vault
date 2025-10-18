@@ -22,7 +22,7 @@ class Transaction(Base):
 	asset_id = Column(Integer, ForeignKey("assets.id"), nullable=False)
 	amount = Column(Float, nullable=False)
 	transaction_type = Column(SQLAlchemyEnum(TransactionTypeEnum), nullable=False)
-	transaction_date = Column(DateTime, default=datetime.utcnow)
+	transaction_date = Column(DateTime, nullable=False)
 	description = Column(String, nullable=True)
 
 	asset = relationship("Asset", back_populates="transactions")

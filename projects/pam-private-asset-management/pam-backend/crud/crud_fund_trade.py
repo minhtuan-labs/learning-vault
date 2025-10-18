@@ -2,6 +2,10 @@ from sqlalchemy.orm import Session
 
 import models
 from schemas.fund_trade import FundTradeCreate, FundTradeUpdate
+from . import crud_transaction
+from schemas.transaction import TransactionCreate
+from models.transaction import TransactionTypeEnum
+from models.fund_trade import FundTradeTypeEnum
 
 
 def get_fund_trade(db: Session, trade_id: int):
@@ -16,6 +20,25 @@ def create_portfolio_fund_trade(db: Session, trade: FundTradeCreate, portfolio_i
 	db.add(db_trade)
 	db.commit()
 	db.refresh(db_trade)
+
+	if trade.trade_type == FundTradeTypeEnum.BUY:
+		transaction_type = TransactionTypeEnum.FUND_BUY
+		transaction_amount = -(total_amount + trade.fee)
+	elif trade.trade_type == FundTradeTypeEnum.SELL:
+		transaction_type = TransactionTypeEnum.FUND_SELL
+		transaction_amount = total_amount - trade.fee
+
+	if transaction_type:
+		transaction_schema = TransactionCreate(
+			amount=transaction_amount,
+			transaction_type=transaction_type,
+			transaction_date=trade.trade_date,
+			description=f"{trade.trade_type.value.upper()} {trade.quantity} units of {db_trade.portfolio.ticker} @ {trade.price}"
+		)
+		crud_transaction.create_asset_transaction(
+			db=db, transaction=transaction_schema, asset_id=cash_asset_id
+		)
+
 	return db_trade
 
 

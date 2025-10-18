@@ -16,6 +16,7 @@ router = APIRouter()
 def create_stock_trade_for_portfolio(
 		portfolio_id: int,
 		trade: StockTradeCreate,
+		cash_asset_id: int,
 		db: Session = Depends(get_db),
 		current_user: models.User = Depends(get_current_user)
 ):
@@ -24,7 +25,18 @@ def create_stock_trade_for_portfolio(
 		raise HTTPException(status_code=404, detail="Stock portfolio not found")
 	if db_portfolio.asset.owner_id != current_user.id:
 		raise HTTPException(status_code=403, detail="Not authorized to add trades to this portfolio")
-	return crud_stock_trade.create_portfolio_stock_trade(db=db, trade=trade, portfolio_id=portfolio_id)
+
+	cash_asset = crud_asset.get_asset(db, asset_id=cash_asset_id)
+	if not cash_asset:
+		raise HTTPException(status_code=404, detail="Cash asset not found")
+	if cash_asset.owner_id != current_user.id:
+		raise HTTPException(status_code=403, detail="Not authorized to use this cash asset")
+	if cash_asset.asset_type != AssetTypeEnum.CASH:
+		raise HTTPException(status_code=400, detail="The specified asset for cash flow is not of type CASH")
+
+	return crud_stock_trade.create_portfolio_stock_trade(
+		db=db, trade=trade, portfolio_id=portfolio_id, cash_asset_id=cash_asset_id
+	)
 
 
 @router.patch("/stock-trades/{trade_id}", response_model=StockTrade)
