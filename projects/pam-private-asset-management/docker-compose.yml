@@ -30,5 +30,22 @@ services:
       - pam-db-service
     restart: unless-stopped
 
+  # Service cho Frontend Streamlit
+  pam-frontend-service:
+    container_name: pam-frontend-service-container
+    build: ./pam-frontend
+    image: pam-frontend:latest
+    volumes:
+      - ./pam-frontend:/app
+    ports:
+      - "6868:8001"
+    env_file:
+      - ./.env
+    environment:
+      - BACKEND_API_URL=${BACKEND_API_URL}
+    depends_on:
+      - pam-backend-service
+    restart: unless-stopped
+
 volumes:
   postgres_data:
