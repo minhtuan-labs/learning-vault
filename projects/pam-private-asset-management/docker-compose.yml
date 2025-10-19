@@ -14,6 +14,12 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # Service cho Backend FastAPI
   pam-backend-service:
@@ -29,6 +35,12 @@ services:
     depends_on:
       - pam-db-service
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s = socket.socket(); s.connect(('localhost', 8000))\""]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Service cho Frontend Streamlit
   pam-frontend-service:
@@ -42,9 +54,10 @@ services:
     env_file:
       - ./.env
     environment:
-      - BACKEND_API_URL=${BACKEND_API_URL}
+      - PAM_BACKEND_API_URL=${PAM_BACKEND_API_URL}
     depends_on:
-      - pam-backend-service
+      pam-backend-service:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
