@@ -10,6 +10,7 @@ from api.v1.endpoints import fund_portfolio as fund_portfolio_router
 from api.v1.endpoints import fund_trade as fund_trade_router
 from api.v1.endpoints import saving as saving_router
 from api.v1.endpoints import transaction as transaction_router
+from api.v1.endpoints import trades as trades_router
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -27,62 +28,17 @@ def read_root():
 	return {"message": "Welcome to PAM (Private Asset Management) API!"}
 
 
-# Router cho User
-app.include_router(
-	user_router.router,
-	prefix="/api/v1/users",
-	tags=["Users"]
-)
+# Router for CRUD API
+app.include_router(user_router.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(asset_router.router, prefix="/api/v1/assets", tags=["Assets"])
+app.include_router(stock_portfolio_router.router, prefix="/api/v1", tags=["Stock Portfolios"])
+app.include_router(stock_trade_router.router, prefix="/api/v1", tags=["Stock Trades"])
+app.include_router(fund_portfolio_router.router, prefix="/api/v1", tags=["Fund Portfolios"])
+app.include_router(fund_trade_router.router, prefix="/api/v1", tags=["Fund Trades"])
+app.include_router(saving_router.router, prefix="/api/v1", tags=["Savings"])
+app.include_router(transaction_router.router, prefix="/api/v1", tags=["Transactions"])
 
 
-# Router cho Asset
-app.include_router(
-	asset_router.router,
-	prefix="/api/v1/assets",
-	tags=["Assets"]
-)
-
-
-# Router cho Stock
-app.include_router(
-	stock_portfolio_router.router,
-	prefix="/api/v1", # Tiền tố chung, vì các URL đầy đủ đã được định nghĩa trong file endpoint
-	tags=["Stock Portfolios"]
-)
-
-app.include_router(
-	stock_trade_router.router,
-	prefix="/api/v1", # Tiền tố chung
-	tags=["Stock Trades"]
-)
-
-
-# Router for Fund
-app.include_router(
-	fund_portfolio_router.router,
-	prefix="/api/v1",
-	tags=["Fund Portfolios"]
-)
-
-app.include_router(
-	fund_trade_router.router,
-	prefix="/api/v1",
-	tags=["Fund Trades"]
-)
-
-
-# Router cho Saving
-app.include_router(
-	saving_router.router,
-	prefix="/api/v1",
-	tags=["Savings"]
-)
-
-
-# Router cho Transaction
-app.include_router(
-    transaction_router.router,
-    prefix="/api/v1",
-    tags=["Transactions"]
-)
+# Router cho Business Action
+app.include_router(trades_router.router, prefix="/api/v1/trades", tags=["Business Actions"])
 

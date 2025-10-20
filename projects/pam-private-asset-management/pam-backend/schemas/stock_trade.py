@@ -11,6 +11,7 @@ class StockTradeBase(BaseModel):
 	price: float
 	fee: float = 0.0
 	notes: Optional[str] = None
+	is_hidden: bool = False
 
 
 class StockTradeCreate(StockTradeBase):
@@ -23,6 +24,7 @@ class StockTradeUpdate(BaseModel):
 	price: Optional[float] = None
 	fee: Optional[float] = None
 	notes: Optional[str] = None
+	is_hidden: Optional[bool] = None
 
 
 class StockTrade(StockTradeBase):

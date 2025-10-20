@@ -12,7 +12,7 @@ def get_stock_trade(db: Session, trade_id: int):
 	return db.query(models.StockTrade).filter(models.StockTrade.id == trade_id).first()
 
 
-def create_portfolio_stock_trade(db: Session, trade: StockTradeCreate, portfolio_id: int):
+def create_portfolio_stock_trade(db: Session, trade: StockTradeCreate, portfolio_id: int, cash_asset_id: int):
 	db_trade = models.StockTrade(**trade.model_dump(), portfolio_id=portfolio_id)
 	db.add(db_trade)
 	db.commit()

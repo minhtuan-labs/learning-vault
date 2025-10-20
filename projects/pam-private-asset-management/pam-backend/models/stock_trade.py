@@ -19,5 +19,6 @@ class StockTrade(Base):
 	price = Column(Float, nullable=False)
 	fee = Column(Float, default=0.0)
 	notes = Column(String, nullable=True)
+	is_hidden = Column(Boolean, default=False, nullable=False)
 
 	portfolio = relationship("StockPortfolio", back_populates="trades")
