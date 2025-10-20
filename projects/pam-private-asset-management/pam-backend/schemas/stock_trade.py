@@ -30,4 +30,6 @@ class StockTradeUpdate(BaseModel):
 class StockTrade(StockTradeBase):
 	id: int
 	portfolio_id: int
+	ticker: str
+	created_at: datetime
 	model_config = ConfigDict(from_attributes=True)

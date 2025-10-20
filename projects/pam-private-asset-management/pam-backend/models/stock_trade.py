@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Enum as SQLAlchemyEnum, String
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Enum as SQLAlchemyEnum, String, Boolean
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -15,6 +15,7 @@ class StockTrade(Base):
 	portfolio_id = Column(Integer, ForeignKey("stock_portfolios.id"), nullable=False)
 	trade_type = Column(SQLAlchemyEnum(StockTradeTypeEnum), nullable=False)
 	trade_date = Column(DateTime, nullable=False)
+	created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 	quantity = Column(Float, nullable=False)
 	price = Column(Float, nullable=False)
 	fee = Column(Float, default=0.0)
@@ -22,3 +23,8 @@ class StockTrade(Base):
 	is_hidden = Column(Boolean, default=False, nullable=False)
 
 	portfolio = relationship("StockPortfolio", back_populates="trades")
+
+	@property
+	def ticker(self):
+		return self.portfolio.ticker
+

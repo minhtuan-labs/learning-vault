@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 
 # Import các schema và crud cần thiết
 from schemas.stock_trade import StockTrade, StockTradeCreate
@@ -74,7 +75,7 @@ def get_all_stock_trades(
 		.join(models.StockPortfolio)
 		.join(models.Asset)
 		.filter(models.Asset.owner_id == current_user.id)
-		.order_by(models.StockTrade.trade_date.desc())
+		.order_by(models.StockTrade.created_at.desc())
 		.all()
 	)
 	return trades

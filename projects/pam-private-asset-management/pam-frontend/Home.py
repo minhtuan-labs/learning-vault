@@ -1,6 +1,6 @@
 import streamlit as st
-# Import các hàm đã được tách ra từ module service
 from services import pam_backend_api as api
+from utils import auth
 
 # --- Cấu hình trang ---
 st.set_page_config(
@@ -9,28 +9,26 @@ st.set_page_config(
 	layout="centered"
 )
 
+# Khởi tạo session, khôi phục từ cookie nếu có
+auth.initialize_session()
+
 # --- Giao diện ---
 st.title("🔐 My Private Asset Management")
 
-# Khởi tạo session state để lưu trạng thái đăng nhập nếu chưa có
-if 'auth_token' not in st.session_state:
-	st.session_state['auth_token'] = None
-
 # --- Logic hiển thị ---
 
-# Nếu người dùng đã đăng nhập
-if st.session_state['auth_token']:
+# Sử dụng hàm is_authenticated() để kiểm tra trạng thái đăng nhập
+if auth.is_authenticated():
 	st.success("You are logged in successfully!")
 	st.info("Select a page from the sidebar to start managing your assets.")
 
+	# Sử dụng hàm logout() để xử lý đăng xuất
 	if st.button("Logout"):
-		st.session_state['auth_token'] = None
+		auth.logout()
 		st.success("You have been logged out.")
-		st.rerun()  # Chạy lại script để hiển thị lại form đăng nhập
-
-# Nếu người dùng chưa đăng nhập
+		st.rerun()
 else:
-	# Hiển thị form đăng nhập
+	# Hiển thị form đăng nhập nếu chưa xác thực
 	with st.form("login_form"):
 		st.header("Login")
 		username = st.text_input("Username")
@@ -42,11 +40,10 @@ else:
 				st.warning("Please enter both username and password.")
 			else:
 				with st.spinner("Logging in..."):
-					# Gọi hàm login từ module API
 					token_data = api.login(username, password)
 					if token_data:
-						# Lưu token vào session state để duy trì đăng nhập
-						st.session_state['auth_token'] = token_data['access_token']
+						# Sử dụng hàm login() để lưu token
+						auth.login(token_data['access_token'])
 						st.success("Login successful!")
-						st.rerun()  # Chạy lại script để hiển thị thông báo đã đăng nhập
+						st.rerun()
 
