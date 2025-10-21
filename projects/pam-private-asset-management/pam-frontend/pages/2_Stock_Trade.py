@@ -29,7 +29,7 @@ with st.expander("Record a New Stock Trade", expanded=True):
 			ticker = st.text_input("Ticker Symbol", placeholder="E.g., HPG, FPT").upper()
 			trade_type = st.selectbox("Trade Type", ("BUY", "SELL"))
 		with col2:
-			quantity = st.number_input("Quantity", min_value=0.01, format="%.2f")
+			quantity = st.number_input("Quantity", min_value=100, format="%d")
 			price = st.number_input("Price per Share", min_value=0.0, format="%.2f")
 		with col3:
 			trade_date = st.date_input("Trade Date")
