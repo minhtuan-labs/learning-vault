@@ -133,7 +133,6 @@ if trades_data is not None:
 
 			st.toast("Visibility updated!")
 			st.cache_data.clear()
-			st.rerun()
 
 	else:
 		st.info("You have no stock trades yet. Record one above!")

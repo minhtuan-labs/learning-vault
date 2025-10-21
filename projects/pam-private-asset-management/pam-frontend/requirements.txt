@@ -2,4 +2,4 @@ streamlit
 requests
 pandas
 pydantic-settings
-streamlit-cookies-manager
+extra-streamlit-components

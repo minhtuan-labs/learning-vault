@@ -1,19 +1,19 @@
 import streamlit as st
-from streamlit_cookies_manager import EncryptedCookieManager
-from streamlit_cookies_manager.cookie_manager import CookiesNotReady
+import extra_streamlit_components as stx
+from datetime import datetime, timedelta
 
 
-cookies = EncryptedCookieManager(
-	password="my_super_secret_pam_cookie_key"
-)
+@st.cache_resource
+def get_cookie_manager():
+	return stx.CookieManager()
+
+
+cookies = get_cookie_manager()
 
 
 def initialize_session():
 	if 'auth_token' not in st.session_state:
-		try:
-			st.session_state['auth_token'] = cookies.get('auth_token')
-		except CookiesNotReady:
-			st.session_state['auth_token'] = None
+		st.session_state['auth_token'] = cookies.get('auth_token')
 
 
 def is_authenticated():
@@ -21,20 +21,12 @@ def is_authenticated():
 
 
 def login(token: str):
-    st.session_state['auth_token'] = token
-    try:
-        cookies['auth_token'] = token
-        cookies.save()
-    except CookiesNotReady:
-        pass
+	st.session_state['auth_token'] = token
+	expires_at = datetime.now() + timedelta(days=30)
+	cookies.set('auth_token', token, expires_at=expires_at)
 
 
 def logout():
-    st.session_state['auth_token'] = None
-    try:
-        if 'auth_token' in cookies:
-            del cookies['auth_token']
-            cookies.save()
-    except CookiesNotReady:
-        pass
+	st.session_state['auth_token'] = None
+	cookies.set('auth_token', '', expires_at=datetime.now())
 
