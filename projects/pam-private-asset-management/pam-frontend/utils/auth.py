@@ -27,6 +27,7 @@ def login(token: str):
 
 
 def logout():
-	st.session_state['auth_token'] = None
-	cookies.set('auth_token', '', expires_at=datetime.now())
+	if 'auth_token' in st.session_state:
+		del st.session_state['auth_token']
+	cookies.delete('auth_token')
 
