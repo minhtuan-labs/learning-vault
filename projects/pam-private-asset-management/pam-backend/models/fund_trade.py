@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Enum as SQLAlchemyEnum, String
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, Enum as SQLAlchemyEnum, String, Boolean
 from sqlalchemy.orm import relationship
 from .base import Base
 
@@ -27,3 +27,4 @@ class FundTrade(Base):
 	@property
 	def ticker(self):
 		return self.portfolio.ticker
+

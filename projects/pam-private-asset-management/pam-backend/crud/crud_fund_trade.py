@@ -12,7 +12,7 @@ def get_fund_trade(db: Session, trade_id: int):
 	return db.query(models.FundTrade).filter(models.FundTrade.id == trade_id).first()
 
 
-def create_portfolio_fund_trade(db: Session, trade: FundTradeCreate, portfolio_id: int):
+def create_portfolio_fund_trade(db: Session, trade: FundTradeCreate, portfolio_id: int, cash_asset_id: int):
 	db_trade = models.FundTrade(
 		**trade.model_dump(),
 		portfolio_id=portfolio_id
@@ -20,6 +20,10 @@ def create_portfolio_fund_trade(db: Session, trade: FundTradeCreate, portfolio_i
 	db.add(db_trade)
 	db.commit()
 	db.refresh(db_trade)
+
+	total_amount = trade.quantity * trade.price
+	transaction_type = None
+	transaction_amount = 0
 
 	if trade.trade_type == FundTradeTypeEnum.BUY:
 		transaction_type = TransactionTypeEnum.FUND_BUY

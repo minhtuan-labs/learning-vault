@@ -29,7 +29,7 @@ with st.expander("Record a New Fund Trade", expanded=True):
 			ticker = st.text_input("Fund Ticker Symbol", placeholder="E.g., E1VFVN30").upper()
 			trade_type = st.selectbox("Trade Type", ("BUY", "SELL"))
 		with col2:
-			quantity = st.number_input("Quantity", min_value=0.0001, format="%.4f")
+			quantity = st.number_input("Quantity", min_value=0.0, format="%.2f")
 			price = st.number_input("Price per Unit", min_value=0.0, format="%.2f")
 		with col3:
 			trade_date = st.date_input("Trade Date")
@@ -72,11 +72,12 @@ with col_right:
 
 @st.cache_data(ttl=30)
 def load_trades():
-	"""Tải toàn bộ lịch sử giao dịch CCQ từ backend."""
 	return api.get_data("/api/v1/trades/fund")
 
-
 trades_data = load_trades()
+
+if 'fund_update_processed' not in st.session_state:
+    st.session_state.fund_update_processed = False
 
 if trades_data is not None:
 	if trades_data:
@@ -117,22 +118,24 @@ if trades_data is not None:
 
 		df_before_edit = st.session_state.get('df_fund_before_edit')
 		if df_before_edit is not None and not df_before_edit.reset_index(drop=True).equals(
-				edited_df.reset_index(drop=True)):
+				edited_df.reset_index(drop=True)) and not st.session_state.fund_update_processed:
 			changed_mask = (df_before_edit['is_hidden'].values != edited_df['is_hidden'].values)
 			rows_to_update = df_before_edit[changed_mask]
-
-			with st.spinner("Updating visibility..."):
-				for index, row in rows_to_update.iterrows():
-					trade_id = row['id']
-					new_hidden_status = edited_df.loc[index, "is_hidden"]
-					update_data = {"is_hidden": bool(new_hidden_status)}
-					# Gọi đến API PATCH của Fund
-					api.patch_data(f"/api/v1/fund-trades/{trade_id}", data=update_data)
-
-			st.toast("Visibility updated!", timeout=3000)
-			st.cache_data.clear()
-			st.rerun()
-
+			if not rows_to_update.empty:
+				with st.spinner("Updating visibility..."):
+					for index, row in rows_to_update.iterrows():
+						try:
+							original_index = edited_df[edited_df['id'] == row['id']].index[0]
+							trade_id = row['id']
+							new_hidden_status = edited_df.loc[original_index, "is_hidden"]
+							update_data = {"is_hidden": bool(new_hidden_status)}
+							api.patch_data(f"/api/v1/fund-trades/{trade_id}", data=update_data)
+						except IndexError:
+							st.warning(f"Could not find matching row for ID {row['id']} after edit. Skipping update.")
+				st.toast("Visibility updated!")
+				st.cache_data.clear()
+				st.session_state.fund_update_processed = True
+				st.rerun()
 	else:
 		st.info("You have no fund trades yet. Record one above!")
 else:

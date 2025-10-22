@@ -71,9 +71,7 @@ with col_right:
 
 @st.cache_data(ttl=30)
 def load_trades():
-	# API này bây giờ đã trả về dữ liệu được sắp xếp sẵn
 	return api.get_data("/api/v1/trades/stock")
-
 
 trades_data = load_trades()
 
@@ -121,18 +119,22 @@ if trades_data is not None:
 		)
 
 		df_before_edit = st.session_state.get('df_to_display')
-		if df_before_edit is not None and not df_before_edit.equals(edited_df):
-			changed_mask = (df_before_edit['is_hidden'] != edited_df['is_hidden'])
-			changed_rows = edited_df[changed_mask]
-
-			with st.spinner("Updating visibility..."):
-				for _, row in changed_rows.iterrows():
-					trade_id = row['id']
-					update_data = {"is_hidden": bool(row["is_hidden"])}
-					api.patch_data(f"/api/v1/stock-trades/{trade_id}", data=update_data)
-
-			st.toast("Visibility updated!")
-			st.cache_data.clear()
+		if df_before_edit is not None and not df_before_edit.reset_index(drop=True).equals(
+				edited_df.reset_index(drop=True)) and not st.session_state.update_processed:
+			changed_mask = (df_before_edit['is_hidden'].values != edited_df['is_hidden'].values)
+			rows_to_update = df_before_edit[changed_mask]
+			if not rows_to_update.empty:
+				with st.spinner("Updating visibility..."):
+					for index, row in rows_to_update.iterrows():
+						original_index = edited_df[edited_df['id'] == row['id']].index[0]
+						trade_id = row['id']
+						new_hidden_status = edited_df.loc[original_index, "is_hidden"]
+						update_data = {"is_hidden": bool(new_hidden_status)}
+						api.patch_data(f"/api/v1/stock-trades/{trade_id}", data=update_data)
+				st.toast("Visibility updated!")
+				st.cache_data.clear()
+				st.session_state.update_processed = True
+				st.rerun()
 
 	else:
 		st.info("You have no stock trades yet. Record one above!")
