@@ -23,5 +23,6 @@ class SavingDetail(Base):
 	expected_maturity_date = Column(DateTime, nullable=True)
 	actual_settlement_date = Column(DateTime, nullable=True)
 	matured_amount = Column(Float, nullable=True)
+	is_matured = Column(Boolean, default=False, nullable=False)
 
 	asset = relationship("Asset", back_populates="savings_details")

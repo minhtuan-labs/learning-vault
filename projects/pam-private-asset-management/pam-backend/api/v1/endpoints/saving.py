@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+# Import schema đã được cập nhật với is_matured
 from schemas.saving import SavingDetail, SavingDetailCreate, SavingDetailUpdate
 from crud import crud_saving, crud_asset
 from api.v1.deps import get_current_user
@@ -31,10 +32,29 @@ def create_saving_detail(
 	return crud_saving.create_asset_saving_detail(db=db, saving=saving, asset_id=asset_id)
 
 
+@router.get("/assets/{asset_id}/savings/", response_model=SavingDetail)
+def read_saving_detail_for_asset(
+		asset_id: int,
+		db: Session = Depends(get_db),
+		current_user: models.User = Depends(get_current_user)
+):
+	db_asset = crud_asset.get_asset(db, asset_id=asset_id)
+	if not db_asset:
+		raise HTTPException(status_code=404, detail="Asset not found")
+	if db_asset.owner_id != current_user.id:
+		raise HTTPException(status_code=403, detail="Not authorized to access this asset")
+	if db_asset.asset_type != AssetTypeEnum.SAVINGS:
+		raise HTTPException(status_code=400, detail="This asset is not a SAVINGS asset")
+	saving_detail = crud_saving.get_saving_detail_by_asset(db, asset_id=asset_id)
+	if saving_detail is None:
+		raise HTTPException(status_code=404, detail="Saving detail not found for this asset")
+	return saving_detail
+
+
 @router.patch("/savings/{saving_id}", response_model=SavingDetail)
 def update_saving_detail(
 		saving_id: int,
-		saving_update: SavingDetailUpdate,
+		saving_update: SavingDetailUpdate,  # Schema này đã cho phép cập nhật is_matured
 		db: Session = Depends(get_db),
 		current_user: models.User = Depends(get_current_user)
 ):
@@ -44,4 +64,21 @@ def update_saving_detail(
 	if db_saving.asset.owner_id != current_user.id:
 		raise HTTPException(status_code=403, detail="Not authorized to update this saving detail")
 	return crud_saving.update_saving_detail(db, saving_id=saving_id, saving_update=saving_update)
+
+
+@router.delete("/savings/{saving_id}", response_model=SavingDetail)
+def delete_saving_detail_endpoint(
+		saving_id: int,
+		db: Session = Depends(get_db),
+		current_user: models.User = Depends(get_current_user)
+):
+	db_saving = crud_saving.get_saving_detail(db, saving_id=saving_id)
+	if not db_saving:
+		raise HTTPException(status_code=404, detail="Saving detail not found")
+	if db_saving.asset.owner_id != current_user.id:
+		raise HTTPException(status_code=403, detail="Not authorized to delete this saving detail")
+	deleted_saving = crud_saving.delete_saving_detail(db, saving_id=saving_id)
+	if deleted_saving is None:  # Có thể hàm delete_saving_detail trả về None nếu có lỗi
+		raise HTTPException(status_code=500, detail="Failed to delete saving detail")
+	return deleted_saving
 
