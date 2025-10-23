@@ -34,7 +34,7 @@ def create_portfolio_stock_trade(db: Session, trade: StockTradeCreate, portfolio
 			amount=transaction_amount,
 			transaction_type=transaction_type,
 			transaction_date=trade.trade_date,
-			description=f"{trade.trade_type.value.upper()} {trade.quantity} shares of {db_trade.portfolio.ticker} @ {trade.price}"
+			description=f"{trade.trade_type.value.upper()} {int(trade.quantity):,} shares of {db_trade.portfolio.ticker} @ {int(trade.price):,}"
 		)
 		crud_transaction.create_asset_transaction(
 			db=db, transaction=transaction_schema, asset_id=cash_asset_id

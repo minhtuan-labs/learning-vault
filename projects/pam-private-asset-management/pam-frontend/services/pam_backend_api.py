@@ -9,16 +9,18 @@ def login(username, password):
 			f"{settings.PAM_BACKEND_API_URL}/api/v1/users/token",
 			data={"username": username, "password": password}
 		)
-		response.raise_for_status()
+		response.raise_for_status() # Ném lỗi nếu status code là 4xx hoặc 5xx
 		return response.json()
 	except requests.exceptions.RequestException as e:
-		st.error(f"Login failed: {e}")
 		if e.response is not None:
 			try:
-				error_details = e.response.json().get('detail', 'No JSON detail found.')
+				error_details = e.response.json().get('detail', 'An unknown error occurred.')
+				st.warning(f"{error_details}")
 			except requests.exceptions.JSONDecodeError:
-				error_details = e.response.text
-			st.error(f"Error details: {error_details}")
+				st.error(f"Login failed: Server returned an unexpected response. Please check backend logs.")
+				st.error(f"Raw error: {e.response.text[:500]}")
+		else:
+			st.error(f"Login failed: Could not connect to the backend server. {e}")
 		return None
 
 

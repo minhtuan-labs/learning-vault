@@ -37,7 +37,7 @@ def create_portfolio_fund_trade(db: Session, trade: FundTradeCreate, portfolio_i
 			amount=transaction_amount,
 			transaction_type=transaction_type,
 			transaction_date=trade.trade_date,
-			description=f"{trade.trade_type.value.upper()} {trade.quantity} units of {db_trade.portfolio.ticker} @ {trade.price}"
+			description=f"{trade.trade_type.value.upper()} {trade.quantity:.2f} units of {db_trade.portfolio.ticker} @ {int(trade.price):,}"
 		)
 		crud_transaction.create_asset_transaction(
 			db=db, transaction=transaction_schema, asset_id=cash_asset_id

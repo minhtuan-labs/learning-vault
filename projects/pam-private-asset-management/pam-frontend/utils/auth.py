@@ -30,4 +30,8 @@ def logout():
 	if 'auth_token' in st.session_state:
 		del st.session_state['auth_token']
 	cookies.delete('auth_token')
+	try:
+		st.rerun()
+	except st.errors.StreamlitAPIException:
+		pass
 
