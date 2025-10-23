@@ -39,7 +39,6 @@ def create_portfolio_stock_trade(db: Session, trade: StockTradeCreate, portfolio
 		crud_transaction.create_asset_transaction(
 			db=db, transaction=transaction_schema, asset_id=cash_asset_id
 		)
-
 	return db_trade
 
 

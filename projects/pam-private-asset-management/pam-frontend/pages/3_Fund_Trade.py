@@ -140,11 +140,8 @@ if trades_data is not None:
 				"ticker": st.column_config.TextColumn("Ticker", width="small"),
 				"trade_date": st.column_config.DateColumn("Date", format="YYYY-MM-DD"),
 				"trade_type": st.column_config.TextColumn("Type", width="small"),
-				# SỬA ĐỔI: Quantity hiển thị 2 chữ số thập phân
 				"quantity": st.column_config.NumberColumn("Quantity", format="localized"),
-				# SỬA ĐỔI: Price hiển thị số nguyên VND
 				"price": st.column_config.NumberColumn("Price (VND)", format="localized", help="Price per unit in VND"),
-				# SỬA ĐỔI: Total Value hiển thị số nguyên VND
 				"display_total_value": st.column_config.NumberColumn("Total (VND)", format="localized",
 																	 help="Total value in VND"),
 				"display_fee": st.column_config.NumberColumn("Fee (VND)", format="localized"),
@@ -166,7 +163,6 @@ if trades_data is not None:
 		if df_before_edit is not None and not df_before_edit.reset_index(drop=True).equals(
 				edited_df.reset_index(drop=True)) and not st.session_state.fund_update_processed:
 			if len(df_before_edit) == len(edited_df):
-				### BEGIN
 				edited_df_reindexed = edited_df.set_index(df_before_edit.index)
 				changed_mask = df_before_edit['is_hidden'] != edited_df_reindexed['is_hidden']
 
@@ -191,32 +187,6 @@ if trades_data is not None:
 						st.cache_data.clear()
 						st.session_state.update_processed = True
 						st.rerun()
-
-				### END
-				#"""changed_mask = (df_before_edit['is_hidden'].values != edited_df['is_hidden'].values)
-				#rows_to_update = df_before_edit.loc[changed_mask]
-
-				#if not rows_to_update.empty:
-				#	with st.spinner("Updating visibility..."):
-				#		for index, row in rows_to_update.iterrows():
-				#			try:
-				#				edited_row_list = edited_df[edited_df['id'] == row['id']]
-				#				if not edited_row_list.empty:
-				#					original_index = edited_row_list.index[0]
-				#					trade_id = row['id']
-				#					new_hidden_status = edited_df.loc[original_index, "is_hidden"]
-				#					update_data = {"is_hidden": bool(new_hidden_status)}
-				#					api.patch_data(f"/api/v1/fund-trades/{trade_id}", data=update_data)
-				#				else:
-				#					st.warning(
-				#						f"Could not find matching edited row for Fund ID {row['id']}. Skipping update.")
-				#			except Exception as e:
-				#				st.error(f"Error updating visibility for fund trade ID {row.get('id', 'N/A')}: {e}")
-
-				#	st.toast("Visibility updated!")
-				#	st.cache_data.clear()
-				#	st.session_state.fund_update_processed = True
-				#	st.rerun()"""
 			else:
 				st.warning("Dataframe length mismatch after edit. Cannot compare changes. Please refresh the trade history.")
 	else:
