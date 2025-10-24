@@ -14,19 +14,26 @@ from api.v1.endpoints import saving as saving_router
 from api.v1.endpoints import transaction as transaction_router
 from api.v1.endpoints import trades as trades_router
 
-
-models.Base.metadata.create_all(bind=engine)
-
 app = FastAPI(
 	title=settings.PROJECT_NAME,
 	description="Private Asset Management API",
 	version="0.1.0"
 )
 
+@app.on_event("startup")
+async def startup_event():
+	"""Create database tables on startup"""
+	try:
+		models.Base.metadata.create_all(bind=engine)
+		print("✅ Database tables created successfully")
+	except Exception as e:
+		print(f"❌ Error creating database tables: {e}")
+		raise
+
 # CORS middleware
 app.add_middleware(
 	CORSMiddleware,
-	allow_origins=settings.BACKEND_CORS_ORIGINS,
+	allow_origins=settings.cors_origins_list,
 	allow_credentials=True,
 	allow_methods=["*"],
 	allow_headers=["*"],

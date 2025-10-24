@@ -31,7 +31,7 @@ services:
     ports:
       - "6138:8000"
     env_file:
-      - ./.env
+      - .env
     depends_on:
       pam-db-service:
         condition: service_healthy
@@ -53,9 +53,7 @@ services:
     ports:
       - "6868:8001"
     env_file:
-      - ./.env
-    environment:
-      - PAM_BACKEND_API_URL=${PAM_BACKEND_API_URL}
+      - .env
     depends_on:
       pam-backend-service:
         condition: service_healthy

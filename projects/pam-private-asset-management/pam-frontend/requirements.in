@@ -1,5 +1,6 @@
 streamlit
 requests
 pandas
+plotly
 pydantic-settings
 extra-streamlit-components

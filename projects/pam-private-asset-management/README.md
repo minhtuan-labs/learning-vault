@@ -81,18 +81,17 @@ The project is built on a basic microservice architecture, completely decoupling
     # (Assuming this is the chosen directory name for the project)
     ```
 
-3.  **Create environment files:**
-    Create `.env` files within each service directory (`pam_backend`, `telegram_worker`) based on the `.env.example` files that will be provided.
+3.  **Create environment file:**
+    Create a single `.env` file in the project root based on the `env.example` file provided.
+    ```bash
+    cp env.example .env
+    # Edit .env with your database credentials and JWT secret key
+    ```
 
-4.  **Configure `docker-compose.yml`:**
-    To run the frontend on port `6868`, your `docker-compose.yml` should map the ports for the `frontend` service as follows. This port was chosen for its cultural significance in Vietnam, representing prosperity ("Lộc Phát").
-    ```yaml
-    services:
-      frontend:
-        build: ./pam_frontend
-        ports:
-          - "6868:8501" # Map port 6868 on the host to port 8501 in the container
-      # ... other services
+4.  **Generate JWT Secret Key:**
+    ```bash
+    openssl rand -hex 32
+    # Copy the generated key to JWT_SECRET_KEY in your .env file
     ```
 
 5.  **Build and run with Docker Compose:**

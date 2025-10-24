@@ -11,16 +11,21 @@ class Settings(BaseSettings):
 	DB_NAME: str = ""
 
 	# Security settings
-	PASSWORD_HASHING_ALGORITHM: str = "bcrypt"
+	PASSWORD_HASHING_ALGORITHM: str = "bcrypt"  # For password hashing
 	PASSWORD_HASHING_DEPRECATED_SCHEMES: str = "auto"
-
+	
 	# JWT Token settings: run 'openssl rand -hex 32' for new SECRET_KEY
 	JWT_SECRET_KEY: str = ""
 	JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours (24 * 60 minutes)
-	JWT_HASHING_ALGORITHM: str = "HS256"
+	JWT_HASHING_ALGORITHM: str = "HS256"  # For JWT token signing
 	
 	# CORS settings
-	BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:6868", "http://localhost:8501"]
+	BACKEND_CORS_ORIGINS: str = "http://localhost:6868,http://localhost:8501"
+	
+	@property
+	def cors_origins_list(self) -> List[str]:
+		"""Convert comma-separated CORS origins to list"""
+		return [origin.strip() for origin in self.BACKEND_CORS_ORIGINS.split(",")]
 	
 	# API settings
 	API_V1_STR: str = "/api/v1"
