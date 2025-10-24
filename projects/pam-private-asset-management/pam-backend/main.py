@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import models
 from core.database import engine
+from core.config import settings
 
 from api.v1.endpoints import user as user_router
 from api.v1.endpoints import asset as asset_router
@@ -16,9 +18,18 @@ from api.v1.endpoints import trades as trades_router
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-	title="P.A.M API",
+	title=settings.PROJECT_NAME,
 	description="Private Asset Management API",
 	version="0.1.0"
+)
+
+# CORS middleware
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=settings.BACKEND_CORS_ORIGINS,
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"],
 )
 
 

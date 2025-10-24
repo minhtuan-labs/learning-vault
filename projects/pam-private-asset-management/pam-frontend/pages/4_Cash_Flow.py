@@ -34,8 +34,8 @@ def load_transactions(asset_id):
 
 
 @st.cache_data(ttl=60)
-def get_cash_asset_id():
-	"""Tìm ID của tài sản CASH. Tự động tạo nếu chưa có."""
+def _get_cash_asset_id_internal():
+	"""Tìm ID của tài sản CASH. Không có widget commands."""
 	all_assets = api.get_data("/api/v1/assets/")
 	if all_assets is None:
 		return None
@@ -45,10 +45,23 @@ def get_cash_asset_id():
 				return asset.get('id')
 	new_cash_asset = api.post_data("/api/v1/assets/", data={"name": "Investment Cash", "asset_type": "cash"})
 	if new_cash_asset:
-		st.toast("Auto-created 'Investment Cash' asset for you.")
-		get_cash_asset_id.clear()
 		return new_cash_asset.get('id')
 	return None
+
+
+def get_cash_asset_id():
+	"""Tìm ID của tài sản CASH. Tự động tạo nếu chưa có."""
+	asset_id = _get_cash_asset_id_internal()
+	
+	# Kiểm tra nếu cần tạo mới asset
+	if asset_id is None:
+		# Clear cache và thử lại
+		_get_cash_asset_id_internal.clear()
+		asset_id = _get_cash_asset_id_internal()
+		if asset_id:
+			st.toast("Auto-created 'Investment Cash' asset for you.")
+	
+	return asset_id
 
 
 cash_asset_id = get_cash_asset_id()
@@ -164,7 +177,7 @@ else:
 	# Chỉ xử lý nếu có dữ liệu và df_trans tồn tại
 	if 'df_trans' in locals() and not df_trans.empty:
 		df_trans['transaction_date'] = pd.to_datetime(df_trans['transaction_date'], errors='coerce').dt.strftime(
-			'%Y-%m-%d %H:%M:%S')
+			'%Y-%m-%d')
 
 		st.dataframe(
 			df_trans[['transaction_date', 'transaction_type', 'amount', 'balance', 'description']],

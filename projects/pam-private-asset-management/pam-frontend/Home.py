@@ -22,6 +22,9 @@ if auth.is_authenticated():
 	st.success("You are logged in successfully!")
 	st.info("Select a page from the sidebar to start managing your assets.")
 
+	# Debug session state (chỉ hiển thị khi cần)
+	auth.debug_session_state()
+
 	# Sử dụng hàm logout() để xử lý đăng xuất
 	if st.button("Logout"):
 		auth.logout()
