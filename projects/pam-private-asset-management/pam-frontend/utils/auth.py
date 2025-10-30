@@ -19,49 +19,60 @@ def _get_cookie_manager():
 			if hasattr(st, 'warning'):
 				st.warning(f"Cookie manager initialization failed: {e}")
 	
-	return st.session_state.get('cookie_manager')
+	cookie_manager = st.session_state.get('cookie_manager')
+	
+	# Nếu cookie manager bị None, thử tạo lại
+	if cookie_manager is None:
+		try:
+			st.session_state['cookie_manager'] = stx.CookieManager(key="pam_cookie_manager")
+			cookie_manager = st.session_state['cookie_manager']
+		except Exception:
+			# Vẫn fail, giữ None
+			pass
+	
+	return cookie_manager
+
+
+# Simplified approach - chỉ dùng session state với fallback đơn giản
 
 
 def initialize_session():
-	"""Khởi tạo session từ cookie nếu có - cải thiện để tránh mất session khi refresh"""
-	# Luôn kiểm tra cookie trước, ngay cả khi đã có session state
+	"""Đơn giản hóa - chỉ sync cookie và session state"""
 	cookie_manager = _get_cookie_manager()
+	
 	if cookie_manager:
 		try:
 			cookie_token = cookie_manager.get('auth_token')
+			session_token = st.session_state.get('auth_token')
 			
-			# Nếu có token trong cookie và chưa có trong session state
-			if cookie_token and 'auth_token' not in st.session_state:
+			# Nếu có cookie và không có session, restore từ cookie
+			if cookie_token and not session_token:
 				if _is_token_valid(cookie_token):
 					st.session_state['auth_token'] = cookie_token
 				else:
-					# Token hết hạn, xóa cookie
 					cookie_manager.delete('auth_token')
 			
-			# Nếu có session state nhưng không có cookie, đồng bộ lại
-			elif 'auth_token' in st.session_state and not cookie_token:
-				session_token = st.session_state['auth_token']
+			# Nếu có session và không có cookie, sync vào cookie
+			elif session_token and not cookie_token:
 				if _is_token_valid(session_token):
-					# Khôi phục cookie từ session
 					expires_at = datetime.now() + timedelta(days=30)
 					cookie_manager.set('auth_token', session_token, expires_at=expires_at)
 				else:
-					# Session token hết hạn, xóa session
 					del st.session_state['auth_token']
 			
-			# Nếu cả hai đều có nhưng khác nhau, ưu tiên cookie
-			elif (cookie_token and 'auth_token' in st.session_state and 
-				  cookie_token != st.session_state['auth_token']):
+			# Nếu cả hai đều có, ưu tiên cookie
+			elif cookie_token and session_token and cookie_token != session_token:
 				if _is_token_valid(cookie_token):
 					st.session_state['auth_token'] = cookie_token
+				elif _is_token_valid(session_token):
+					expires_at = datetime.now() + timedelta(days=30)
+					cookie_manager.set('auth_token', session_token, expires_at=expires_at)
 				else:
-					# Cookie token hết hạn, xóa cả hai
 					cookie_manager.delete('auth_token')
-					if 'auth_token' in st.session_state:
-						del st.session_state['auth_token']
-						
-		except Exception as e:
-			# Log lỗi nhưng không crash app
+					del st.session_state['auth_token']
+					
+		except Exception:
+			# Cookie fail, không làm gì
 			pass
 
 
@@ -101,58 +112,56 @@ def is_authenticated():
 	
 	# Kiểm tra token expiration
 	if not _is_token_valid(token):
-		# Token hết hạn, clear session nhưng không logout (để tránh loop)
-		if 'auth_token' in st.session_state:
-			del st.session_state['auth_token']
-		cookie_manager = _get_cookie_manager()
-		if cookie_manager:
-			try:
-				cookie_manager.delete('auth_token')
-			except:
-				pass
+		# Token hết hạn, clear session và cookie
+		_clear_auth_session()
 		return False
 	
 	return True
 
 
-def login(token: str):
-	"""Lưu token vào session và cookie - cải thiện persistence"""
-	st.session_state['auth_token'] = token
-	
-	# Lưu vào cookie với expiration dài hơn (fallback nếu cookie manager fail)
-	cookie_manager = _get_cookie_manager()
-	if cookie_manager:
-		try:
-			# Cookie expiration 30 ngày, JWT token 24h
-			expires_at = datetime.now() + timedelta(days=30)
-			cookie_manager.set('auth_token', token, expires_at=expires_at)
-		except Exception:
-			# Cookie manager fail, nhưng session vẫn hoạt động
-			pass
-	else:
-		# Nếu không có cookie manager, ít nhất session state vẫn hoạt động
-		pass
-
-
-def logout():
-	"""Đăng xuất và xóa session/cookie"""
+def _clear_auth_session():
+	"""Helper function để clear session và cookie"""
 	if 'auth_token' in st.session_state:
 		del st.session_state['auth_token']
 	
-	# Xóa cookie (fallback nếu cookie manager fail)
+	cookie_manager = _get_cookie_manager()
+	if cookie_manager:
+		try:
+			cookie_manager.delete('auth_token')
+		except:
+			pass
+
+
+def login(token: str):
+	"""Đơn giản hóa - chỉ lưu session và cookie"""
+	st.session_state['auth_token'] = token
+	
+	cookie_manager = _get_cookie_manager()
+	if cookie_manager:
+		try:
+			expires_at = datetime.now() + timedelta(days=30)
+			cookie_manager.set('auth_token', token, expires_at=expires_at)
+		except Exception:
+			# Cookie fail, session vẫn hoạt động
+			pass
+
+
+def logout():
+	"""Đơn giản hóa - chỉ clear session và cookie"""
+	if 'auth_token' in st.session_state:
+		del st.session_state['auth_token']
+	
 	cookie_manager = _get_cookie_manager()
 	if cookie_manager:
 		try:
 			cookie_manager.delete('auth_token')
 		except Exception:
-			# Cookie manager fail, nhưng session vẫn được clear
 			pass
 	
-	# Clear cookie manager khỏi session state để tránh conflict
+	# Clear cookie manager khỏi session state
 	if 'cookie_manager' in st.session_state:
 		del st.session_state['cookie_manager']
 	
-	# Rerun để refresh page
 	try:
 		st.rerun()
 	except st.errors.StreamlitAPIException:
@@ -168,6 +177,7 @@ def debug_session_state():
 			token = st.session_state['auth_token']
 			st.write(f"- Token length: {len(token) if token else 0}")
 			st.write(f"- Token valid: {_is_token_valid(token) if token else False}")
+			st.write(f"- Token preview: {token[:20] + '...' if token else 'None'}")
 		
 		st.write("**Cookie Manager State:**")
 		st.write(f"- cookie_manager in session: {'cookie_manager' in st.session_state}")
@@ -181,14 +191,51 @@ def debug_session_state():
 				if cookie_token:
 					st.write(f"- Cookie token length: {len(cookie_token)}")
 					st.write(f"- Cookie token valid: {_is_token_valid(cookie_token)}")
+					st.write(f"- Cookie token preview: {cookie_token[:20] + '...' if cookie_token else 'None'}")
 			except Exception as e:
 				st.write(f"- Cookie error: {e}")
 		else:
 			st.write("- Cookie manager not available")
 		
 		# Thêm button để clear cookie manager nếu cần
-		if st.button("🔄 Reset Cookie Manager"):
-			if 'cookie_manager' in st.session_state:
-				del st.session_state['cookie_manager']
+		col1, col2, col3 = st.columns(3)
+		with col1:
+			if st.button("🔄 Reset Cookie Manager"):
+				if 'cookie_manager' in st.session_state:
+					del st.session_state['cookie_manager']
+				st.rerun()
+		
+		with col2:
+			if st.button("🧪 Test Cookie Set"):
+				cookie_manager = _get_cookie_manager()
+				if cookie_manager:
+					try:
+						cookie_manager.set('test_cookie', 'test_value')
+						st.success("Cookie set successful!")
+					except Exception as e:
+						st.error(f"Cookie set failed: {e}")
+				else:
+					st.error("No cookie manager available")
+		
+		with col3:
+			if st.button("🧪 Test Cookie Get"):
+				cookie_manager = _get_cookie_manager()
+				if cookie_manager:
+					try:
+						test_value = cookie_manager.get('test_cookie')
+						st.write(f"Test cookie value: {test_value}")
+					except Exception as e:
+						st.error(f"Cookie get failed: {e}")
+				else:
+					st.error("No cookie manager available")
+		
+		# Thêm thông tin về browser và environment
+		st.write("**Environment Info:**")
+		st.write(f"- Streamlit version: {st.__version__}")
+		st.write(f"- Current page: {st.get_option('server.headless')}")
+		
+		# Force sync button
+		if st.button("🔄 Force Sync Session"):
+			initialize_session()
 			st.rerun()
 
