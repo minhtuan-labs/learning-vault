@@ -47,6 +47,21 @@ def read_stock_portfolios(
 	return portfolios
 
 
+@router.get("/stock-portfolios/by-ticker/{ticker}", response_model=StockPortfolio)
+def read_stock_portfolio_by_ticker(
+		ticker: str,
+		db: Session = Depends(get_db),
+		current_user: models.User = Depends(get_current_user)
+):
+	"""Get stock portfolio by ticker for current user"""
+	db_portfolio = crud_stock_portfolio.get_stock_portfolio_by_ticker_and_owner(
+		db, ticker=ticker, owner_id=current_user.id
+	)
+	if not db_portfolio:
+		raise HTTPException(status_code=404, detail=f"Stock portfolio with ticker '{ticker}' not found")
+	return db_portfolio
+
+
 @router.patch("/stock-portfolios/{portfolio_id}", response_model=StockPortfolio)
 def update_stock_portfolio(
 		portfolio_id: int,

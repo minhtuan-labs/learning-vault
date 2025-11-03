@@ -13,6 +13,7 @@ from api.v1.endpoints import fund_trade as fund_trade_router
 from api.v1.endpoints import saving as saving_router
 from api.v1.endpoints import transaction as transaction_router
 from api.v1.endpoints import trades as trades_router
+from api.v1.endpoints import watchlist as watchlist_router
 
 app = FastAPI(
 	title=settings.PROJECT_NAME,
@@ -55,6 +56,7 @@ app.include_router(fund_portfolio_router.router, prefix="/api/v1", tags=["Fund P
 app.include_router(fund_trade_router.router, prefix="/api/v1", tags=["Fund Trades"])
 app.include_router(saving_router.router, prefix="/api/v1", tags=["Savings"])
 app.include_router(transaction_router.router, prefix="/api/v1", tags=["Transactions"])
+app.include_router(watchlist_router.router, prefix="/api/v1", tags=["Watchlist"])
 
 
 # Router cho Business Action

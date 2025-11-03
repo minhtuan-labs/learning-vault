@@ -8,3 +8,4 @@ class User(Base):
 	username = Column(String, unique=True, index=True, nullable=False)
 	hashed_password = Column(String, nullable=False)
 	assets = relationship("Asset", back_populates="owner", cascade="all, delete-orphan")
+	watchlists = relationship("Watchlist", back_populates="owner", cascade="all, delete-orphan")

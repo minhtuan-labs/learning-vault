@@ -182,3 +182,43 @@ def patch_data(endpoint: str, data: dict):
 			st.error(f"Failed to update resource at {endpoint}: {e}")
 		return None
 
+
+def delete_data(endpoint: str):
+	"""Hàm chung để gửi yêu cầu xóa (DELETE) đến các endpoint được bảo vệ."""
+	token = st.session_state.get('auth_token')
+	if not token:
+		st.error("Authentication token not found. Please login again.")
+		return None
+	
+	# Kiểm tra token expiration
+	if not _is_token_valid(token):
+		st.error("Your session has expired. Please login again.")
+		_clear_auth_session()
+		return None
+
+	headers = {"Authorization": f"Bearer {token}"}
+	try:
+		response = requests.delete(f"{settings.PAM_BACKEND_API_URL}{endpoint}", headers=headers, timeout=10)
+		response.raise_for_status()
+		return response.json()
+	except requests.exceptions.Timeout:
+		st.error("Request timeout. Please check your connection and try again.")
+		return None
+	except requests.exceptions.ConnectionError:
+		st.error("Could not connect to the server. Please check if the backend is running.")
+		return None
+	except requests.exceptions.RequestException as e:
+		if e.response is not None:
+			if e.response.status_code == 401:
+				st.error("Authentication failed. Please login again.")
+				_clear_auth_session()
+				return None
+			try:
+				error_details = e.response.json().get('detail', 'No JSON detail found.')
+			except requests.exceptions.JSONDecodeError:
+				error_details = e.response.text
+			st.error(f"Error details: {error_details}")
+		else:
+			st.error(f"Failed to delete resource at {endpoint}: {e}")
+		return None
+

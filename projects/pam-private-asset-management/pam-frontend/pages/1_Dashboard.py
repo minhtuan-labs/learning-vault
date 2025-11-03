@@ -14,43 +14,6 @@ st.set_page_config(
 	layout="wide"
 )
 
-# CSS và JavaScript để căn phải các cột số trong bảng Asset Details
-st.markdown("""
-<style>
-/* Căn phải các cột số trong bảng Asset Details Table */
-div[data-testid="stDataFrame"] table th:nth-child(3),
-div[data-testid="stDataFrame"] table th:nth-child(4),
-div[data-testid="stDataFrame"] table th:nth-child(5),
-div[data-testid="stDataFrame"] table th:nth-child(6) {
-    text-align: right !important;
-}
-
-div[data-testid="stDataFrame"] table td:nth-child(3),
-div[data-testid="stDataFrame"] table td:nth-child(4),
-div[data-testid="stDataFrame"] table td:nth-child(5),
-div[data-testid="stDataFrame"] table td:nth-child(6) {
-    text-align: right !important;
-}
-</style>
-
-<script>
-// JavaScript để căn phải các cột số
-setTimeout(function() {
-    const tables = document.querySelectorAll('div[data-testid="stDataFrame"] table');
-    tables.forEach(table => {
-        const rows = table.querySelectorAll('tr');
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td, th');
-            // Căn phải từ cột thứ 3 trở đi (Quantity, Cost Basis, Estimated Value, P&L)
-            for (let i = 2; i < cells.length; i++) {
-                cells[i].style.textAlign = 'right';
-            }
-        });
-    });
-}, 100);
-</script>
-""", unsafe_allow_html=True)
-
 
 # Khởi tạo session
 auth.initialize_session()
@@ -426,10 +389,11 @@ if stock_total_cost > 0:
 	asset_details.append({
 		'Type': 'Stock',
 		'Ticker': f"{len(asset_values['stock_details'])} positions",
-		'Quantity': f"{sum(stock['quantity'] for stock in asset_values['stock_details']):,.0f}",
-		'Cost Basis': f"{stock_total_cost:,.0f}",
-		'Estimated Value': f"{stock_total_estimated:,.0f}",
-		'P&L': f"{stock_total_pnl:+,.0f} VND ({stock_total_pnl_pct:+.1f}%)"
+		'Quantity': sum(stock['quantity'] for stock in asset_values['stock_details']),
+		'Cost Basis': stock_total_cost,
+		'Estimated Value': stock_total_estimated,
+		'P&L': stock_total_pnl,
+		'P&L %': stock_total_pnl_pct
 	})
 
 # Thêm Fund summary
@@ -437,10 +401,11 @@ if fund_total_cost > 0:
 	asset_details.append({
 		'Type': 'Fund',
 		'Ticker': f"{len(asset_values['fund_details'])} positions",
-		'Quantity': f"{sum(fund['quantity'] for fund in asset_values['fund_details']):,.0f}",
-		'Cost Basis': f"{fund_total_cost:,.0f}",
-		'Estimated Value': f"{fund_total_estimated:,.0f}",
-		'P&L': f"{fund_total_pnl:+,.0f} VND ({fund_total_pnl_pct:+.1f}%)"
+		'Quantity': sum(fund['quantity'] for fund in asset_values['fund_details']),
+		'Cost Basis': fund_total_cost,
+		'Estimated Value': fund_total_estimated,
+		'P&L': fund_total_pnl,
+		'P&L %': fund_total_pnl_pct
 	})
 
 # Thêm Savings summary
@@ -448,10 +413,11 @@ if saving_total_cost > 0:
 	asset_details.append({
 		'Type': 'Savings',
 		'Ticker': f"{len(asset_values['saving_details'])} accounts",
-		'Quantity': f"{len(asset_values['saving_details'])}",
-		'Cost Basis': f"{saving_total_cost:,.0f}",
-		'Estimated Value': f"{saving_total_estimated:,.0f}",
-		'P&L': f"{saving_total_pnl:+,.0f} VND ({saving_total_pnl_pct:+.1f}%)"
+		'Quantity': len(asset_values['saving_details']),
+		'Cost Basis': saving_total_cost,
+		'Estimated Value': saving_total_estimated,
+		'P&L': saving_total_pnl,
+		'P&L %': saving_total_pnl_pct
 	})
 
 # Thêm Cash summary
@@ -459,22 +425,24 @@ if cash_total > 0:
 	asset_details.append({
 		'Type': 'Cash',
 		'Ticker': 'CASH',
-		'Quantity': '1',
-		'Cost Basis': f"{cash_total:,.0f}",
-		'Estimated Value': f"{cash_total:,.0f}",
-		'P&L': "0 VND (0.0%)"
+		'Quantity': 1,
+		'Cost Basis': cash_total,
+		'Estimated Value': cash_total,
+		'P&L': 0,
+		'P&L %': 0.0
 	})
 
 if asset_details:
 	df = pd.DataFrame(asset_details)
 	st.dataframe(
-		df, 
+		df,
 		use_container_width=True,
 		column_config={
-			"Quantity": st.column_config.NumberColumn("Quantity", format="%d"),
-			"Cost Basis": st.column_config.TextColumn("Cost Basis"),
-			"Estimated Value": st.column_config.TextColumn("Estimated Value"),
-			"P&L": st.column_config.TextColumn("P&L")
+			"Quantity": st.column_config.NumberColumn("Quantity", format="localized"),
+			"Cost Basis": st.column_config.NumberColumn("Cost Basis", format="localized"),
+			"Estimated Value": st.column_config.NumberColumn("Estimated Value", format="localized"),
+			"P&L": st.column_config.NumberColumn("P&L", format="localized"),
+			"P&L %": st.column_config.NumberColumn("P&L %", format="%.1f%%"),
 		}
 	)
 else:
