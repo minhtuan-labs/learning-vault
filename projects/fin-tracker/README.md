@@ -74,10 +74,10 @@ fin-tracker/
 
 ## 📋 Tài liệu
 
-- [PRD — Product Requirements](https://claude.ai/chat/docs/PRD.md)
-- [System Design](https://claude.ai/chat/docs/system-design.md)
-- [User Stories](https://claude.ai/chat/docs/user-stories.md)
-- [Test Cases](https://claude.ai/chat/docs/test-cases.md)
+- [PRD — Product Requirements](docs/PRD.md)
+- [System Design](docs/system-design.md)
+- [User Stories](docs/user-stories.md)
+- [Test Cases](docs/test-cases.md)
 
 ---
 
