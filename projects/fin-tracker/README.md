@@ -1,93 +1,67 @@
-# 📊 fin-tracker
+# fin-tracker
 
-> Hệ thống Quản lý Báo Cáo Tài Chính Doanh Nghiệp
+Hệ thống quản lý báo cáo tài chính doanh nghiệp.
 
-Ứng dụng web giúp lưu trữ, số hoá và phân tích BCTC của các doanh nghiệp niêm yết trên thị trường chứng khoán Việt Nam.
+## Phase 1 Scope
 
----
+- CRUD doanh nghiệp niêm yết
+- Tìm kiếm và lọc theo sàn/ngành
+- Kiến trúc tách lớp rõ ràng cho frontend/backend
+- Chạy đồng bộ bằng Docker Compose (frontend + backend + postgres)
 
-## ✨ Tính năng
+## Tech Stack
 
-- 🏢 Quản lý danh sách doanh nghiệp theo mã chứng khoán
-- 📄 Upload và lưu trữ BCTC dạng PDF theo từng kỳ
-- 🤖 AI tự động trích xuất số liệu từ PDF (Claude API)
-- 📈 Biểu đồ xu hướng doanh thu, lợi nhuận, dòng tiền
-- 🔍 So sánh chỉ số tài chính giữa các doanh nghiệp
-- 🚨 Cảnh báo tự động khi có chỉ số bất thường
-- 📝 AI tóm tắt tình hình kinh doanh bằng Tiếng Việt
+- Frontend: React 18 + TailwindCSS + Vite
+- Backend: FastAPI + SQLAlchemy
+- Database: PostgreSQL 15
+- Deploy local: Docker Compose
 
----
+## Cấu trúc thư mục
 
-## 🛠️ Tech Stack
-
-|Layer|Công nghệ|
-|---|---|
-|Frontend|React 18 + TailwindCSS + Recharts|
-|Backend|Python FastAPI|
-|Database|PostgreSQL 15|
-|AI|Claude API (Anthropic)|
-|Deploy|Docker Compose|
-
----
-
-## 🚀 Chạy project
-
-### Yêu cầu
-
-- Docker & Docker Compose
-- Anthropic API Key
-
-### Các bước
-
-```bash
-# 1. Clone repo
-git clone https://github.com/minhtuan-labs/learning-vault.git
-cd learning-vault/projects/fin-tracker
-
-# 2. Tạo file .env
-cp .env.example .env
-# Điền ANTHROPIC_API_KEY vào file .env
-
-# 3. Chạy Docker
-docker-compose -f docker/docker-compose.yml up -d
-
-# 4. Mở trình duyệt
-# Frontend: http://localhost:3000
-# API Docs: http://localhost:8000/docs
-```
-
----
-
-## 📁 Cấu trúc thư mục
-
-```
+```text
 fin-tracker/
-├── docs/           → Tài liệu BA/SA
+├── docker-compose.yml
+├── .env.example
 ├── src/
-│   ├── frontend/   → React app
-│   └── backend/    → FastAPI
-├── docker/         → Docker config
+│   ├── backend/
+│   │   ├── app/
+│   │   │   ├── api/
+│   │   │   ├── core/
+│   │   │   ├── db/
+│   │   │   ├── models/
+│   │   │   ├── repositories/
+│   │   │   ├── schemas/
+│   │   │   └── services/
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   └── frontend/
+│       ├── src/
+│       │   ├── api/
+│       │   ├── components/
+│       │   ├── constants/
+│       │   ├── layouts/
+│       │   └── pages/
+│       ├── Dockerfile
+│       └── package.json
 └── README.md
 ```
 
----
+## API Phase 1
 
-## 📋 Tài liệu
+- `GET /api/companies` - danh sách doanh nghiệp, có `search`, `exchange`, `industry`
+- `POST /api/companies` - thêm doanh nghiệp mới
+- `GET /api/companies/{id}` - chi tiết doanh nghiệp
+- `PUT /api/companies/{id}` - cập nhật doanh nghiệp
+- `DELETE /api/companies/{id}` - xoá doanh nghiệp
 
-- [PRD — Product Requirements](docs/PRD.md)
-- [System Design](docs/system-design.md)
-- [User Stories](docs/user-stories.md)
-- [Test Cases](docs/test-cases.md)
+## Chạy project
 
----
+```bash
+cp .env.example .env
+docker compose up --build
+```
 
-## 🗺️ Lộ trình
+Sau khi chạy:
 
-- [x] Phase 1 — Setup + CRUD Doanh nghiệp
-- [ ] Phase 2 — Upload PDF + AI trích xuất
-- [ ] Phase 3 — Dashboard + Charts
-- [ ] Phase 4 — AI Analysis + Cảnh báo
-
----
-
-_Tác giả: Tuan Pham | FPT IS_
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- Backend API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
