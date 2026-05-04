@@ -248,3 +248,37 @@ class PeriodService:
             self.db.add(r)
         self.db.commit()
         return count
+
+    def delete_file(self, period_id: int, file_id: int) -> None:
+        period = self.get_period(period_id)
+        rf = self.db.get(ReportFile, file_id)
+        if not rf or rf.period_id != period_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy file.")
+        abs_path = self._abs_path(rf.file_path)
+        if abs_path.exists():
+            abs_path.unlink(missing_ok=True)
+        report_type = rf.report_type
+        self.db.delete(rf)
+        self.db.execute(
+            delete(FinancialData).where(
+                FinancialData.period_id == period_id,
+                FinancialData.report_type == report_type,
+            )
+        )
+        self.db.commit()
+
+    def delete_period(self, company_id: int, period_id: int) -> None:
+        period = self.get_period(period_id)
+        if period.company_id != company_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy kỳ báo cáo.")
+        files = list(
+            self.db.scalars(
+                select(ReportFile).where(ReportFile.period_id == period_id)
+            ).all()
+        )
+        for rf in files:
+            abs_path = self._abs_path(rf.file_path)
+            if abs_path.exists():
+                abs_path.unlink(missing_ok=True)
+        self.db.delete(period)
+        self.db.commit()

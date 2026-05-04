@@ -2,12 +2,20 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import {
+  deletePeriodFile,
+  extractPeriodData,
   listFinancialData,
   listPeriodFiles,
   pdfFileUrl,
   updateFinancialMetric,
   verifyPeriodData,
 } from "../api/periodApi";
+
+function truncateFileName(name, maxLen = 45) {
+  if (!name || name.length <= maxLen) return name;
+  const half = Math.floor((maxLen - 3) / 2);
+  return name.slice(0, half) + "..." + name.slice(-half);
+}
 
 export default function ReviewExtractionPage() {
   const { companyId, periodId } = useParams();
@@ -20,6 +28,7 @@ export default function ReviewExtractionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState(null);
+  const [extracting, setExtracting] = useState(false);
 
   const allVerified = useMemo(() => rows.length > 0 && rows.every((r) => r.is_verified), [rows]);
 
@@ -75,6 +84,31 @@ export default function ReviewExtractionPage() {
     }
   };
 
+  const handleDeleteFile = async (fId) => {
+    setError("");
+    if (!confirm("Bạn có chắc muốn xoá file này cùng dữ liệu đã trích xuất?")) return;
+    try {
+      await deletePeriodFile(periodId, fId);
+      await load();
+    } catch {
+      setError("Không xoá được file. Thử lại.");
+    }
+  };
+
+  const handleReExtract = async () => {
+    if (!fileId) return;
+    setError("");
+    setExtracting(true);
+    try {
+      await extractPeriodData(periodId, { file_id: fileId });
+      await load();
+    } catch {
+      setError("Không trích xuất lại được. Thử lại.");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   if (loading) {
     return <p className="text-sm text-slate-500">Đang tải…</p>;
   }
@@ -127,21 +161,40 @@ export default function ReviewExtractionPage() {
             <div className="border-b border-slate-200 px-4 py-3">
               <h2 className="text-sm font-semibold text-slate-800">Số liệu đã trích xuất</h2>
               {files.length > 1 ? (
-                <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
-                  Chọn file:
-                  <select
-                    value={fileId}
-                    onChange={(e) => setFileId(Number(e.target.value))}
-                    className="rounded border border-slate-300 px-2 py-1 text-xs"
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-600">
+                    Chọn file:
+                    <select
+                      value={fileId}
+                      onChange={(e) => setFileId(Number(e.target.value))}
+                      className="rounded border border-slate-300 px-2 py-1 text-xs"
+                    >
+                      {files.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {truncateFileName(f.file_name)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteFile(fileId)}
+                    className="rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
                   >
-                    {files.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.file_name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    Xoá file
+                  </button>
+                </div>
               ) : null}
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleReExtract}
+                  disabled={extracting || !fileId}
+                  className="rounded border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                >
+                  {extracting ? "Đang trích xuất lại…" : "Trích xuất lại"}
+                </button>
+              </div>
             </div>
             <div className="max-h-[70vh] overflow-auto">
               <table className="min-w-full text-sm">

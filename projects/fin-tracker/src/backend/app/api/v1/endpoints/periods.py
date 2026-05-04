@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -95,3 +95,14 @@ def verify_period_data(period_id: int, db: Session = Depends(get_db_session)):
     svc = PeriodService(db)
     count = svc.verify_all(period_id)
     return {"verified_count": count, "message": "Đã xác nhận toàn bộ số liệu trong kỳ."}
+
+
+@router.delete("/{period_id}/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_report_file(
+    period_id: int,
+    file_id: int,
+    db: Session = Depends(get_db_session),
+):
+    svc = PeriodService(db)
+    svc.delete_file(period_id, file_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

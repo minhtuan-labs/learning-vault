@@ -91,12 +91,27 @@ def _call_claude(
     import anthropic
 
     client = anthropic.Anthropic(api_key=api_key)
-    message = client.messages.create(
-        model=model,
-        max_tokens=8192,
-        system=SYSTEM_PROMPT_VI,
-        messages=[{"role": "user", "content": user_content}],
-    )
+    selected_model = model.strip() or "claude-sonnet-4-6"
+    try:
+        message = client.messages.create(
+            model=selected_model,
+            max_tokens=8192,
+            system=SYSTEM_PROMPT_VI,
+            messages=[{"role": "user", "content": user_content}],
+        )
+    except Exception as e:
+        err = str(e)
+        is_missing_model = "not_found_error" in err and "model" in err.lower()
+        fallback_model = "claude-sonnet-4-6"
+        if is_missing_model and selected_model != fallback_model:
+            message = client.messages.create(
+                model=fallback_model,
+                max_tokens=8192,
+                system=SYSTEM_PROMPT_VI,
+                messages=[{"role": "user", "content": user_content}],
+            )
+        else:
+            raise
     blocks = message.content
     text_parts: list[str] = []
     for block in blocks:

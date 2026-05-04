@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { getCompanyById } from "../api/companyApi";
-import { listFinancialPeriods, listPeriodFiles } from "../api/periodApi";
+import { listFinancialPeriods, listPeriodFiles, deleteFinancialPeriod } from "../api/periodApi";
+
+function truncateFileName(name, maxLen = 40) {
+  if (!name || name.length <= maxLen) return name;
+  const half = Math.floor((maxLen - 3) / 2);
+  return name.slice(0, half) + "..." + name.slice(-half);
+}
 
 export default function CompanyDetailPage() {
   const { id } = useParams();
@@ -11,36 +17,51 @@ export default function CompanyDetailPage() {
   const [filesByPeriod, setFilesByPeriod] = useState({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deletingPeriodId, setDeletingPeriodId] = useState(null);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const c = await getCompanyById(id);
+      setCompany(c);
+      const plist = await listFinancialPeriods(id);
+      setPeriods(plist);
+      const map = {};
+      await Promise.all(
+        plist.map(async (p) => {
+          try {
+            map[p.id] = await listPeriodFiles(p.id);
+          } catch {
+            map[p.id] = [];
+          }
+        })
+      );
+      setFilesByPeriod(map);
+    } catch {
+      setError("Không thể tải chi tiết doanh nghiệp.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const c = await getCompanyById(id);
-        setCompany(c);
-        const plist = await listFinancialPeriods(id);
-        setPeriods(plist);
-        const map = {};
-        await Promise.all(
-          plist.map(async (p) => {
-            try {
-              map[p.id] = await listPeriodFiles(p.id);
-            } catch {
-              map[p.id] = [];
-            }
-          })
-        );
-        setFilesByPeriod(map);
-      } catch {
-        setError("Không thể tải chi tiết doanh nghiệp.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAll();
   }, [id]);
+
+  const handleDeletePeriod = async (periodId) => {
+    setError("");
+    if (!confirm("Bạn có chắc muốn xoá kỳ báo cáo này cùng toàn bộ file và số liệu?")) return;
+    setDeletingPeriodId(periodId);
+    try {
+      await deleteFinancialPeriod(id, periodId);
+      await fetchAll();
+    } catch {
+      setError("Không xoá được kỳ báo cáo. Thử lại.");
+    } finally {
+      setDeletingPeriodId(null);
+    }
+  };
 
   if (loading) {
     return <p className="text-sm text-slate-500">Đang tải dữ liệu...</p>;
@@ -65,12 +86,20 @@ export default function CompanyDetailPage() {
             </p>
           </div>
 
-          <Link
-            to={`/companies/${company.id}/edit`}
-            className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
-          >
-            Cập nhật
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/companies/${company.id}/analytics`}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Xem phân tích
+            </Link>
+            <Link
+              to={`/companies/${company.id}/edit`}
+              className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+            >
+              Cập nhật
+            </Link>
+          </div>
         </div>
 
         <dl className="grid gap-4 md:grid-cols-2">
@@ -138,7 +167,7 @@ export default function CompanyDetailPage() {
                     <p className="font-medium text-slate-800">{label}</p>
                     <p className="text-xs text-slate-500">
                       {files.length} file PDF
-                      {files[0] ? ` — mới nhất: ${files[0].file_name}` : ""}
+                      {files[0] ? ` — mới nhất: ${truncateFileName(files[0].file_name)}` : ""}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -154,6 +183,14 @@ export default function CompanyDetailPage() {
                     >
                       Xem & kiểm tra số liệu
                     </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePeriod(p.id)}
+                      disabled={deletingPeriodId === p.id}
+                      className="rounded border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {deletingPeriodId === p.id ? "Đang xoá…" : "Xoá kỳ"}
+                    </button>
                   </div>
                 </li>
               );

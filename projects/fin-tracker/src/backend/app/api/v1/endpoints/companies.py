@@ -50,6 +50,17 @@ def list_financial_periods(company_id: int, db: Session = Depends(get_db_session
     return [FinancialPeriodResponse.model_validate(p) for p in periods]
 
 
+@router.delete("/{company_id}/periods/{period_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_financial_period(
+    company_id: int,
+    period_id: int,
+    db: Session = Depends(get_db_session),
+):
+    svc = PeriodService(db)
+    svc.delete_period(company_id, period_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/{company_id}", response_model=CompanyResponse)
 def get_company(company_id: int, db: Session = Depends(get_db_session)):
     service = CompanyService(db)

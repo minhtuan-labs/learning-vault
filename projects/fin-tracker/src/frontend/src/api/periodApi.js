@@ -53,3 +53,11 @@ export const verifyPeriodData = async (periodId) => {
 
 export const pdfFileUrl = (periodId, fileId) =>
   `${baseURL}/api/periods/${periodId}/files/${fileId}`;
+
+export const deletePeriodFile = async (periodId, fileId) => {
+  await api.delete(`/api/periods/${periodId}/files/${fileId}`);
+};
+
+export const deleteFinancialPeriod = async (companyId, periodId) => {
+  await api.delete(`/api/companies/${companyId}/periods/${periodId}`);
+};
