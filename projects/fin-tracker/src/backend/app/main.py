@@ -7,6 +7,8 @@ from sqlalchemy.exc import OperationalError
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.db.session import Base, engine
+from app.models.company import Company  # noqa: F401
+from app.models.financial import FinancialData, FinancialPeriod, ReportFile  # noqa: F401
 
 app = FastAPI(title=settings.app_name)
 

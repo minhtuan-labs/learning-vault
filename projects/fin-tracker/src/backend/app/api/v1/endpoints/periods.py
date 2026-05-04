@@ -1,0 +1,97 @@
+from fastapi import APIRouter, Body, Depends, File, Form, UploadFile, status
+from fastapi.responses import FileResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_db_session
+from app.models.financial import ReportFile, ReportTypeEnum
+from app.schemas.financial import (
+    ExtractRequest,
+    FinancialDataResponse,
+    FinancialDataUpdate,
+    ReportFileResponse,
+)
+from app.services.period_service import PeriodService
+
+router = APIRouter(prefix="/periods", tags=["periods"])
+
+
+@router.get("/{period_id}/files", response_model=list[ReportFileResponse])
+def list_period_files(period_id: int, db: Session = Depends(get_db_session)):
+    svc = PeriodService(db)
+    svc.get_period(period_id)
+    rows = list(
+        db.scalars(
+            select(ReportFile)
+            .where(ReportFile.period_id == period_id)
+            .order_by(ReportFile.uploaded_at.desc())
+        ).all()
+    )
+    return [ReportFileResponse.model_validate(r) for r in rows]
+
+
+@router.post("/{period_id}/upload", response_model=ReportFileResponse, status_code=status.HTTP_201_CREATED)
+def upload_report_pdf(
+    period_id: int,
+    file: UploadFile = File(...),
+    report_type: ReportTypeEnum = Form(...),
+    db: Session = Depends(get_db_session),
+):
+    svc = PeriodService(db)
+    rf = svc.save_pdf_upload(period_id, file, report_type)
+    return ReportFileResponse.model_validate(rf)
+
+
+@router.get("/{period_id}/files/{file_id}")
+def download_report_pdf(
+    period_id: int,
+    file_id: int,
+    db: Session = Depends(get_db_session),
+):
+    svc = PeriodService(db)
+    rf = svc.get_report_file(period_id, file_id)
+    path = svc.resolve_file_abs_path(rf)
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=rf.file_name,
+        content_disposition_type="inline",
+    )
+
+
+@router.post("/{period_id}/extract", response_model=list[FinancialDataResponse])
+def extract_financial_data(
+    period_id: int,
+    body: ExtractRequest | None = Body(default=None),
+    db: Session = Depends(get_db_session),
+):
+    svc = PeriodService(db)
+    payload = body or ExtractRequest()
+    rows = svc.extract_from_file(period_id, payload)
+    return [FinancialDataResponse.model_validate(r) for r in rows]
+
+
+@router.get("/{period_id}/data", response_model=list[FinancialDataResponse])
+def list_financial_data(period_id: int, db: Session = Depends(get_db_session)):
+    svc = PeriodService(db)
+    rows = svc.list_financial_data(period_id)
+    return [FinancialDataResponse.model_validate(r) for r in rows]
+
+
+@router.put("/{period_id}/data/{metric_id}", response_model=FinancialDataResponse)
+def update_financial_metric(
+    period_id: int,
+    metric_id: int,
+    payload: FinancialDataUpdate,
+    db: Session = Depends(get_db_session),
+):
+    svc = PeriodService(db)
+    row = svc.update_metric(period_id, metric_id, payload)
+    return FinancialDataResponse.model_validate(row)
+
+
+@router.post("/{period_id}/verify", status_code=status.HTTP_200_OK)
+def verify_period_data(period_id: int, db: Session = Depends(get_db_session)):
+    svc = PeriodService(db)
+    count = svc.verify_all(period_id)
+    return {"verified_count": count, "message": "Đã xác nhận toàn bộ số liệu trong kỳ."}
