@@ -16,7 +16,16 @@ class Settings(BaseSettings):
     claude_api_key: str = ""
     claude_model: str = "claude-sonnet-4-20250514"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    # Extra fields from .env (not used by backend but needed for pydantic)
+    backend_port: int = 8000
+    frontend_port: int = 3000
+    vite_api_base_url: str = "http://localhost:8000"
+
+    model_config = SettingsConfigDict(
+        env_file="/app/.env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @property
     def database_url(self) -> str:

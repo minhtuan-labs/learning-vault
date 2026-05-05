@@ -22,8 +22,6 @@ services:
     container_name: fin-tracker-backend
     env_file:
       - .env
-    environment:
-      UPLOAD_DIR: /app/uploads
     ports:
       - "${BACKEND_PORT}:8000"
     depends_on:
@@ -31,6 +29,7 @@ services:
         condition: service_healthy
     volumes:
       - ./src/backend:/app
+      - ./.env:/app/.env
       - fin_tracker_uploads:/app/uploads
 
   frontend:
