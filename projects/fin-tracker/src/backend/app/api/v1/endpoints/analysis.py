@@ -4,18 +4,18 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_db
+from app.api.deps import get_db_session
 from app.models.ai_analysis import AIAnalysis
 from app.models.financial import FinancialPeriod
 from app.schemas.analysis import AIAnalysisResponse
 from app.services.ai_analyzer import AIAnalyzer
 
-router = APIRouter()
+router = APIRouter(prefix="/analysis", tags=["analysis"])
 _analyzer = AIAnalyzer()
 
 
 @router.get("/companies/{company_id}/analysis", response_model=list[AIAnalysisResponse])
-def list_analysis(company_id: int, db: Session = Depends(get_db)):
+def list_analysis(company_id: int, db: Session = Depends(get_db_session)):
     rows = (
         db.execute(
             select(
@@ -53,7 +53,7 @@ def list_analysis(company_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/periods/{period_id}/analyze")
-def trigger_analysis(period_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def trigger_analysis(period_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db_session)):
     period = db.get(FinancialPeriod, period_id)
     if not period:
         raise HTTPException(404, "Period not found")

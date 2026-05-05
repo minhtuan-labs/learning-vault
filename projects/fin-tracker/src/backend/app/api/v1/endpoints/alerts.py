@@ -10,7 +10,7 @@ from app.models.company import Company
 from app.models.financial import FinancialPeriod
 from app.schemas.alert import AlertResponse, MarkReadResponse
 
-router = APIRouter()
+router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 
 @router.get("", response_model=list[AlertResponse])
@@ -18,7 +18,7 @@ def list_alerts(
     company_id: int | None = Query(None),
     is_read: bool | None = Query(None),
     limit: int = Query(50, le=100),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_session),
 ):
     stmt = (
         select(
@@ -70,7 +70,7 @@ def list_alerts(
 
 
 @router.put("/{alert_id}/read", response_model=MarkReadResponse)
-def mark_read(alert_id: int, db: Session = Depends(get_db)):
+def mark_read(alert_id: int, db: Session = Depends(get_db_session)):
     alert = db.get(Alert, alert_id)
     if not alert:
         raise HTTPException(404, "Alert not found")
@@ -80,7 +80,7 @@ def mark_read(alert_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/read-all", response_model=MarkReadResponse)
-def mark_all_read(company_id: int | None = Query(None), db: Session = Depends(get_db)):
+def mark_all_read(company_id: int | None = Query(None), db: Session = Depends(get_db_session)):
     stmt = select(Alert).where(Alert.is_read == False)
     if company_id:
         stmt = stmt.where(Alert.company_id == company_id)
