@@ -59,7 +59,7 @@ def download_report_pdf(
     )
 
 
-@router.post("/{period_id}/extract", response_model=list[FinancialDataResponse])
+@router.post("/{period_id}/extract")
 def extract_financial_data(
     period_id: int,
     body: ExtractRequest | None = Body(default=None),
@@ -67,8 +67,11 @@ def extract_financial_data(
 ):
     svc = PeriodService(db)
     payload = body or ExtractRequest()
-    rows = svc.extract_from_file(period_id, payload)
-    return [FinancialDataResponse.model_validate(r) for r in rows]
+    rows, entity_type = svc.extract_from_file(period_id, payload)
+    return {
+        "entity_type": entity_type,
+        "metrics": [FinancialDataResponse.model_validate(r).model_dump() for r in rows],
+    }
 
 
 @router.get("/{period_id}/data", response_model=list[FinancialDataResponse])

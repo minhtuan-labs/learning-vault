@@ -13,10 +13,10 @@
 
 **Acceptance Criteria:**
 
-- [ ] Form nhập: Mã CK (_), Tên DN (_), Sàn, Ngành, Mô tả, Website
-- [ ] Mã CK không được trùng với DN đã có
-- [ ] Sau khi thêm, chuyển tới trang chi tiết DN
-- [ ] Hiển thị thông báo thành công
+- [x] Form nhập: Mã CK (_), Tên DN (_), Sàn, Ngành, Mô tả, Website
+- [x] Mã CK không được trùng với DN đã có
+- [x] Sau khi thêm, chuyển tới trang chi tiết DN
+- [x] Hiển thị thông báo thành công
 
 ---
 
@@ -27,10 +27,10 @@
 
 **Acceptance Criteria:**
 
-- [ ] Hiển thị dạng bảng: Mã CK, Tên, Sàn, Ngành, Số kỳ báo cáo
-- [ ] Tìm kiếm theo tên hoặc mã CK
-- [ ] Lọc theo sàn (HOSE/HNX/UPCOM) và ngành
-- [ ] Phân trang khi có > 20 DN
+- [x] Hiển thị dạng bảng: Mã CK, Tên, Sàn, Ngành, Số kỳ báo cáo
+- [x] Tìm kiếm theo tên hoặc mã CK
+- [x] Lọc theo sàn (HOSE/HNX/UPCOM) và ngành
+- [x] Phân trang khi có > 20 DN
 
 ---
 
@@ -41,9 +41,9 @@
 
 **Acceptance Criteria:**
 
-- [ ] Sửa được tất cả thông tin trừ Mã CK
-- [ ] Xoá DN yêu cầu xác nhận trước khi thực hiện
-- [ ] Khi xoá DN, toàn bộ BCTC liên quan cũng bị xoá
+- [x] Sửa được tất cả thông tin trừ Mã CK
+- [x] Xoá DN yêu cầu xác nhận trước khi thực hiện
+- [x] Khi xoá DN, toàn bộ BCTC liên quan cũng bị xoá
 
 ---
 

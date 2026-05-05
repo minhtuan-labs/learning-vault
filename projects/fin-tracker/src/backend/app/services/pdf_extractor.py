@@ -18,23 +18,76 @@ MAX_TEXT_CHARS = 120_000
 MAX_VISION_PAGES = 15
 RENDER_DPI = 120
 
-SYSTEM_PROMPT_VI = """Bạn là chuyên gia kế toán Việt Nam, chuyên đọc báo cáo tài chính doanh nghiệp.
+SYSTEM_PROMPT_VI = """Bạn là chuyên gia kế toán Việt Nam, chuyên đọc báo cáo tài chính doanh nghiệp (phi ngân hàng).
 Nhiệm vụ: trích xuất các chỉ số tài chính chính từ nội dung được cung cấp (text hoặc hình ảnh trang báo cáo).
 
 Quy tắc:
 - Trả về ĐÚNG một JSON hợp lệ, không markdown, không giải thích ngoài JSON.
 - Cấu trúc bắt buộc:
 {
+  "entity_type": "company",
   "report_type": "KQKD",
   "metrics": [
     {"name": "Tên chỉ tiêu tiếng Việt", "value": 123456.78, "unit": "triệu VND"},
     ...
   ]
 }
+- entity_type luôn là "company" với doanh nghiệp phi ngân hàng.
 - report_type phải là một trong: KQKD, CDKT, LCTT, TM, CBTT (suy luận từ nội dung nếu có thể, mặc định KQKD nếu không chắc).
 - value là số (float), không dùng chuỗi; bỏ qua chỉ tiêu không đọc được số.
 - unit mặc định "triệu VND" nếu báo cáo ghi triệu đồng; giữ đúng đơn vị nếu có trong tài liệu.
 - Ưu tiên các chỉ tiêu cấp 1: Doanh thu thuần, Lợi nhuận trước thuế, Lợi nhuận sau thuế, Tài sản ngắn hạn, Nợ phải trả, Vốn chủ sở hữu, Lưu chuyển tiền thuần từ hoạt động kinh doanh, v.v. tùy loại báo cáo.
+"""
+
+SYSTEM_PROMPT_BANK_VI = """Bạn là chuyên gia kế toán Việt Nam, chuyên đọc báo cáo tài chính ngân hàng và tổ chức tín dụng.
+Nhiệm vụ: trích xuất các chỉ số tài chính chính từ nội dung được cung cấp (text hoặc hình ảnh trang báo cáo).
+
+Quy tắc:
+- Trả về ĐÚNG một JSON hợp lệ, không markdown, không giải thích ngoài JSON.
+- Cấu trúc bắt buộc:
+{
+  "entity_type": "bank",
+  "report_type": "KQKD",
+  "metrics": [
+    {"name": "Tên chỉ tiêu tiếng Việt", "value": 123456.78, "unit": "triệu VND"},
+    ...
+  ]
+}
+- entity_type luôn là "bank" với ngân hàng/tổ chức tín dụng.
+- report_type phải là một trong: KQKD, CDKT, LCTT, TM, CBTT (suy luận từ nội dung nếu có thể, mặc định KQKD nếu không chắc).
+- value là số (float), không dùng chuỗi; bỏ qua chỉ tiêu không đọc được số.
+- unit mặc định "triệu VND" nếu báo cáo ghi triệu đồng; giữ đúng đơn vị nếu có trong tài liệu.
+
+Với KQKD (Kết quả kinh doanh), ưu tiên trích xuất:
+- Thu nhập lãi và các khoản tương đương
+- Chi phí lãi và các khoản tương đương
+- Thu nhập lãi thuần (Lãi thuần từ hoạt động tín dụng)
+- Thu nhập từ hoạt động dịch vụ
+- Thu nhập từ hoạt động kinh doanh ngoại hối và vàng
+- Thu nhập từ mua bán chứng khoán kinh doanh
+- Thu nhập hoạt động khác
+- Tổng thu nhập hoạt động (TOI)
+- Chi phí hoạt động (OPEX)
+- Lợi nhuận thuần từ hoạt động kinh doanh trước dự phòng
+- Chi phí dự phòng rủi ro tín dụng
+- Lợi nhuận trước thuế
+- Lợi nhuận sau thuế
+
+Với CDKT (Cân đối kế toán), ưu tiên trích xuất:
+- Tổng tài sản
+- Cho vay khách hàng (Tổng dư nợ cho vay khách hàng)
+- Nợ xấu (Nợ nhóm 3-5, Tỷ lệ NPL)
+- Tiền gửi khách hàng
+- Vốn chủ sở hữu
+- Hệ số CAR (Tỷ lệ an toàn vốn) - nếu có
+
+Với chỉ số tài chính, ưu tiên:
+- NIM (Tỷ lệ thu nhập lãi thuần trên tài sản sinh lời bình quân)
+- ROE (Tỷ suất lợi nhuận trên vốn chủ sở hữu)
+- ROA (Tỷ suất lợi nhuận trên tổng tài sản)
+- NPL ratio (Tỷ lệ nợ xấu)
+- LDR (Tỷ lệ cho vay trên tiền gửi)
+- CASA ratio (Tỷ lệ tiền gửi không kỳ hạn) - nếu có
 """
 
 
@@ -82,11 +135,21 @@ def _parse_json_from_assistant_text(text: str) -> dict[str, Any]:
         raise ValueError("Không parse được JSON từ phản hồi AI.") from None
 
 
+BANK_KEYWORDS = ["Ngân hàng", "ngân hàng", "Banking", "banking", "Tài chính", "tài chính", "Finance", "finance", "Credit", "credit", "Tín dụng", "tín dụng"]
+
+
+def _is_bank(industry: str | None) -> bool:
+    if not industry:
+        return False
+    return any(kw in industry for kw in BANK_KEYWORDS)
+
+
 def _call_claude(
     *,
     api_key: str,
     model: str,
     user_content: list[dict[str, Any]],
+    system_prompt: str = SYSTEM_PROMPT_VI,
 ) -> dict[str, Any]:
     import anthropic
 
@@ -96,7 +159,7 @@ def _call_claude(
         message = client.messages.create(
             model=selected_model,
             max_tokens=8192,
-            system=SYSTEM_PROMPT_VI,
+            system=system_prompt,
             messages=[{"role": "user", "content": user_content}],
         )
     except Exception as e:
@@ -107,7 +170,7 @@ def _call_claude(
             message = client.messages.create(
                 model=fallback_model,
                 max_tokens=8192,
-                system=SYSTEM_PROMPT_VI,
+                system=system_prompt,
                 messages=[{"role": "user", "content": user_content}],
             )
         else:
@@ -127,13 +190,17 @@ def extract_financial_json_from_pdf(
     api_key: str,
     model: str,
     default_report_type: str = "KQKD",
+    company_industry: str | None = None,
 ) -> dict[str, Any]:
     """
-    Đọc PDF và gọi Claude để trả về dict có keys: report_type, metrics (list name/value/unit).
+    Đọc PDF và gọi Claude để trả về dict có keys: entity_type, report_type, metrics (list name/value/unit).
     """
     path = Path(pdf_path)
     if not path.is_file():
         raise FileNotFoundError(str(path))
+
+    is_bank = _is_bank(company_industry)
+    system_prompt = SYSTEM_PROMPT_BANK_VI if is_bank else SYSTEM_PROMPT_VI
 
     doc = fitz.open(path)
     try:
@@ -177,19 +244,27 @@ def extract_financial_json_from_pdf(
                 }
             ]
 
-        result = _call_claude(api_key=api_key, model=model, user_content=content)
+        result = _call_claude(
+            api_key=api_key,
+            model=model,
+            user_content=content,
+            system_prompt=system_prompt,
+        )
         if "report_type" not in result or "metrics" not in result:
             raise ValueError("JSON thiếu report_type hoặc metrics.")
         if not isinstance(result["metrics"], list):
             raise ValueError("metrics phải là mảng.")
+        if "entity_type" not in result:
+            result["entity_type"] = "bank" if is_bank else "company"
         return result
     finally:
         doc.close()
 
 
-def normalize_metrics(raw: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
-    """Chuẩn hoá metrics về list dict có keys name, value, unit."""
+def normalize_metrics(raw: dict[str, Any]) -> tuple[str, list[dict[str, Any]], str]:
+    """Chuẩn hoá metrics về list dict có keys name, value, unit. Trả về (report_type, metrics, entity_type)."""
     rt = str(raw.get("report_type", "KQKD")).upper()
+    entity_type = str(raw.get("entity_type", "company"))
     metrics_out: list[dict[str, Any]] = []
     for item in raw["metrics"]:
         if not isinstance(item, dict):
@@ -204,4 +279,4 @@ def normalize_metrics(raw: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
         except (TypeError, ValueError):
             continue
         metrics_out.append({"name": str(name).strip(), "value": fv, "unit": str(unit)})
-    return rt, metrics_out
+    return rt, metrics_out, entity_type

@@ -76,10 +76,13 @@ export default function ComparePage() {
     }
   };
 
+  const hasBank = data && data.companies.some((c) => c.entity_type === "bank");
+  const revenueLabel = hasBank ? "TOI (tỷ)" : "Doanh thu (tỷ)";
+
   const radarData = useMemo(() => {
     if (!data || data.companies.length === 0) return [];
     const dims = [
-      { key: "revenue", label: "Doanh thu" },
+      { key: "revenue", label: hasBank ? "TOI" : "Doanh thu" },
       { key: "profit_after_tax", label: "Lợi nhuận" },
       { key: "roe", label: "ROE" },
       { key: "roa", label: "ROA" },
@@ -93,7 +96,7 @@ export default function ComparePage() {
       });
       return obj;
     });
-  }, [data]);
+  }, [data, hasBank]);
 
   const barChartData = useMemo(() => {
     if (!data) return [];
@@ -237,14 +240,24 @@ export default function ComparePage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {[
-                    { label: "Doanh thu (tỷ)", key: "revenue", fmt: "billion" },
+                    { label: revenueLabel, key: "revenue", fmt: "billion" },
                     { label: "Lợi nhuận sau thuế (tỷ)", key: "profit_after_tax", fmt: "billion" },
                     { label: "Dòng tiền HĐKD (tỷ)", key: "operating_cash_flow", fmt: "billion" },
                     { label: "Tổng tài sản (tỷ)", key: "total_assets", fmt: "billion" },
                     { label: "ROE (%)", key: "roe", fmt: "pct" },
                     { label: "ROA (%)", key: "roa", fmt: "pct" },
-                    { label: "Biên LN gộp (%)", key: "gross_profit_margin", fmt: "pct" },
-                    { label: "Nợ / Tài sản (%)", key: "debt_to_assets", fmt: "pct" },
+                    ...(hasBank
+                      ? [
+                          { label: "NIM (%)", key: "nim", fmt: "pct" },
+                          { label: "NPL (%)", key: "npl_ratio", fmt: "pct" },
+                          { label: "LDR (%)", key: "ldr", fmt: "pct" },
+                          { label: "CASA (%)", key: "casa_ratio", fmt: "pct" },
+                          { label: "CAR (%)", key: "car", fmt: "pct" },
+                        ]
+                      : [
+                          { label: "Biên LN gộp (%)", key: "gross_profit_margin", fmt: "pct" },
+                          { label: "Nợ / Tài sản (%)", key: "debt_to_assets", fmt: "pct" },
+                        ]),
                   ].map((row) => (
                     <tr key={row.key} className="hover:bg-slate-50">
                       <td className="px-5 py-3 font-medium text-slate-700">{row.label}</td>
@@ -291,7 +304,7 @@ export default function ComparePage() {
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold text-slate-800">Doanh thu & Lợi nhuận (tỷ VND)</h3>
+              <h3 className="mb-4 text-sm font-semibold text-slate-800">{hasBank ? "TOI" : "Doanh thu"} & Lợi nhuận (tỷ VND)</h3>
               <ResponsiveContainer width="100%" height={350}>
                 <ComposedChart data={barChartData} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -299,7 +312,7 @@ export default function ComparePage() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Legend />
                   <Tooltip formatter={(v) => v?.toLocaleString("vi-VN")} />
-                  <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Doanh thu" />
+                  <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name={hasBank ? "TOI" : "Doanh thu"} />
                   <Bar dataKey="profit" radius={[4, 4, 0, 0]} name="Lợi nhuận">
                     {barChartData.map((entry, idx) => (
                       <Cell key={idx} fill={entry.profit >= 0 ? "#10b981" : "#ef4444"} />

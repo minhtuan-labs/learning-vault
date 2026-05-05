@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
 from app.models.company import ExchangeEnum
-from app.schemas.company import CompanyCreate, CompanyResponse, CompanyUpdate
+from app.schemas.company import CompanyCreate, CompanyResponse, CompanySummaryResponse, CompanyUpdate
 from app.schemas.financial import FinancialPeriodCreate, FinancialPeriodResponse
 from app.services.company_service import CompanyService
 from app.services.period_service import PeriodService
+from app.services.summary_service import SummaryService
 
 router = APIRouter(prefix="/companies", tags=["companies"])
 
@@ -78,3 +79,19 @@ def delete_company(company_id: int, db: Session = Depends(get_db_session)):
     service = CompanyService(db)
     service.delete_company(company_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/{company_id}/summary")
+def get_company_summary(company_id: int, db: Session = Depends(get_db_session)):
+    CompanyService(db).get_company(company_id)
+    summary = SummaryService(db).get_summary(company_id)
+    if not summary:
+        return {"company_id": company_id, "summary_text": None, "generated_at": None}
+    return CompanySummaryResponse.model_validate(summary)
+
+
+@router.post("/{company_id}/summary", response_model=CompanySummaryResponse)
+def generate_company_summary(company_id: int, db: Session = Depends(get_db_session)):
+    CompanyService(db).get_company(company_id)
+    summary = SummaryService(db).generate_and_save(company_id)
+    return CompanySummaryResponse.model_validate(summary)

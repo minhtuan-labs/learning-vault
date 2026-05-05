@@ -38,7 +38,7 @@
 |**UI**|TailwindCSS|3.x|Utility-first, nhanh|
 |**Charts**|Recharts|2.x|Tích hợp tốt với React|
 |**Backend**|FastAPI|0.110+|Async, tự gen API docs|
-|**Language**|Python|3.11+|Ecosystem AI/ML tốt nhất|
+|**Language**|Python|3.12+|Ecosystem AI/ML tốt nhất|
 |**Database**|PostgreSQL|15+|Dữ liệu có cấu trúc, query mạnh|
 |**ORM**|SQLAlchemy|2.x|Pythonic, migration dễ|
 |**PDF**|PyMuPDF|Latest|Đọc PDF nhanh, hỗ trợ scan|
@@ -108,18 +108,18 @@ CREATE TABLE financial_data (
 );
 ```
 
-### Bảng: `ai_analysis` — Phân tích AI
+### Bảng: `company_summaries` — Tóm tắt AI
 
 ```sql
-CREATE TABLE ai_analysis (
-    id           SERIAL PRIMARY KEY,
-    period_id    INTEGER REFERENCES financial_periods(id),
-    company_id   INTEGER REFERENCES companies(id),
-    analysis_type VARCHAR(50),                 -- 'summary'/'comparison'/'alert'
-    content      TEXT,                         -- Nội dung phân tích tiếng Việt
-    created_at   TIMESTAMP DEFAULT NOW()
+CREATE TABLE company_summaries (
+    id            SERIAL PRIMARY KEY,
+    company_id    INTEGER REFERENCES companies(id) ON DELETE CASCADE UNIQUE,
+    summary_text  TEXT NOT NULL,
+    generated_at  TIMESTAMP DEFAULT NOW()
 );
 ```
+
+### Bảng: `ai_analysis` — Phân tích AI (đã loại bỏ, thay bằng `company_summaries`)
 
 ### Bảng: `alerts` — Cảnh báo
 
@@ -160,13 +160,13 @@ GET    /api/periods/{id}/data               → Xem số liệu đã trích xu�
 PUT    /api/periods/{id}/data/{metric_id}   → Chỉnh sửa số liệu
 ```
 
-### AI Analysis
+### AI Summary & Analytics
 
 ```
-POST   /api/periods/{id}/analyze            → Trigger AI phân tích
-GET    /api/companies/{id}/analysis         → Xem lịch sử phân tích
-POST   /api/compare                         → So sánh 2-3 DN
-GET    /api/alerts                          → Danh sách cảnh báo
+GET    /api/companies/{id}/summary         → Xem tóm tắt AI
+POST   /api/companies/{id}/summary         → Tạo tóm tắt mới bằng AI
+GET    /api/analytics/dashboard            → Dữ liệu dashboard tổng quan
+GET    /api/analytics/compare              → So sánh chỉ số giữa các DN
 ```
 
 ---
@@ -182,28 +182,27 @@ fin-tracker/
 │   └── test-cases.md
 ├── src/
 │   ├── frontend/
-│   │   ├── public/
 │   │   ├── src/
+│   │   │   ├── api/            → API clients (axios)
 │   │   │   ├── components/     → UI components
 │   │   │   ├── pages/          → Trang chính
-│   │   │   ├── services/       → Gọi API
 │   │   │   └── utils/
-│   │   ├── package.json
-│   │   └── tailwind.config.js
+│   │   ├── Dockerfile
+│   │   └── package.json
 │   └── backend/
 │       ├── app/
 │       │   ├── api/            → Route handlers
 │       │   ├── models/         → SQLAlchemy models
+│       │   ├── schemas/        → Pydantic schemas
 │       │   ├── services/       → Business logic
 │       │   │   ├── pdf_extractor.py
-│       │   │   └── ai_analyzer.py
-│       │   └── database.py
-│       ├── requirements.txt
-│       └── main.py
-├── docker/
-│   ├── Dockerfile.frontend
-│   ├── Dockerfile.backend
-│   └── docker-compose.yml
+│       │   │   ├── summary_service.py
+│       │   │   ├── analytics_service.py
+│       │   │   └── dashboard_service.py
+│       │   └── main.py
+│       ├── Dockerfile
+│       └── requirements.txt
+├── docker-compose.yml
 └── README.md
 ```
 
@@ -212,43 +211,47 @@ fin-tracker/
 ## 6. DOCKER COMPOSE
 
 ```yaml
-version: '3.8'
 services:
-  frontend:
-    build:
-      context: ../src/frontend
-      dockerfile: ../../docker/Dockerfile.frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: ../src/backend
-      dockerfile: ../../docker/Dockerfile.backend
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/fintracker
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    depends_on:
-      - db
-    volumes:
-      - pdf_storage:/app/uploads
-
   db:
-    image: postgres:15
+    image: postgres:15-alpine
     environment:
-      - POSTGRES_DB=fintracker
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+
+  backend:
+    build: ./src/backend
+    environment:
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "${BACKEND_PORT}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./src/backend:/app
+      - fin_tracker_uploads:/app/uploads
+
+  frontend:
+    build: ./src/frontend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
 
 volumes:
   postgres_data:
-  pdf_storage:
+  fin_tracker_uploads:
 ```

@@ -32,3 +32,10 @@ class CompanyResponse(CompanyBase):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+class CompanySummaryResponse(BaseModel):
+    company_id: int
+    summary_text: str
+    generated_at: datetime
+    model_config = ConfigDict(from_attributes=True)

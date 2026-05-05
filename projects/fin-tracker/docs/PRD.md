@@ -138,9 +138,9 @@ Hệ thống web tập trung giúp:
 
 ## 7. TIÊU CHÍ HOÀN THÀNH (Definition of Done)
 
-- [ ] Thêm được DN với đầy đủ thông tin
-- [ ] Upload PDF và AI trích xuất đúng số liệu chính
-- [ ] Xem biểu đồ tăng trưởng theo kỳ
-- [ ] AI tóm tắt được tình hình kinh doanh bằng Tiếng Việt
+- [x] Thêm được DN với đầy đủ thông tin
+- [x] Upload PDF và AI trích xuất đúng số liệu chính
+- [x] Xem biểu đồ tăng trưởng theo kỳ
+- [x] AI tóm tắt được tình hình kinh doanh bằng Tiếng Việt
 - [ ] Cảnh báo khi doanh thu/lợi nhuận giảm >20% so với kỳ trước
-- [ ] Chạy được trên Docker, có thể share link
+- [x] Chạy được trên Docker, có thể share link

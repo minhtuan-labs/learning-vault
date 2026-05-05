@@ -87,14 +87,18 @@ export default function DashboardPage() {
   }
 
   const top5 = data.top_revenue_companies || [];
+  const hasBank = top5.some((c) => c.entity_type === "bank");
+  const revenueLabel = hasBank ? "TOI (tỷ)" : "Doanh thu (tỷ)";
   const chartData = top5
     .filter((c) => c.revenue != null)
     .map((c) => ({
       name: c.code,
       revenue: c.revenue,
       profit: c.profit,
+      isBank: c.entity_type === "bank",
     }))
     .reverse();
+  const barRevenueName = hasBank ? "TOI" : "Doanh thu";
 
   return (
     <section className="space-y-6">
@@ -118,7 +122,7 @@ export default function DashboardPage() {
                 <tr>
                   <th className="px-5 py-3">Mã CK</th>
                   <th className="px-5 py-3">Doanh nghiệp</th>
-                  <th className="px-5 py-3 text-right">Doanh thu (tỷ)</th>
+                  <th className="px-5 py-3 text-right">{revenueLabel}</th>
                   <th className="px-5 py-3 text-right">Lợi nhuận (tỷ)</th>
                   <th className="px-5 py-3 text-right">Tăng trưởng DT</th>
                   <th className="px-5 py-3 text-right">Tăng trưởng LN</th>
@@ -174,7 +178,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}`} />
                   <Tooltip formatter={(v) => `${v?.toLocaleString("vi-VN")}`} />
-                  <Bar dataKey="revenue" fill={COLOR_BLUE} radius={[4, 4, 0, 0]} name="Doanh thu" />
+                  <Bar dataKey="revenue" fill={COLOR_BLUE} radius={[4, 4, 0, 0]} name={barRevenueName} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -144,13 +144,16 @@ class PeriodService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File không tồn tại trên máy chủ.")
         return p
 
-    def extract_from_file(self, period_id: int, body: ExtractRequest) -> list[FinancialData]:
+    def extract_from_file(self, period_id: int, body: ExtractRequest) -> tuple[list[FinancialData], str]:
         period = self.get_period(period_id)
         if not settings.anthropic_api_key:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Chưa cấu hình ANTHROPIC_API_KEY.",
             )
+
+        company = CompanyService(self.db).get_company(period.company_id)
+        company_industry = company.industry if company else None
 
         if body.file_id:
             rf = self.get_report_file(period_id, body.file_id)
@@ -175,8 +178,9 @@ class PeriodService:
                 api_key=settings.anthropic_api_key,
                 model=settings.anthropic_model,
                 default_report_type=rf.report_type.value,
+                company_industry=company_industry,
             )
-            rt_str, metrics = pdf_extractor.normalize_metrics(raw)
+            rt_str, metrics, entity_type = pdf_extractor.normalize_metrics(raw)
         except FileNotFoundError as e:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
         except ValueError as e:
@@ -213,7 +217,7 @@ class PeriodService:
         self.db.commit()
         for r in rows:
             self.db.refresh(r)
-        return rows
+        return rows, entity_type
 
     def list_financial_data(self, period_id: int) -> list[FinancialData]:
         self.get_period(period_id)

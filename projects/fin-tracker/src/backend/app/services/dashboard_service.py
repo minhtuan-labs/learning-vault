@@ -17,8 +17,23 @@ _KQKD_PROFIT_KEYS = [
     "Lợi nhuận sau thuế TNDN",
     "Lợi nhuận sau thuế thu nhập doanh nghiệp",
 ]
+_BANK_REVENUE_KEYS = [
+    "Tổng thu nhập hoạt động",
+    "TOI",
+    "Tổng thu nhập",
+    "Thu nhập hoạt động",
+]
+_BANK_PROFIT_KEYS = _KQKD_PROFIT_KEYS
+
+_BANK_KEYWORDS = ["Ngân hàng", "ngân hàng", "Banking", "banking", "Tài chính", "tài chính", "Finance", "finance", "Credit", "credit", "Tín dụng", "tín dụng"]
 
 _TO_BILLION = 1_000_000
+
+
+def _is_bank(industry: str | None) -> bool:
+    if not industry:
+        return False
+    return any(kw in industry for kw in _BANK_KEYWORDS)
 
 
 def _match(metrics: dict[str, float], keys: list[str]) -> float | None:
@@ -78,6 +93,12 @@ class DashboardService:
 
         company_data = {}
         for company_id in company_latest_period:
+            company_obj = self.db.get(Company, company_id)
+            is_bank_entity = _is_bank(company_obj.industry if company_obj else None)
+
+            revenue_keys = _BANK_REVENUE_KEYS if is_bank_entity else _KQKD_REVENUE_KEYS
+            profit_keys = _BANK_PROFIT_KEYS
+
             periods_stmt = (
                 select(FinancialPeriod.id, FinancialPeriod.year, FinancialPeriod.quarter)
                 .where(FinancialPeriod.company_id == company_id)
@@ -92,8 +113,8 @@ class DashboardService:
                     "period_id": pid,
                     "year": py,
                     "quarter": pq,
-                    "revenue": _match(metrics, _KQKD_REVENUE_KEYS),
-                    "profit": _match(metrics, _KQKD_PROFIT_KEYS),
+                    "revenue": _match(metrics, revenue_keys),
+                    "profit": _match(metrics, profit_keys),
                 })
 
             period_metrics_list.sort(key=lambda x: (x["year"], x["quarter"] or 0))
@@ -118,6 +139,7 @@ class DashboardService:
             if not cd or not cd["latest"] or cd["latest"]["revenue"] is None:
                 continue
 
+            is_bank_entity = _is_bank(c.industry)
             rev = cd["latest"]["revenue"]
             profit = cd["latest"]["profit"]
 
@@ -145,6 +167,8 @@ class DashboardService:
                 "code": c.code,
                 "name": c.name,
                 "exchange": c.exchange.value if hasattr(c.exchange, "value") else str(c.exchange),
+                "industry": c.industry,
+                "entity_type": "bank" if is_bank_entity else "company",
                 "revenue": round(rev / _TO_BILLION, 2),
                 "profit": round(profit / _TO_BILLION, 2) if profit is not None else None,
                 "revenue_growth": round(revenue_growth, 2) if revenue_growth is not None else None,
