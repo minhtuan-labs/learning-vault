@@ -1,4 +1,9 @@
-import api from "./config";
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000",
+  timeout: 10000,
+});
 
 export async function getAlerts(params = {}) {
   const res = await api.get("/alerts", { params });
