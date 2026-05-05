@@ -33,7 +33,7 @@ export default function CompanyAnalyticsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [timeRange, setTimeRange] = useState(4);
+  const [timeRange, setTimeRange] = useState(null);
 
   const [summary, setSummary] = useState(null);   // { summary_text, generated_at } | null
   const [summaryLoading, setSummaryLoading] = useState(true);
