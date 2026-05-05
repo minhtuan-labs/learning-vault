@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
@@ -16,6 +16,13 @@ class CompanySummary(Base):
         nullable=False,
         index=True,
     )
+    summary_text: Mapped[str] = mapped_column(Text, nullable=False)
+    summary_html: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    company = relationship("Company", back_populates="summaries")
     summary_text: Mapped[str] = mapped_column(Text, nullable=False)
     summary_html: Mapped[str] = mapped_column(Text, nullable=False)
     generated_at: Mapped[datetime] = mapped_column(

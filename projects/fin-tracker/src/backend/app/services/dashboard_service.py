@@ -176,12 +176,12 @@ class DashboardService:
 
         from app.models.alert import Alert
 
-        unread_alerts_count = db.scalar(
+        unread_alerts_count = self.db.scalar(
             select(func.count(Alert.id)).where(Alert.is_read == False)
         ) or 0
 
         recent_alerts = (
-            db.execute(
+            self.db.execute(
                 select(
                     Alert.id,
                     Alert.company_id,
