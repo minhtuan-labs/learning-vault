@@ -67,6 +67,7 @@ class DashboardService:
                 FinancialPeriod.period_type,
             )
             .join(ReportFile, ReportFile.period_id == FinancialPeriod.id)
+            .where(FinancialPeriod.period_type == "Y")
             .distinct()
         )
         rows = self.db.execute(stmt_periods).all()
@@ -74,11 +75,7 @@ class DashboardService:
         companies_with_reports = len({r.company_id for r in rows})
 
         latest_year = max((r.year for r in rows), default=0)
-        latest_rows = [r for r in rows if r.year == latest_year]
-        latest_q = max((r.quarter or 0 for r in latest_rows), default=None)
-        if latest_year > 0 and latest_q:
-            latest_label = f"Quý {latest_q}/{latest_year}"
-        elif latest_year > 0:
+        if latest_year > 0:
             latest_label = f"Năm {latest_year}"
         else:
             latest_label = "Chưa có"
@@ -87,9 +84,8 @@ class DashboardService:
         for r in rows:
             key = r.company_id
             existing = company_latest_period.get(key)
-            current = (r.year, r.quarter or 0)
-            if existing is None or current > existing:
-                company_latest_period[key] = current
+            if existing is None or r.year > existing:
+                company_latest_period[key] = r.year
 
         company_data = {}
         for company_id in company_latest_period:
@@ -102,7 +98,8 @@ class DashboardService:
             periods_stmt = (
                 select(FinancialPeriod.id, FinancialPeriod.year, FinancialPeriod.quarter)
                 .where(FinancialPeriod.company_id == company_id)
-                .order_by(FinancialPeriod.year.desc(), nulls_last(desc(FinancialPeriod.quarter)))
+                .where(FinancialPeriod.period_type == "Y")
+                .order_by(FinancialPeriod.year.desc())
             )
             periods = self.db.execute(periods_stmt).all()
 
@@ -117,12 +114,12 @@ class DashboardService:
                     "profit": _match(metrics, profit_keys),
                 })
 
-            period_metrics_list.sort(key=lambda x: (x["year"], x["quarter"] or 0))
+            period_metrics_list.sort(key=lambda x: x["year"])
 
-            latest = company_latest_period[company_id]
+            latest_year = company_latest_period[company_id]
             latest_metrics = None
             for pm in period_metrics_list:
-                if pm["year"] == latest[0] and (pm["quarter"] or 0) == latest[1]:
+                if pm["year"] == latest_year:
                     latest_metrics = pm
                     break
 

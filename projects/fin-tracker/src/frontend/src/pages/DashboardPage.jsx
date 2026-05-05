@@ -115,7 +115,7 @@ export default function DashboardPage() {
         <>
           <div className="overflow-hidden rounded-xl bg-white shadow">
             <div className="border-b border-slate-200 px-5 py-4">
-              <h2 className="text-lg font-semibold text-slate-900">Top doanh thu kỳ gần nhất</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Top doanh thu năm gần nhất ({data.latest_period_label})</h2>
             </div>
             <table className="min-w-full divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-600">
