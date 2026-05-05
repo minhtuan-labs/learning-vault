@@ -63,7 +63,7 @@ class AnalyticsService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_company_analytics(self, company_id: int, max_periods: int | None = None) -> dict:
+    def get_company_analytics(self, company_id: int, max_periods: int | None = None, period_type: str | None = None) -> dict:
         company = self.db.get(Company, company_id)
         if not company:
             from fastapi import HTTPException, status
@@ -79,6 +79,8 @@ class AnalyticsService:
             .join(ReportFile, ReportFile.period_id == FinancialPeriod.id)
             .order_by(FinancialPeriod.year.desc(), nulls_last(desc(FinancialPeriod.quarter)))
         )
+        if period_type:
+            stmt = stmt.where(FinancialPeriod.period_type == period_type)
         if max_periods:
             stmt = stmt.limit(max_periods)
 

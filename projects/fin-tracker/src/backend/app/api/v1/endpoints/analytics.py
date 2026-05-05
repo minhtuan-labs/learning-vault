@@ -12,10 +12,11 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 def get_company_analytics(
     company_id: int,
     periods: int | None = Query(None, description="Số kỳ tối đa, None=tất cả"),
+    period_type: str | None = Query(None, description="Lọc theo loại kỳ: Q=quý, Y=năm"),
     db: Session = Depends(get_db_session),
 ):
     svc = AnalyticsService(db)
-    return svc.get_company_analytics(company_id, max_periods=periods)
+    return svc.get_company_analytics(company_id, max_periods=periods, period_type=period_type)
 
 
 @router.get("/compare", response_model=CompareResponse)
