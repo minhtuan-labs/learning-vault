@@ -5,9 +5,10 @@ const api = axios.create({
   timeout: 30000,
 });
 
-export const getCompanyAnalytics = async (companyId, periods = null) => {
+export const getCompanyAnalytics = async (companyId, periods = null, periodType = null) => {
   const params = {};
   if (periods) params.periods = periods;
+  if (periodType) params.period_type = periodType;
   const { data } = await api.get(`/api/analytics/companies/${companyId}`, { params });
   return data;
 };

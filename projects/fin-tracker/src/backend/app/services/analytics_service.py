@@ -76,7 +76,6 @@ class AnalyticsService:
         stmt = (
             select(FinancialPeriod)
             .where(FinancialPeriod.company_id == company_id)
-            .join(ReportFile, ReportFile.period_id == FinancialPeriod.id)
             .order_by(FinancialPeriod.year.desc(), nulls_last(desc(FinancialPeriod.quarter)))
         )
         if period_type:
