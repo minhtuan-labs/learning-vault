@@ -51,7 +51,7 @@ class SummaryService:
         context = self._build_context(company)
         summary_text = self._call_claude(context)
         md = markdown_it.MarkdownIt("commonmark", {"breaks": True, "html": True})
-        md.enable(["table", "fenced_code"])
+        md.enable(["table", "fence"])
         summary_html = md.render(summary_text)
 
         existing = self.get_summary(company_id)
