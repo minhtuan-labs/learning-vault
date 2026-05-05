@@ -23,9 +23,9 @@ const COLOR_GREEN = "#10b981";
 const COLOR_ORANGE = "#f59e0b";
 
 const QUARTERLY_RANGES = [
+  { label: "Tất cả", value: null },
   { label: "4 quý gần nhất", value: 4 },
   { label: "8 quý gần nhất", value: 8 },
-  { label: "Tất cả", value: null },
 ];
 
 const YEARLY_RANGES = [
@@ -254,7 +254,7 @@ export default function CompanyAnalyticsPage() {
   const [yearlyData, setYearlyData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [quarterlyRange, setQuarterlyRange] = useState(4);
+  const [quarterlyRange, setQuarterlyRange] = useState(null);
   const [yearlyRange, setYearlyRange] = useState(5);
 
   const [summary, setSummary] = useState(null);
