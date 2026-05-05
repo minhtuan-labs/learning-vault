@@ -29,8 +29,8 @@ const QUARTERLY_RANGES = [
 ];
 
 const YEARLY_RANGES = [
-  { label: "5 năm gần nhất", value: 5 },
   { label: "Tất cả", value: null },
+  { label: "5 năm gần nhất", value: 5 },
 ];
 
 function SummaryCard({ summary, loading, generating, error, onGenerate }) {
@@ -255,7 +255,7 @@ export default function CompanyAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [quarterlyRange, setQuarterlyRange] = useState(null);
-  const [yearlyRange, setYearlyRange] = useState(5);
+  const [yearlyRange, setYearlyRange] = useState(null);
 
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
