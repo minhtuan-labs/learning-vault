@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import markdown_it
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -49,17 +50,21 @@ class SummaryService:
 
         context = self._build_context(company)
         summary_text = self._call_claude(context)
+        md = markdown_it.MarkdownIt("commonmark", {"breaks": True, "html": True})
+        md.enable(["table", "fenced_code"])
+        summary_html = md.render(summary_text)
 
         existing = self.get_summary(company_id)
         if existing:
             existing.summary_text = summary_text
+            existing.summary_html = summary_html
             existing.generated_at = datetime.now(timezone.utc)
             self.db.add(existing)
             self.db.commit()
             self.db.refresh(existing)
             return existing
 
-        record = CompanySummary(company_id=company_id, summary_text=summary_text)
+        record = CompanySummary(company_id=company_id, summary_text=summary_text, summary_html=summary_html)
         self.db.add(record)
         self.db.commit()
         self.db.refresh(record)

@@ -17,6 +17,7 @@ class CompanySummary(Base):
         index=True,
     )
     summary_text: Mapped[str] = mapped_column(Text, nullable=False)
+    summary_html: Mapped[str] = mapped_column(Text, nullable=False)
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

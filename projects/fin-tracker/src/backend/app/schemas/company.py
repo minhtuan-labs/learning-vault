@@ -37,5 +37,6 @@ class CompanyResponse(CompanyBase):
 class CompanySummaryResponse(BaseModel):
     company_id: int
     summary_text: str
+    summary_html: str | None = None
     generated_at: datetime
     model_config = ConfigDict(from_attributes=True)

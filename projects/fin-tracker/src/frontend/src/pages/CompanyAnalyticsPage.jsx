@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
+// Using dangerouslySetInnerHTML to render HTML from backend (markdown converted to HTML with table support)
 import {
   Bar,
   BarChart,
@@ -283,32 +284,25 @@ function SummaryCard({ summary, loading, generating, error, onGenerate }) {
     <div className="rounded-xl border border-blue-100 bg-blue-50 p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-blue-900">Tóm tắt tình hình kinh doanh</h2>
-        <div className="flex items-center gap-2">
-          {summary && (
-            <span className="text-xs text-blue-500">
-              Cập nhật: {new Date(summary.generated_at).toLocaleString("vi-VN")}
-            </span>
+        <button
+          onClick={onGenerate}
+          disabled={generating}
+          className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {generating ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Đang tóm tắt...
+            </>
+          ) : summary ? (
+            "Tóm tắt lại"
+          ) : (
+            "Tóm tắt"
           )}
-          <button
-            onClick={onGenerate}
-            disabled={generating}
-            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {generating ? (
-              <>
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Đang tóm tắt...
-              </>
-            ) : summary ? (
-              "Tóm tắt lại"
-            ) : (
-              "Tóm tắt"
-            )}
-          </button>
-        </div>
+        </button>
       </div>
 
       {error && (
@@ -322,8 +316,16 @@ function SummaryCard({ summary, loading, generating, error, onGenerate }) {
       )}
 
       {summary && !generating && (
-        <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-          {summary.summary_text}
+        <div className="mt-4 rounded-lg border border-blue-100 bg-white p-5">
+          <div
+            className="summary-content"
+            dangerouslySetInnerHTML={{ __html: summary.summary_html }}
+          />
+          <div className="mt-3 border-t border-blue-100 pt-3 text-right">
+            <span className="text-xs text-slate-400">
+              Cập nhật: {new Date(summary.generated_at).toLocaleString("vi-VN")}
+            </span>
+          </div>
         </div>
       )}
     </div>
