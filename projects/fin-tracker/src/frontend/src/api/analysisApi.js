@@ -6,11 +6,11 @@ const api = axios.create({
 });
 
 export async function getCompanyAnalysis(companyId) {
-  const res = await api.get(`/companies/${companyId}/analysis`);
+  const res = await api.get(`/analysis/companies/${companyId}/analysis`);
   return res.data;
 }
 
 export async function triggerAnalysis(periodId) {
-  const res = await api.post(`/periods/${periodId}/analyze`);
+  const res = await api.post(`/analysis/periods/${periodId}/analyze`);
   return res.data;
 }
