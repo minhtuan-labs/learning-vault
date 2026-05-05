@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.db.base import SessionLocal
+from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.company import Company
 from app.models.financial import FinancialData, FinancialPeriod
-from app.services.financial_data_extractor import _BANK_KEYWORDS, _is_bank
+from app.services.pdf_extractor import BANK_KEYWORDS, _is_bank
 
 
 _BANK_REVENUE_KEYS = [

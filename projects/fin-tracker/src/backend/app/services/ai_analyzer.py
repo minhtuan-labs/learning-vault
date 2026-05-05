@@ -4,11 +4,11 @@ import json
 from datetime import datetime
 
 from app.core.config import settings
-from app.db.base import SessionLocal
+from app.db.session import SessionLocal
 from app.models.ai_analysis import AIAnalysis
 from app.models.company import Company
 from app.models.financial import FinancialData, FinancialPeriod
-from app.services.financial_data_extractor import _BANK_KEYWORDS, _is_bank
+from app.services.pdf_extractor import BANK_KEYWORDS, _is_bank
 
 
 class AIAnalyzer:

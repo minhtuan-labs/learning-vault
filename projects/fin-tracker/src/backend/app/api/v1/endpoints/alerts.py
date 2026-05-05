@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_db
+from app.api.deps import get_db_session
 from app.models.alert import Alert
 from app.models.company import Company
 from app.models.financial import FinancialPeriod
