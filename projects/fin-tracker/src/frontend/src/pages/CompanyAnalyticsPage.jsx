@@ -328,7 +328,7 @@ export default function CompanyAnalyticsPage() {
         ];
         const analyzedPeriodIds = result.map((a) => a.period_id);
         const hasUnanalyzed = allPeriods.some((p) => !analyzedPeriodIds.includes(p.period_id));
-        setHasNewReports(hasUnanalyzed && result.length > 0);
+        setHasNewReports(hasUnanalyzed);
       } catch {
         setAnalyses([]);
       } finally {
