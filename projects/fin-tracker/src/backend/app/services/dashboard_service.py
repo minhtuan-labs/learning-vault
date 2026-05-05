@@ -174,10 +174,46 @@ class DashboardService:
 
         top_revenue.sort(key=lambda x: x["revenue"] or 0, reverse=True)
 
+        from app.models.alert import Alert
+
+        unread_alerts_count = db.scalar(
+            select(func.count(Alert.id)).where(Alert.is_read == False)
+        ) or 0
+
+        recent_alerts = (
+            db.execute(
+                select(
+                    Alert.id,
+                    Alert.company_id,
+                    Alert.alert_type,
+                    Alert.severity,
+                    Alert.description,
+                    Alert.created_at,
+                    Alert.is_read,
+                )
+                .order_by(Alert.created_at.desc())
+                .limit(5)
+            )
+            .all()
+        )
+
+        recent_alerts_data = []
+        for r in recent_alerts:
+            recent_alerts_data.append({
+                "id": r.id,
+                "company_id": r.company_id,
+                "alert_type": r.alert_type,
+                "severity": r.severity,
+                "description": r.description,
+                "created_at": r.created_at,
+                "is_read": r.is_read,
+            })
+
         return {
             "total_companies": total_companies,
             "companies_with_reports": companies_with_reports,
-            "total_warnings": 0,
+            "total_warnings": unread_alerts_count,
             "latest_period_label": latest_label,
             "top_revenue_companies": top_revenue[:5],
+            "recent_alerts": recent_alerts_data,
         }

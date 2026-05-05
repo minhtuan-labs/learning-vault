@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import AlertDropdown from "../components/AlertDropdown";
 
 export default function MainLayout({ children }) {
   return (
@@ -21,12 +22,15 @@ export default function MainLayout({ children }) {
               </Link>
             </nav>
           </div>
-          <Link
-            to="/companies/new"
-            className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600"
-          >
-            Thêm doanh nghiệp
-          </Link>
+          <div className="flex items-center gap-4">
+            <AlertDropdown />
+            <Link
+              to="/companies/new"
+              className="rounded-md bg-emerald-500 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+            >
+              Thêm doanh nghiệp
+            </Link>
+          </div>
         </div>
       </header>
 

@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import MainLayout from "./layouts/MainLayout";
+import AlertsPage from "./pages/AlertsPage";
 import CompanyAnalyticsPage from "./pages/CompanyAnalyticsPage";
 import CompanyDetailPage from "./pages/CompanyDetailPage";
 import CompanyFormPage from "./pages/CompanyFormPage";
@@ -16,6 +17,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/companies" element={<CompanyListPage />} />
         <Route path="/companies/new" element={<CompanyFormPage mode="create" />} />
         <Route path="/companies/:id" element={<CompanyDetailPage />} />

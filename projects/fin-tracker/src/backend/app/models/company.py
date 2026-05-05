@@ -1,7 +1,7 @@
 import enum
 
 from sqlalchemy import DateTime, Enum, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 
@@ -30,3 +30,8 @@ class Company(Base):
     updated_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+    periods = relationship("FinancialPeriod", back_populates="company", cascade="all, delete-orphan")
+    summaries = relationship("CompanySummary", back_populates="company", cascade="all, delete-orphan")
+    ai_analyses = relationship("AIAnalysis", back_populates="company", cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="company", cascade="all, delete-orphan")

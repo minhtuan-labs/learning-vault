@@ -34,11 +34,18 @@ class FinancialPeriod(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
+    company: Mapped["Company"] = relationship("Company", back_populates="periods")
     report_files: Mapped[list["ReportFile"]] = relationship(
         "ReportFile", back_populates="period", cascade="all, delete-orphan"
     )
     financial_data_rows: Mapped[list["FinancialData"]] = relationship(
         "FinancialData", back_populates="period", cascade="all, delete-orphan"
+    )
+    ai_analyses: Mapped[list["AIAnalysis"]] = relationship(
+        "AIAnalysis", back_populates="period", cascade="all, delete-orphan"
+    )
+    alerts: Mapped[list["Alert"]] = relationship(
+        "Alert", back_populates="period", cascade="all, delete-orphan"
     )
 
 

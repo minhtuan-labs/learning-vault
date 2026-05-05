@@ -16,6 +16,7 @@ import {
 } from "recharts";
 
 import { getCompanyAnalytics } from "../api/analyticsApi";
+import { getCompanyAnalysis, triggerAnalysis } from "../api/analysisApi";
 import { generateCompanySummary, getCompanySummary } from "../api/summaryApi";
 
 const COLOR_BLUE = "#3b82f6";
@@ -262,6 +263,10 @@ export default function CompanyAnalyticsPage() {
   const [summaryGenerating, setSummaryGenerating] = useState(false);
   const [summaryError, setSummaryError] = useState("");
 
+  const [analyses, setAnalyses] = useState([]);
+  const [analysesLoading, setAnalysesLoading] = useState(true);
+  const [analysesGenerating, setAnalysesGenerating] = useState(false);
+
   useEffect(() => {
     const fetchAnalytics = async () => {
       setLoading(true);
@@ -305,6 +310,21 @@ export default function CompanyAnalyticsPage() {
     fetchSummary();
   }, [companyId]);
 
+  useEffect(() => {
+    const fetchAnalyses = async () => {
+      setAnalysesLoading(true);
+      try {
+        const result = await getCompanyAnalysis(companyId);
+        setAnalyses(result);
+      } catch {
+        setAnalyses([]);
+      } finally {
+        setAnalysesLoading(false);
+      }
+    };
+    fetchAnalyses();
+  }, [companyId]);
+
   const handleGenerateSummary = async () => {
     setSummaryGenerating(true);
     setSummaryError("");
@@ -316,6 +336,19 @@ export default function CompanyAnalyticsPage() {
       setSummaryError(msg);
     } finally {
       setSummaryGenerating(false);
+    }
+  };
+
+  const handleTriggerAnalysis = async (periodId) => {
+    setAnalysesGenerating(true);
+    try {
+      await triggerAnalysis(periodId);
+      const result = await getCompanyAnalysis(companyId);
+      setAnalyses(result);
+    } catch {
+      // ignore
+    } finally {
+      setAnalysesGenerating(false);
     }
   };
 
@@ -365,6 +398,50 @@ export default function CompanyAnalyticsPage() {
 
       {/* Yearly Charts */}
       {yearlyData && renderChartSection("Biểu đồ năm", yearlyData, yearlyChartData, yearlyRange, setYearlyRange, YEARLY_RANGES)}
+
+      {/* AI Analysis */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-slate-900">Nhận xét AI</h2>
+
+        {analysesLoading ? (
+          <div className="space-y-3">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-32 animate-pulse rounded-xl bg-slate-200" />
+            ))}
+          </div>
+        ) : analyses.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+            <p className="text-sm text-slate-500">Chưa có nhận xét AI nào.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {analyses.map((analysis) => (
+              <details
+                key={analysis.id}
+                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+              >
+                <summary className="flex cursor-pointer items-center justify-between px-5 py-4 hover:bg-slate-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-slate-900">
+                      {analysis.period_label}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {new Date(analysis.created_at).toLocaleString("vi-VN")}
+                    </span>
+                  </div>
+                  <span className="text-xs text-slate-400">Click để xem</span>
+                </summary>
+                <div className="border-t border-slate-200 px-5 py-4">
+                  <div
+                    className="summary-content"
+                    dangerouslySetInnerHTML={{ __html: analysis.analysis_html || analysis.analysis_text }}
+                  />
+                </div>
+              </details>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends, File, Form, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,6 +11,8 @@ from app.schemas.financial import (
     FinancialDataUpdate,
     ReportFileResponse,
 )
+from app.services.alert_engine import AlertEngine
+from app.services.ai_analyzer import AIAnalyzer
 from app.services.period_service import PeriodService
 
 router = APIRouter(prefix="/periods", tags=["periods"])
@@ -62,12 +64,20 @@ def download_report_pdf(
 @router.post("/{period_id}/extract")
 def extract_financial_data(
     period_id: int,
+    background_tasks: BackgroundTasks,
     body: ExtractRequest | None = Body(default=None),
     db: Session = Depends(get_db_session),
 ):
     svc = PeriodService(db)
     payload = body or ExtractRequest()
     rows, entity_type = svc.extract_from_file(period_id, payload)
+
+    alert_engine = AlertEngine()
+    background_tasks.add_task(alert_engine.check_alerts, period_id)
+
+    ai_analyzer = AIAnalyzer()
+    background_tasks.add_task(ai_analyzer.analyze_period, period_id)
+
     return {
         "entity_type": entity_type,
         "metrics": [FinancialDataResponse.model_validate(r).model_dump() for r in rows],

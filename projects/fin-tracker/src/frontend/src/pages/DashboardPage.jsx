@@ -87,6 +87,7 @@ export default function DashboardPage() {
   }
 
   const top5 = data.top_revenue_companies || [];
+  const recentAlerts = data.recent_alerts || [];
   const hasBank = top5.some((c) => c.entity_type === "bank");
   const revenueLabel = hasBank ? "TOI (tỷ)" : "Doanh thu (tỷ)";
   const chartData = top5
@@ -100,6 +101,12 @@ export default function DashboardPage() {
     .reverse();
   const barRevenueName = hasBank ? "TOI" : "Doanh thu";
 
+  const SEVERITY_ICON = {
+    high: "🔴",
+    medium: "🟡",
+    low: "🟢",
+  };
+
   return (
     <section className="space-y-6">
       <h1 className="text-2xl font-semibold text-slate-900">Dashboard tổng quan</h1>
@@ -107,7 +114,11 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <KpiCard label="Tổng doanh nghiệp" value={data.total_companies} icon="🏢" />
         <KpiCard label="DN có BCTC" value={data.companies_with_reports} icon="📊" />
-        <KpiCard label="Cảnh báo" value={data.total_warnings} icon="⚠️" />
+        <KpiCard
+          label="Cảnh báo chưa xử lý"
+          value={data.total_warnings > 0 ? `${data.total_warnings} 🔴` : "0"}
+          icon="⚠️"
+        />
         <KpiCard label="Kỳ gần nhất" value={data.latest_period_label} icon="📅" />
       </div>
 
@@ -201,6 +212,35 @@ export default function DashboardPage() {
             </div>
           </div>
         </>
+      )}
+
+      {recentAlerts.length > 0 && (
+        <div className="overflow-hidden rounded-xl bg-white shadow">
+          <div className="border-b border-slate-200 px-5 py-4">
+            <h2 className="text-lg font-semibold text-slate-900">Cảnh báo gần đây</h2>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {recentAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`flex items-start gap-3 px-5 py-3 ${alert.is_read ? "" : "bg-red-50"}`}
+              >
+                <span className="mt-0.5 text-sm">{SEVERITY_ICON[alert.severity] || "⚪"}</span>
+                <div className="flex-1">
+                  <p className="text-sm text-slate-700">{alert.description}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {new Date(alert.created_at).toLocaleString("vi-VN")}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-slate-200 px-5 py-3 text-center">
+            <Link to="/alerts" className="text-sm font-medium text-blue-600 hover:underline">
+              Xem tất cả cảnh báo
+            </Link>
+          </div>
+        </div>
       )}
     </section>
   );
