@@ -146,7 +146,7 @@ class PeriodService:
 
     def extract_from_file(self, period_id: int, body: ExtractRequest) -> tuple[list[FinancialData], str]:
         period = self.get_period(period_id)
-        if not settings.anthropic_api_key:
+        if not settings.claude_api_key:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Chưa cấu hình ANTHROPIC_API_KEY.",
@@ -175,8 +175,8 @@ class PeriodService:
         try:
             raw = pdf_extractor.extract_financial_json_from_pdf(
                 abs_pdf,
-                api_key=settings.anthropic_api_key,
-                model=settings.anthropic_model,
+                api_key=settings.claude_api_key,
+                model=settings.claude_model,
                 default_report_type=rf.report_type.value,
                 company_industry=company_industry,
             )

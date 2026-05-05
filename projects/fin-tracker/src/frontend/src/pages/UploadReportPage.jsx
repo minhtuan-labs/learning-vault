@@ -100,12 +100,17 @@ export default function UploadReportPage() {
 
       navigate(`/companies/${companyId}/periods/${periodId}/review?fileId=${uploaded.id}`);
     } catch (err) {
-      const msg =
-        err?.response?.data?.detail ||
-        (typeof err?.response?.data === "string" ? err.response.data : null) ||
-        err?.message ||
-        "Có lỗi xảy ra.";
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      let msg = "Có lỗi xảy ra.";
+      if (err?.response?.data) {
+        if (typeof err.response.data === "string") {
+          msg = err.response.data;
+        } else if (err.response.data.detail) {
+          msg = err.response.data.detail;
+        }
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setError(msg);
       setPhase("idle");
     }
   };
