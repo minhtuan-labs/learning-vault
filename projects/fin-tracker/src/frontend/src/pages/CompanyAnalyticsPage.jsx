@@ -266,6 +266,7 @@ export default function CompanyAnalyticsPage() {
   const [analyses, setAnalyses] = useState([]);
   const [analysesLoading, setAnalysesLoading] = useState(true);
   const [analysesGenerating, setAnalysesGenerating] = useState(false);
+  const [hasNewReports, setHasNewReports] = useState(false);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -316,6 +317,18 @@ export default function CompanyAnalyticsPage() {
       try {
         const result = await getCompanyAnalysis(companyId);
         setAnalyses(result);
+        // Check if there are new reports that need analysis
+        const [quarterlyResult, yearlyResult] = await Promise.all([
+          getCompanyAnalytics(companyId, null, "Q"),
+          getCompanyAnalytics(companyId, null, "Y"),
+        ]);
+        const allPeriods = [
+          ...(quarterlyResult?.periods || []),
+          ...(yearlyResult?.periods || []),
+        ];
+        const analyzedPeriodIds = result.map((a) => a.period_id);
+        const hasUnanalyzed = allPeriods.some((p) => !analyzedPeriodIds.includes(p.period_id));
+        setHasNewReports(hasUnanalyzed && result.length > 0);
       } catch {
         setAnalyses([]);
       } finally {
@@ -345,10 +358,29 @@ export default function CompanyAnalyticsPage() {
       await triggerAnalysis(periodId);
       const result = await getCompanyAnalysis(companyId);
       setAnalyses(result);
+      setHasNewReports(false);
     } catch {
       // ignore
     } finally {
       setAnalysesGenerating(false);
+    }
+  };
+
+  const checkNewReports = async () => {
+    try {
+      const [quarterlyResult, yearlyResult] = await Promise.all([
+        getCompanyAnalytics(companyId, null, "Q"),
+        getCompanyAnalytics(companyId, null, "Y"),
+      ]);
+      const allPeriods = [
+        ...(quarterlyResult?.periods || []),
+        ...(yearlyResult?.periods || []),
+      ];
+      const analyzedPeriodIds = analyses.map((a) => a.period_id);
+      const hasUnanalyzed = allPeriods.some((p) => !analyzedPeriodIds.includes(p.period_id));
+      setHasNewReports(hasUnanalyzed && analyses.length > 0);
+    } catch {
+      // ignore
     }
   };
 
@@ -401,7 +433,38 @@ export default function CompanyAnalyticsPage() {
 
       {/* AI Analysis */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Nhận xét AI</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">Nhận xét AI</h2>
+          {hasNewReports && (
+            <button
+              onClick={() => {
+                const latestPeriod = [...(quarterlyData?.periods || []), ...(yearlyData?.periods || [])]
+                  .sort((a, b) => b.period_id - a.period_id)[0];
+                if (latestPeriod) handleTriggerAnalysis(latestPeriod.period_id);
+              }}
+              disabled={analysesGenerating}
+              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {analysesGenerating ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0c4.418 0 8 3.582 8 8h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Đang phân tích...
+                </>
+              ) : (
+                "Phân tích ngay"
+              )}
+            </button>
+          )}
+        </div>
+
+        {hasNewReports && analyses.length > 0 && (
+          <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
+            Có báo cáo mới đã upload. Nhấn "Phân tích ngay" để cập nhật nhận xét AI.
+          </div>
+        )}
 
         {analysesLoading ? (
           <div className="space-y-3">
@@ -412,6 +475,9 @@ export default function CompanyAnalyticsPage() {
         ) : analyses.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
             <p className="text-sm text-slate-500">Chưa có nhận xét AI nào.</p>
+            {hasNewReports && (
+              <p className="mt-2 text-xs text-slate-400">Có báo cáo mới - hãy nhấn "Phân tích ngay" để tạo nhận xét.</p>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

@@ -75,9 +75,6 @@ def extract_financial_data(
     alert_engine = AlertEngine()
     background_tasks.add_task(alert_engine.check_alerts, period_id)
 
-    ai_analyzer = AIAnalyzer()
-    background_tasks.add_task(ai_analyzer.analyze_period, period_id)
-
     return {
         "entity_type": entity_type,
         "metrics": [FinancialDataResponse.model_validate(r).model_dump() for r in rows],
