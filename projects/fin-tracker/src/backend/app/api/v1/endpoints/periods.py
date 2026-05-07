@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db_session
-from app.models.financial import ReportFile, ReportTypeEnum
+from app.models.financial import FinancialPeriod, ReportFile, ReportTypeEnum
 from app.schemas.financial import (
     ExtractRequest,
     FinancialDataResponse,
@@ -16,6 +16,7 @@ from app.services.ai_analyzer import AIAnalyzer
 from app.services.period_service import PeriodService
 
 router = APIRouter(prefix="/periods", tags=["periods"])
+_analyzer = AIAnalyzer()
 
 
 @router.get("/{period_id}/files", response_model=list[ReportFileResponse])
@@ -74,6 +75,11 @@ def extract_financial_data(
 
     alert_engine = AlertEngine()
     background_tasks.add_task(alert_engine.check_alerts, period_id)
+
+    # Auto-trigger company-wide AI analysis in background
+    period = db.get(FinancialPeriod, period_id)
+    if period:
+        background_tasks.add_task(_analyzer.analyze_company, period.company_id)
 
     return {
         "entity_type": entity_type,

@@ -33,18 +33,15 @@ services:
       - fin_tracker_uploads:/app/uploads
 
   frontend:
-    build:
-      context: ./src/frontend
+    image: nginx:alpine
     container_name: fin-tracker-frontend
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
     ports:
-      - "${FRONTEND_PORT}:5173"
+      - "${FRONTEND_PORT}:80"
     depends_on:
       - backend
     volumes:
-      - ./src/frontend:/app
-      - /app/node_modules
+      - ./src/frontend/dist:/usr/share/nginx/html:ro
+      - ./src/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   postgres_data:

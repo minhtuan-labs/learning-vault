@@ -167,7 +167,7 @@ class DashboardService:
                 "industry": c.industry,
                 "entity_type": "bank" if is_bank_entity else "company",
                 "revenue": round(rev / _TO_BILLION, 2),
-                "profit": round(profit / _TO_BILLION, 2) if profit is not None else None,
+                "profit": round(profit / _TO_BILLION, 2) if profit is not None else 0,
                 "revenue_growth": round(revenue_growth, 2) if revenue_growth is not None else None,
                 "profit_growth": round(profit_growth, 2) if profit_growth is not None else None,
             })
@@ -185,12 +185,15 @@ class DashboardService:
                 select(
                     Alert.id,
                     Alert.company_id,
+                    Company.code.label("company_code"),
+                    Company.name.label("company_name"),
                     Alert.alert_type,
                     Alert.severity,
                     Alert.description,
                     Alert.created_at,
                     Alert.is_read,
                 )
+                .join(Company, Company.id == Alert.company_id)
                 .order_by(Alert.created_at.desc())
                 .limit(5)
             )
@@ -202,10 +205,12 @@ class DashboardService:
             recent_alerts_data.append({
                 "id": r.id,
                 "company_id": r.company_id,
+                "company_code": r.company_code,
+                "company_name": r.company_name,
                 "alert_type": r.alert_type,
                 "severity": r.severity,
                 "description": r.description,
-                "created_at": r.created_at,
+                "created_at": r.created_at.isoformat() if r.created_at else "",
                 "is_read": r.is_read,
             })
 

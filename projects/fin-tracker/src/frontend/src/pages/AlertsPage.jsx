@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getAlerts, markAlertRead, markAllAlertsRead } from "../api/alertsApi";
+import { getAlerts, markAlertRead, markAllAlertsRead, deleteAlert } from "../api/alertsApi";
+import { useAlerts } from "../contexts/AlertContext";
 
 const SEVERITY_ICON = {
   high: "🔴",
@@ -12,12 +13,6 @@ const SEVERITY_LABEL = {
   high: "Cao",
   medium: "Trung bình",
   low: "Thấp",
-};
-
-const SEVERITY_BG = {
-  high: "bg-red-50 border-red-200",
-  medium: "bg-yellow-50 border-yellow-200",
-  low: "bg-green-50 border-green-200",
 };
 
 const ALERT_TYPE_LABEL = {
@@ -33,6 +28,7 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("unread");
   const [companyFilter, setCompanyFilter] = useState("");
+  const { refreshAlerts } = useAlerts();
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -41,13 +37,15 @@ export default function AlertsPage() {
       if (filter === "unread") {
         params.is_read = false;
       }
-      if (companyFilter) {
+      if (companyFilter && companyFilter !== "") {
         params.company_id = companyFilter;
       }
+      console.log('Fetching alerts with params:', params);
       const data = await getAlerts(params);
+      console.log('Alerts data:', data);
       setAlerts(data);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
     } finally {
       setLoading(false);
     }
@@ -61,8 +59,19 @@ export default function AlertsPage() {
     try {
       await markAlertRead(alertId);
       fetchAlerts();
-    } catch {
-      // ignore
+      refreshAlerts();
+    } catch (err) {
+      console.error('Error marking alert as read:', err);
+    }
+  };
+
+  const handleDelete = async (alertId) => {
+    try {
+      await deleteAlert(alertId);
+      fetchAlerts();
+      refreshAlerts();
+    } catch (err) {
+      console.error('Error deleting alert:', err);
     }
   };
 
@@ -70,8 +79,9 @@ export default function AlertsPage() {
     try {
       await markAllAlertsRead();
       fetchAlerts();
-    } catch {
-      // ignore
+      refreshAlerts();
+    } catch (err) {
+      console.error('Error marking all as read:', err);
     }
   };
 
@@ -126,12 +136,12 @@ export default function AlertsPage() {
             <div
               key={alert.id}
               className={`rounded-xl border p-4 shadow-sm ${
-                alert.is_read ? "bg-white" : SEVERITY_BG[alert.severity]
+                alert.is_read ? "bg-white" : "bg-red-50"
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg">{SEVERITY_ICON[alert.severity]}</span>
+                  <span className="text-lg">⚪</span>
                   <div>
                     <Link
                       to={`/companies/${alert.company_id}`}
@@ -156,6 +166,12 @@ export default function AlertsPage() {
                       Đã đọc
                     </button>
                   )}
+                  <button
+                    onClick={() => handleDelete(alert.id)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Xóa
+                  </button>
                 </div>
               </div>
               <p className="mt-2 text-sm text-slate-700">{alert.description}</p>

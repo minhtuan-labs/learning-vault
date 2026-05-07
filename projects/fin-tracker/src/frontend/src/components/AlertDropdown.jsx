@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { getAlerts, markAlertRead } from "../api/alertsApi";
+import { useAlerts } from "../contexts/AlertContext";
 
 const SEVERITY_ICON = {
   high: "🔴",
@@ -17,11 +18,11 @@ const SEVERITY_BG = {
 export default function AlertDropdown() {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
+  const { unreadCount, setUnreadCount, refreshAlerts } = useAlerts();
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getAlerts({ is_read: false, limit: 5 });
@@ -32,13 +33,13 @@ export default function AlertDropdown() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setUnreadCount]);
 
   useEffect(() => {
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAlerts]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -55,6 +56,7 @@ export default function AlertDropdown() {
     try {
       await markAlertRead(alertId);
       fetchAlerts();
+      refreshAlerts();
     } catch {
       // ignore
     }

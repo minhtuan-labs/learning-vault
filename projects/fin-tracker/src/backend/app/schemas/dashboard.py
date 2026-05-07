@@ -1,6 +1,18 @@
 from pydantic import BaseModel, ConfigDict
 
 
+class AlertItem(BaseModel):
+    id: int
+    company_id: int
+    company_code: str | None = None
+    company_name: str | None = None
+    alert_type: str
+    severity: str
+    description: str
+    created_at: str
+    is_read: bool
+
+
 class CompanyOverviewItem(BaseModel):
     id: int
     code: str
@@ -18,6 +30,7 @@ class DashboardOverview(BaseModel):
     total_warnings: int
     latest_period_label: str
     top_revenue_companies: list[CompanyOverviewItem]
+    recent_alerts: list[AlertItem] = []
 
 
 class AnalyticsPeriodMetric(BaseModel):

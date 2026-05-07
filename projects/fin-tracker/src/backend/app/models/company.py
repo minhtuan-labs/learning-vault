@@ -33,5 +33,5 @@ class Company(Base):
 
     periods = relationship("FinancialPeriod", back_populates="company", cascade="all, delete-orphan")
     summaries = relationship("CompanySummary", back_populates="company", cascade="all, delete-orphan")
-    ai_analyses = relationship("AIAnalysis", back_populates="company", cascade="all, delete-orphan")
+    ai_analyses = relationship("AIAnalysis", back_populates="company", cascade="all, delete-orphan", lazy="selectin")
     alerts = relationship("Alert", back_populates="company", cascade="all, delete-orphan")

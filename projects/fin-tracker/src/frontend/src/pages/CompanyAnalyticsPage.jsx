@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 // Using dangerouslySetInnerHTML to render HTML from backend (markdown converted to HTML with table support)
 import {
   Bar,
@@ -266,7 +266,25 @@ export default function CompanyAnalyticsPage() {
   const [analyses, setAnalyses] = useState([]);
   const [analysesLoading, setAnalysesLoading] = useState(true);
   const [analysesGenerating, setAnalysesGenerating] = useState(false);
-  const [hasNewReports, setHasNewReports] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState(null); // "PENDING" | "COMPLETED" | null
+  const [pollingInterval, setPollingInterval] = useState(null);
+
+  const fetchAnalyses = useCallback(async () => {
+    setAnalysesLoading(true);
+    try {
+      const result = await getCompanyAnalysis(companyId);
+      setAnalyses(result);
+      const status = result?.[0]?.status || null;
+      setAnalysisStatus(status);
+      return status;
+    } catch {
+      setAnalyses([]);
+      setAnalysisStatus(null);
+      return null;
+    } finally {
+      setAnalysesLoading(false);
+    }
+  }, [companyId]);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -312,31 +330,27 @@ export default function CompanyAnalyticsPage() {
   }, [companyId]);
 
   useEffect(() => {
-    const fetchAnalyses = async () => {
-      setAnalysesLoading(true);
-      try {
-        const result = await getCompanyAnalysis(companyId);
-        setAnalyses(result);
-        // Check if there are new reports that need analysis
-        const [quarterlyResult, yearlyResult] = await Promise.all([
-          getCompanyAnalytics(companyId, null, "Q"),
-          getCompanyAnalytics(companyId, null, "Y"),
-        ]);
-        const allPeriods = [
-          ...(quarterlyResult?.periods || []),
-          ...(yearlyResult?.periods || []),
-        ];
-        const analyzedPeriodIds = result.map((a) => a.period_id);
-        const hasUnanalyzed = allPeriods.some((p) => !analyzedPeriodIds.includes(p.period_id));
-        setHasNewReports(hasUnanalyzed);
-      } catch {
-        setAnalyses([]);
-      } finally {
-        setAnalysesLoading(false);
-      }
-    };
     fetchAnalyses();
-  }, [companyId]);
+  }, [companyId, fetchAnalyses]);
+
+  // Poll analysis status when pending
+  useEffect(() => {
+    if (analysisStatus === "PENDING") {
+      const interval = setInterval(async () => {
+        const status = await fetchAnalyses();
+        if (status !== "PENDING") {
+          clearInterval(interval);
+        }
+      }, 3000);
+      setPollingInterval(interval);
+      return () => clearInterval(interval);
+    } else {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        setPollingInterval(null);
+      }
+    }
+  }, [analysisStatus, fetchAnalyses, pollingInterval]);
 
   const handleGenerateSummary = async () => {
     setSummaryGenerating(true);
@@ -352,37 +366,19 @@ export default function CompanyAnalyticsPage() {
     }
   };
 
-  const handleTriggerAnalysis = async (periodId) => {
-    setAnalysesGenerating(true);
-    try {
-      await triggerAnalysis(periodId);
-      const result = await getCompanyAnalysis(companyId);
-      setAnalyses(result);
-      setHasNewReports(false);
-    } catch {
-      // ignore
-    } finally {
-      setAnalysesGenerating(false);
-    }
-  };
-
-  const checkNewReports = async () => {
-    try {
-      const [quarterlyResult, yearlyResult] = await Promise.all([
-        getCompanyAnalytics(companyId, null, "Q"),
-        getCompanyAnalytics(companyId, null, "Y"),
-      ]);
-      const allPeriods = [
-        ...(quarterlyResult?.periods || []),
-        ...(yearlyResult?.periods || []),
-      ];
-      const analyzedPeriodIds = analyses.map((a) => a.period_id);
-      const hasUnanalyzed = allPeriods.some((p) => !analyzedPeriodIds.includes(p.period_id));
-      setHasNewReports(hasUnanalyzed && analyses.length > 0);
-    } catch {
-      // ignore
-    }
-  };
+   const handleTriggerAnalysis = async () => {
+     setAnalysesGenerating(true);
+     try {
+       await triggerAnalysis(companyId);
+       const status = await fetchAnalyses();
+       setAnalysisStatus(status);
+     } catch (err) {
+       console.error('Error triggering analysis:', err);
+       alert('Error: ' + (err.message || 'Failed to trigger analysis'));
+     } finally {
+       setAnalysesGenerating(false);
+     }
+   };
 
   if (loading) {
     return (
@@ -431,52 +427,38 @@ export default function CompanyAnalyticsPage() {
       {/* Yearly Charts */}
       {yearlyData && renderChartSection("Biểu đồ năm", yearlyData, yearlyChartData, yearlyRange, setYearlyRange, YEARLY_RANGES)}
 
-      {/* AI Analysis */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Nhận xét AI</h2>
-          {hasNewReports && (
-            <button
-              onClick={() => {
-                const latestPeriod = [...(quarterlyData?.periods || []), ...(yearlyData?.periods || [])]
-                  .sort((a, b) => b.period_id - a.period_id)[0];
-                if (latestPeriod) handleTriggerAnalysis(latestPeriod.period_id);
-              }}
-              disabled={analysesGenerating}
-              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {analysesGenerating ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0c4.418 0 8 3.582 8 8h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  Đang phân tích...
-                </>
-              ) : (
-                "Phân tích ngay"
+        {/* AI Analysis */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900">Nhận xét AI</h2>
+             {analysisStatus === "PENDING" && (
+                <div className="rounded-lg bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+                  📊 AI đang phân tích...
+                </div>
               )}
-            </button>
-          )}
-        </div>
-
-        {hasNewReports && analyses.length > 0 && (
-          <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800">
-            Có báo cáo mới đã upload. Nhấn "Phân tích ngay" để cập nhật nhận xét AI.
           </div>
-        )}
 
-        {analysesLoading ? (
+         {analysesLoading ? (
           <div className="space-y-3">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="h-32 animate-pulse rounded-xl bg-slate-200" />
             ))}
           </div>
-        ) : analyses.length === 0 ? (
+        ) : analyses.length === 0 || !analyses[0]?.analysis_text ? (
           <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-            <p className="text-sm text-slate-500">Chưa có nhận xét AI nào.</p>
-            {hasNewReports && (
-              <p className="mt-2 text-xs text-slate-400">Có báo cáo mới - hãy nhấn "Phân tích ngay" để tạo nhận xét.</p>
+            {analysisStatus === "PENDING" ? (
+              <p className="text-sm text-slate-500">AI đang phân tích, vui lòng chờ...</p>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500">Chưa có nhận xét AI nào.</p>
+                <button
+                  onClick={handleTriggerAnalysis}
+                  disabled={analysesGenerating}
+                  className="mt-3 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {analysesGenerating ? "Đang phân tích..." : "Phân tích ngay"}
+                </button>
+              </>
             )}
           </div>
         ) : (
@@ -492,7 +474,7 @@ export default function CompanyAnalyticsPage() {
                       {analysis.period_label}
                     </span>
                     <span className="text-xs text-slate-400">
-                      {new Date(analysis.created_at).toLocaleString("vi-VN")}
+                      {new Date(analysis.updated_at || analysis.created_at).toLocaleString("vi-VN")}
                     </span>
                   </div>
                   <span className="text-xs text-slate-400">Click để xem</span>

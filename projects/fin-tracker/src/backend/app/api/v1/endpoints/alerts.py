@@ -89,3 +89,14 @@ def mark_all_read(company_id: int | None = Query(None), db: Session = Depends(ge
         a.is_read = True
     db.commit()
     return MarkReadResponse(success=True)
+
+
+@router.delete("/{alert_id}", status_code=204)
+def delete_alert(alert_id: int, db: Session = Depends(get_db_session)):
+    alert = db.get(Alert, alert_id)
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    db.delete(alert)
+    db.commit()
+    return None
+

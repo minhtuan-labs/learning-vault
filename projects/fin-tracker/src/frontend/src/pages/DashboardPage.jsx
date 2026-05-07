@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { getDashboardOverview } from "../api/dashboardApi";
+import { useAlerts } from "../contexts/AlertContext";
 
 const COLOR_BLUE = "#3b82f6";
 const COLOR_GREEN = "#10b981";
@@ -33,22 +34,24 @@ export default function DashboardPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { refreshKey } = useAlerts();
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError("");
       try {
         const result = await getDashboardOverview();
         setData(result);
-      } catch {
+      } catch (err) {
+        console.error("Dashboard error:", err);
         setError("Không thể tải dữ liệu dashboard.");
       } finally {
         setLoading(false);
       }
     };
-    fetch();
-  }, []);
+    fetchData();
+  }, [refreshKey]);
 
   if (loading) {
     return (
@@ -221,18 +224,24 @@ export default function DashboardPage() {
           </div>
           <div className="divide-y divide-slate-100">
             {recentAlerts.map((alert) => (
-              <div
+              <Link
                 key={alert.id}
-                className={`flex items-start gap-3 px-5 py-3 ${alert.is_read ? "" : "bg-red-50"}`}
+                to={`/companies/${alert.company_id}`}
+                className={`flex items-start gap-3 px-5 py-3 hover:bg-slate-50 ${alert.is_read ? "" : "bg-red-50"}`}
               >
                 <span className="mt-0.5 text-sm">{SEVERITY_ICON[alert.severity] || "⚪"}</span>
                 <div className="flex-1">
-                  <p className="text-sm text-slate-700">{alert.description}</p>
+                  <p className="text-sm text-slate-700">
+                    {alert.company_code && (
+                      <span className="mr-1 font-medium text-slate-900">{alert.company_code}</span>
+                    )}
+                    {alert.description}
+                  </p>
                   <p className="mt-1 text-xs text-slate-400">
                     {new Date(alert.created_at).toLocaleString("vi-VN")}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
           <div className="border-t border-slate-200 px-5 py-3 text-center">

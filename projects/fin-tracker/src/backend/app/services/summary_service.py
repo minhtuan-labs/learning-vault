@@ -35,10 +35,10 @@ class SummaryService:
         )
 
     def generate_and_save(self, company_id: int) -> CompanySummary:
-        if not settings.anthropic_api_key:
+        if not settings.claude_api_key:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Chưa cấu hình ANTHROPIC_API_KEY.",
+                detail="Chưa cấu hình CLAUDE_API_KEY.",
             )
 
         company = self.db.get(Company, company_id)
@@ -115,10 +115,10 @@ class SummaryService:
     def _call_claude(self, context: str) -> str:
         import anthropic
 
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        client = anthropic.Anthropic(api_key=settings.claude_api_key)
         try:
             message = client.messages.create(
-                model=settings.anthropic_model,
+                model=settings.claude_model,
                 max_tokens=2048,
                 system=_SYSTEM_PROMPT,
                 messages=[
@@ -131,7 +131,7 @@ class SummaryService:
         except Exception as e:
             err = str(e)
             fallback = "claude-sonnet-4-6"
-            if "not_found_error" in err and "model" in err.lower() and settings.anthropic_model != fallback:
+            if "not_found_error" in err and "model" in err.lower() and settings.claude_model != fallback:
                 message = client.messages.create(
                     model=fallback,
                     max_tokens=2048,

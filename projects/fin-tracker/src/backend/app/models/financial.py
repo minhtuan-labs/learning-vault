@@ -41,9 +41,6 @@ class FinancialPeriod(Base):
     financial_data_rows: Mapped[list["FinancialData"]] = relationship(
         "FinancialData", back_populates="period", cascade="all, delete-orphan"
     )
-    ai_analyses: Mapped[list["AIAnalysis"]] = relationship(
-        "AIAnalysis", back_populates="period", cascade="all, delete-orphan"
-    )
     alerts: Mapped[list["Alert"]] = relationship(
         "Alert", back_populates="period", cascade="all, delete-orphan"
     )

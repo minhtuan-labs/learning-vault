@@ -149,7 +149,7 @@ class PeriodService:
         if not settings.claude_api_key:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Chưa cấu hình ANTHROPIC_API_KEY.",
+                detail="Chưa cấu hình CLAUDE_API_KEY.",
             )
 
         company = CompanyService(self.db).get_company(period.company_id)
