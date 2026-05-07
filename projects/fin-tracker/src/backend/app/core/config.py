@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 50
     claude_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-20250514"
+    claude_model: str = "claude-sonnet-4-6"
 
     # Extra fields from .env (not used by backend but needed for pydantic)
     backend_port: int = 8000
@@ -25,6 +25,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     @property

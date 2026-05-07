@@ -64,14 +64,29 @@ fin-tracker/
 ### Periods & Reports
 - `GET /api/companies/{id}/periods` - danh sách kỳ báo cáo
 - `POST /api/companies/{id}/periods` - tạo kỳ báo cáo mới
+- `GET /api/periods/{id}/files` - danh sách file PDF của kỳ
 - `POST /api/periods/{id}/upload` - upload PDF BCTC
+- `GET /api/periods/{id}/files/{file_id}` - xem PDF gốc (inline)
+- `DELETE /api/periods/{id}/files/{file_id}` - xoá file PDF
+- `POST /api/periods/{id}/extract` - trích xuất số liệu (Claude); chạy alert + AI analysis ở background
 - `GET /api/periods/{id}/data` - xem số liệu đã trích xuất
+- `PUT /api/periods/{id}/data/{metric_id}` - chỉnh sửa số liệu
+- `POST /api/periods/{id}/verify` - đánh dấu toàn bộ số liệu trong kỳ là đã kiểm tra
 
-### Analytics & AI
-- `GET /api/companies/{id}/summary` - xem tóm tắt AI
-- `POST /api/companies/{id}/summary` - tạo tóm tắt mới bằng AI
-- `GET /api/analytics/dashboard` - dữ liệu dashboard tổng quan
-- `GET /api/analytics/compare` - so sánh chỉ số giữa các DN
+### Dashboard & Analytics
+- `GET /api/dashboard/overview` - dữ liệu dashboard tổng quan
+- `GET /api/analytics/companies/{id}` - chuỗi chỉ số theo kỳ cho 1 DN
+- `GET /api/analytics/compare?ids=1,2,3&year=YYYY[&quarter=Q]` - so sánh chỉ số giữa các DN
+
+### AI Analysis
+- `GET /api/analysis/companies/{id}/analysis` - xem tóm tắt AI hiện tại của DN
+- `POST /api/analysis/companies/{id}/analyze` - chạy lại tóm tắt AI (background)
+
+### Alerts
+- `GET /api/alerts` - danh sách cảnh báo (lọc theo `company_id`, `is_read`)
+- `PUT /api/alerts/{id}/read` - đánh dấu đã đọc
+- `PUT /api/alerts/read-all` - đánh dấu đã đọc toàn bộ
+- `DELETE /api/alerts/{id}` - xoá cảnh báo
 
 ## Chạy project
 

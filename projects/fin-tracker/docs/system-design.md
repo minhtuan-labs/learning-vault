@@ -42,7 +42,7 @@
 |**Database**|PostgreSQL|15+|Dữ liệu có cấu trúc, query mạnh|
 |**ORM**|SQLAlchemy|2.x|Pythonic, migration dễ|
 |**PDF**|PyMuPDF|Latest|Đọc PDF nhanh, hỗ trợ scan|
-|**AI**|Claude API|claude-3-5-sonnet|Phân tích tài chính, tiếng Việt|
+|**AI**|Claude API|claude-sonnet-4-6|Phân tích tài chính, tiếng Việt|
 |**Deploy**|Docker Compose|Latest|Đóng gói toàn bộ stack|
 |**File Storage**|Local Volume|—|Đơn giản cho v1.0|
 

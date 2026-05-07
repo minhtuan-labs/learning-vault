@@ -142,5 +142,5 @@ Hệ thống web tập trung giúp:
 - [x] Upload PDF và AI trích xuất đúng số liệu chính
 - [x] Xem biểu đồ tăng trưởng theo kỳ
 - [x] AI tóm tắt được tình hình kinh doanh bằng Tiếng Việt
-- [ ] Cảnh báo khi doanh thu/lợi nhuận giảm >20% so với kỳ trước
+- [x] Cảnh báo khi doanh thu/lợi nhuận giảm >20% so với kỳ trước
 - [x] Chạy được trên Docker, có thể share link
