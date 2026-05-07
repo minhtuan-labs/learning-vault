@@ -65,6 +65,7 @@ class AlertEngine:
 
             current_metrics = _get_metrics(db, period_id)
 
+            # Find the comparison period (year-over-year for better context)
             prev_stmt = (
                 db.query(FinancialPeriod)
                 .filter(
@@ -77,8 +78,14 @@ class AlertEngine:
             prev_period = None
             for p in prev_stmt:
                 if p.id != period.id:
-                    prev_period = p
-                    break
+                    # For yearly: compare with previous year
+                    if not period.quarter and not p.quarter and p.year == period.year - 1:
+                        prev_period = p
+                        break
+                    # For quarterly: compare with same quarter of previous year (better context)
+                    if period.quarter and p.quarter and p.quarter == period.quarter and p.year == period.year - 1:
+                        prev_period = p
+                        break
 
             prev_metrics = {}
             if prev_period:
@@ -190,11 +197,14 @@ class AlertEngine:
                             )
                         )
 
+            saved_alerts = []
             for alert in alerts:
                 db.add(alert)
+                saved_alerts.append(alert)
             db.commit()
 
-            return alerts
+            # Return descriptions for immediate use
+            return [a.description for a in saved_alerts]
 
         except Exception as e:
             print(f"Alert check error: {e}")
