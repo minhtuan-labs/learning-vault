@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
+from app.core.alert_thresholds import (
+    BANK_NPL_SURGE_PCT,
+    COST_ANOMALY_PROFIT_DROP_PCT,
+    DEBT_RATIO_SURGE_PCT,
+    REVENUE_DROP_PCT,
+)
 from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.company import Company
 from app.models.financial import FinancialData, FinancialPeriod
 from app.services.pdf_extractor import BANK_KEYWORDS, _is_bank
+
+logger = logging.getLogger(__name__)
 
 
 _BANK_REVENUE_KEYS = [
@@ -110,7 +119,7 @@ class AlertEngine:
 
             TO_BILLION = 1_000_000
 
-            if rev_change is not None and rev_change < -20:
+            if rev_change is not None and rev_change < REVENUE_DROP_PCT:
                 alerts.append(
                     Alert(
                         company_id=period.company_id,
@@ -152,7 +161,7 @@ class AlertEngine:
                 ratio_cur = debt_ratio_cur / asset_cur
                 ratio_prev = debt_ratio_prev / asset_prev
                 debt_change = _pct_change(ratio_cur, ratio_prev)
-                if debt_change is not None and debt_change > 30:
+                if debt_change is not None and debt_change > DEBT_RATIO_SURGE_PCT:
                     alerts.append(
                         Alert(
                             company_id=period.company_id,
@@ -165,7 +174,12 @@ class AlertEngine:
                         )
                     )
 
-            if rev_change is not None and rev_change > 0 and profit_change is not None and profit_change < -10:
+            if (
+                rev_change is not None
+                and rev_change > 0
+                and profit_change is not None
+                and profit_change < COST_ANOMALY_PROFIT_DROP_PCT
+            ):
                 alerts.append(
                     Alert(
                         company_id=period.company_id,
@@ -184,7 +198,7 @@ class AlertEngine:
 
                 if npl_cur is not None and npl_prev is not None and npl_prev > 0:
                     npl_change = _pct_change(npl_cur, npl_prev)
-                    if npl_change is not None and npl_change > 50:
+                    if npl_change is not None and npl_change > BANK_NPL_SURGE_PCT:
                         alerts.append(
                             Alert(
                                 company_id=period.company_id,
@@ -206,8 +220,8 @@ class AlertEngine:
             # Return descriptions for immediate use
             return [a.description for a in saved_alerts]
 
-        except Exception as e:
-            print(f"Alert check error: {e}")
+        except Exception:
+            logger.exception("Alert check failed for period_id=%s", period_id)
             db.rollback()
             return alerts
         finally:

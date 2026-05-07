@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 
 from app.core.config import settings
@@ -9,6 +10,8 @@ from app.models.ai_analysis import AIAnalysis, AnalysisStatus
 from app.models.company import Company
 from app.models.financial import FinancialData, FinancialPeriod
 from app.services.pdf_extractor import BANK_KEYWORDS, _is_bank
+
+logger = logging.getLogger(__name__)
 
 
 class AIAnalyzer:
@@ -156,17 +159,16 @@ Yêu cầu:
 
             return analysis_text
 
-        except Exception as e:
-            print(f"AI analysis error: {e}")
-            # Mark as failed but keep status
+        except Exception:
+            logger.exception("AI analysis failed for company_id=%s", company_id)
             try:
                 existing = db.query(AIAnalysis).filter(AIAnalysis.company_id == company_id).first()
                 if existing:
                     existing.status = AnalysisStatus.PENDING
                     existing.updated_at = datetime.now()
                     db.commit()
-            except:
-                pass
+            except Exception:
+                logger.exception("Failed to reset analysis status for company_id=%s", company_id)
             return ""
         finally:
             db.close()
@@ -230,8 +232,8 @@ Yêu cầu:
 
             return response.content[0].text.strip()
 
-        except Exception as e:
-            print(f"AI comparison error: {e}")
+        except Exception:
+            logger.exception("AI comparison failed for companies=%s year=%s quarter=%s", company_ids, year, quarter)
             return ""
         finally:
             db.close()

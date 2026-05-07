@@ -1,5 +1,5 @@
+import { Component } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useState, useEffect, Component } from "react";
 
 import MainLayout from "./layouts/MainLayout";
 import AlertsPage from "./pages/AlertsPage";
@@ -16,19 +16,19 @@ import { AlertProvider } from "./contexts/AlertContext";
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { error: null };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return { error };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.log('Error:', error, errorInfo);
+    console.error("React error:", error, errorInfo);
   }
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.error) {
       return (
         <div style={{ padding: "20px", color: "red" }}>
           <h1>React Error</h1>
@@ -44,31 +44,6 @@ class ErrorBoundary extends Component {
 }
 
 export default function App() {
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const handleError = (event) => {
-      setError({
-        message: event.error?.message || "Unknown error",
-        stack: event.error?.stack || "No stack trace"
-      });
-    };
-    window.addEventListener("error", handleError);
-    return () => window.removeEventListener("error", handleError);
-  }, []);
-
-  if (error) {
-    return (
-      <div style={{ padding: "20px", color: "red" }}>
-        <h1>JavaScript Error</h1>
-        <p><strong>Message:</strong> {error.message}</p>
-        <pre style={{ whiteSpace: "pre-wrap", fontSize: "12px" }}>
-          {error.stack}
-        </pre>
-      </div>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <AlertProvider>
