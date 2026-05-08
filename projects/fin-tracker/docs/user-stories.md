@@ -1,6 +1,6 @@
 # User Stories — fin-tracker
 
-> **Version:** 1.0 | **Ngày tạo:** 2026-05-02
+> **Version:** 1.1 | **Ngày tạo:** 2026-05-02 | **Cập nhật:** 2026-05-08
 
 ---
 
@@ -148,3 +148,46 @@
 - [ ] Cảnh báo khi nợ/tài sản tăng đột biến > 30%
 - [ ] Hiển thị danh sách cảnh báo trên dashboard
 - [ ] Đánh dấu "đã đọc" cho từng cảnh báo
+
+---
+
+## MODULE 4 — Xác thực & Cài đặt
+
+### US-11: Đăng nhập / Đăng xuất
+
+**Là** PM, **tôi muốn** đăng nhập vào hệ thống bằng tài khoản và mật khẩu  
+**để** bảo vệ dữ liệu riêng tư
+
+**Acceptance Criteria:**
+
+- [x] Form đăng nhập với tên đăng nhập và mật khẩu
+- [x] Chuyển về Dashboard sau khi đăng nhập thành công
+- [x] Hiển thị tên user và nút đăng xuất ở header
+- [x] Nhấn đăng xuất → xoá token → chuyển về trang login
+- [x] Tất cả API endpoint (trừ login/register) yêu cầu Bearer token
+- [x] Token hết hạn → tự động redirect về trang login
+
+### US-12: Đăng ký tài khoản
+
+**Là** PM, **tôi muốn** tạo tài khoản mới  
+**để** bắt đầu sử dụng hệ thống
+
+**Acceptance Criteria:**
+
+- [x] Form đăng ký với tên đăng nhập, mật khẩu, tên hiển thị
+- [x] Kiểm tra trùng tên đăng nhập
+- [x] Sau khi đăng ký → tự động đăng nhập → chuyển về Dashboard
+
+### US-13: Quản lý cài đặt hệ thống
+
+**Là** PM, **tôi muốn** bật/tắt các chức năng AI  
+**để** tiết kiệm chi phí gọi API khi không cần
+
+**Acceptance Criteria:**
+
+- [x] Trang Cài đặt hiển thị danh sách toggle (bật/tắt)
+- [x] Bật/tắt phân tích AI → chặn/không gọi API phân tích
+- [x] Bật/tắt trích xuất AI → chặn/không gọi API trích xuất PDF
+- [x] Bật/tắt tóm tắt AI → chặn/không gọi API tóm tắt
+- [x] Bật/tắt cảnh báo → tự động/không kiểm tra chỉ số bất thường
+- [x] Thay đổi lưu ngay lập tức, không cần reload

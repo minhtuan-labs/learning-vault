@@ -1,8 +1,9 @@
 # PRD — Hệ thống Quản lý Báo Cáo Tài Chính Doanh Nghiệp
 
 > **Project:** fin-tracker  
-> **Version:** 1.0  
+> **Version:** 1.1  
 > **Ngày tạo:** 2026-05-02  
+> **Cập nhật:** 2026-05-08  
 > **Tác giả:** Tuan Pham (PM)
 
 ---
@@ -26,6 +27,8 @@ Hệ thống web tập trung giúp:
 - AI tự động trích xuất số liệu từ PDF
 - Phân tích, so sánh và cảnh báo tự động
 - Trực quan hoá dữ liệu qua biểu đồ
+- Đăng nhập / đăng xuất bảo mật (JWT)
+- Quản lý cài đặt hệ thống (bật/tắt AI để tiết kiệm chi phí)
 
 ### Mục tiêu
 
@@ -77,6 +80,16 @@ Hệ thống web tập trung giúp:
 - **Cảnh báo:** Tự động phát hiện và thông báo khi có chỉ số bất thường
 - **Biểu đồ:** Line chart, Bar chart, Radar chart cho các chỉ số tài chính
 
+### Module 4 — Xác thực & Cài đặt
+
+- Đăng ký tài khoản mới
+- Đăng nhập / đăng xuất bằng JWT
+- Trang cài đặt hệ thống:
+    - Bật/tắt phân tích AI (tiết kiệm chi phí API)
+    - Bật/tắt trích xuất AI
+    - Bật/tắt tóm tắt AI
+    - Bật/tắt cảnh báo tự động
+
 ---
 
 ## 4. YÊU CẦU PHI CHỨC NĂNG
@@ -85,7 +98,7 @@ Hệ thống web tập trung giúp:
 |---|---|
 |**Ngôn ngữ**|Tiếng Việt toàn bộ giao diện và báo cáo|
 |**Hiệu năng**|Trích xuất PDF < 30 giây/file|
-|**Bảo mật**|Đăng nhập cơ bản, dữ liệu private|
+|**Bảo mật**|JWT authentication, dữ liệu private|
 |**Deploy**|Docker Compose, có thể share link|
 |**Trình duyệt**|Chrome, Firefox, Edge|
 
@@ -95,7 +108,7 @@ Hệ thống web tập trung giúp:
 
 - Tự động crawl BCTC từ internet
 - Mobile app
-- Đa người dùng / phân quyền phức tạp
+- ~~Đa người dùng / phân quyền phức tạp~~ (hiện tại: single-user JWT auth)
 - Tích hợp API chứng khoán real-time
 
 ---
@@ -134,6 +147,14 @@ Hệ thống web tập trung giúp:
 - So sánh giữa các DN
 - Cảnh báo chỉ số bất thường
 
+### Phase 5 — Auth & Settings
+
+> Mục tiêu: Bảo vệ hệ thống và quản lý chi phí API
+
+- Đăng nhập / đăng xuất (JWT)
+- Trang cài đặt: bật/tắt AI, cảnh báo
+- Tất cả API endpoint yêu cầu xác thực (trừ login/register)
+
 ---
 
 ## 7. TIÊU CHÍ HOÀN THÀNH (Definition of Done)
@@ -144,3 +165,5 @@ Hệ thống web tập trung giúp:
 - [x] AI tóm tắt được tình hình kinh doanh bằng Tiếng Việt
 - [x] Cảnh báo khi doanh thu/lợi nhuận giảm >20% so với kỳ trước
 - [x] Chạy được trên Docker, có thể share link
+- [x] Đăng nhập / đăng xuất với JWT
+- [x] Cài đặt hệ thống (bật/tắt AI)
