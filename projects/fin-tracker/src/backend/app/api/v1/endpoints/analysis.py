@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import markdown_it
 from datetime import datetime
 
@@ -7,11 +9,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db_session
+from app.api.deps import get_current_user, get_db_session
 from app.models.ai_analysis import AIAnalysis, AnalysisStatus
 from app.models.company import Company
+from app.models.user import User
 from app.schemas.analysis import AIAnalysisResponse
 from app.services.ai_analyzer import AIAnalyzer
+from app.services.settings_service import is_enabled
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 _analyzer = AIAnalyzer()
@@ -20,7 +24,6 @@ _md.enable(["table", "fence"])
 
 
 def _ensure_html(text: str, html: str) -> str:
-    """Convert markdown to HTML if html is empty."""
     if html and html.strip():
         return html
     if not text:
@@ -29,8 +32,7 @@ def _ensure_html(text: str, html: str) -> str:
 
 
 @router.get("/companies/{company_id}/analysis", response_model=list[AIAnalysisResponse])
-def list_analysis(company_id: int, db: Session = Depends(get_db_session)):
-    # One analysis per company
+def list_analysis(company_id: int, db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
     row = (
         db.execute(
             select(
@@ -53,10 +55,7 @@ def list_analysis(company_id: int, db: Session = Depends(get_db_session)):
 
     analysis_html = _ensure_html(row.analysis_text, row.analysis_html)
 
-    # Extract latest period from analysis text
-    import re
     latest_label = "Tổng quan"
-    # Look for patterns like "Q1/2026" or "2025" in the text
     period_match = re.search(r'(Q\d+/\d+|\d{4})', row.analysis_text)
     if period_match:
         period_str = period_match.group(1)
@@ -69,7 +68,7 @@ def list_analysis(company_id: int, db: Session = Depends(get_db_session)):
         AIAnalysisResponse(
             id=row.id,
             company_id=row.company_id,
-            period_id=0,  # kept for backward compat
+            period_id=0,
             period_label=latest_label,
             analysis_text=row.analysis_text,
             analysis_html=analysis_html,
@@ -81,12 +80,13 @@ def list_analysis(company_id: int, db: Session = Depends(get_db_session)):
 
 
 @router.post("/companies/{company_id}/analyze")
-def trigger_analysis(company_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db_session)):
+def trigger_analysis(company_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
+    if not is_enabled(db, "ai_analysis_enabled"):
+        raise HTTPException(status_code=403, detail="Phân tích AI đang bị tắt trong cài đặt hệ thống.")
     company = db.get(Company, company_id)
     if not company:
         raise HTTPException(404, "Company not found")
 
-    # Upsert: mark as pending
     existing = db.query(AIAnalysis).filter(AIAnalysis.company_id == company_id).first()
     now = datetime.now()
     if existing:

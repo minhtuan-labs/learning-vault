@@ -10,12 +10,17 @@ from app.db.session import Base, engine
 from app.models.company import Company  # noqa: F401
 from app.models.financial import FinancialData, FinancialPeriod, ReportFile  # noqa: F401
 from app.models.summary import CompanySummary  # noqa: F401
+from app.models.setting import Setting  # noqa: F401
+from app.models.user import User  # noqa: F401
 
 app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,21 +1,16 @@
-import axios from "axios";
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "",
-  timeout: 10000,
-});
+import apiClient from "./client";
 
 export async function getCompanyAnalysis(companyId) {
-  const res = await api.get(`/api/analysis/companies/${companyId}/analysis`);
-  return res.data;
+  const { data } = await apiClient.get(`/api/analysis/companies/${companyId}/analysis`);
+  return data;
 }
 
 export async function triggerAnalysis(companyId) {
-  const res = await api.post(`/api/analysis/companies/${companyId}/analyze`);
-  return res.data;
+  const { data } = await apiClient.post(`/api/analysis/companies/${companyId}/analyze`);
+  return data;
 }
 
 export async function getAnalysisStatus(companyId) {
-  const res = await api.get(`/api/analysis/companies/${companyId}/analysis`);
-  return res.data?.[0]?.status || null;
+  const { data } = await apiClient.get(`/api/analysis/companies/${companyId}/analysis`);
+  return data?.[0]?.status || null;
 }

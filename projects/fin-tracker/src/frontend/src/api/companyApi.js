@@ -1,9 +1,4 @@
-import axios from "axios";
-
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "",
-  timeout: 10000,
-});
+import apiClient from "./client";
 
 export const getCompanies = async (params = {}) => {
   const { data } = await apiClient.get("/api/companies", { params });

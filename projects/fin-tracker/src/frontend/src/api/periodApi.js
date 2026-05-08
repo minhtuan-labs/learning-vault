@@ -1,22 +1,19 @@
-import axios from "axios";
+import apiClient from "./client";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || "";
-
-const api = axios.create({ baseURL, timeout: 30000 });
-const longApi = axios.create({ baseURL, timeout: 600000 });
+const longTimeout = { timeout: 600000 };
 
 export const createFinancialPeriod = async (companyId, payload) => {
-  const { data } = await api.post(`/api/companies/${companyId}/periods`, payload);
+  const { data } = await apiClient.post(`/api/companies/${companyId}/periods`, payload);
   return data;
 };
 
 export const listFinancialPeriods = async (companyId) => {
-  const { data } = await api.get(`/api/companies/${companyId}/periods`);
+  const { data } = await apiClient.get(`/api/companies/${companyId}/periods`);
   return data;
 };
 
 export const listPeriodFiles = async (periodId) => {
-  const { data } = await api.get(`/api/periods/${periodId}/files`);
+  const { data } = await apiClient.get(`/api/periods/${periodId}/files`);
   return data;
 };
 
@@ -24,7 +21,7 @@ export const uploadPeriodPdf = async (periodId, file, reportType, onUploadProgre
   const form = new FormData();
   form.append("file", file);
   form.append("report_type", reportType);
-  const { data } = await api.post(`/api/periods/${periodId}/upload`, form, {
+  const { data } = await apiClient.post(`/api/periods/${periodId}/upload`, form, {
     headers: { "Content-Type": "multipart/form-data" },
     onUploadProgress,
   });
@@ -32,32 +29,36 @@ export const uploadPeriodPdf = async (periodId, file, reportType, onUploadProgre
 };
 
 export const extractPeriodData = async (periodId, body = {}) => {
-  const { data } = await longApi.post(`/api/periods/${periodId}/extract`, body);
+  const { data } = await apiClient.post(`/api/periods/${periodId}/extract`, body, longTimeout);
   return data;
 };
 
 export const listFinancialData = async (periodId) => {
-  const { data } = await api.get(`/api/periods/${periodId}/data`);
+  const { data } = await apiClient.get(`/api/periods/${periodId}/data`);
   return data;
 };
 
 export const updateFinancialMetric = async (periodId, metricId, payload) => {
-  const { data } = await api.put(`/api/periods/${periodId}/data/${metricId}`, payload);
+  const { data } = await apiClient.put(`/api/periods/${periodId}/data/${metricId}`, payload);
   return data;
 };
 
 export const verifyPeriodData = async (periodId) => {
-  const { data } = await api.post(`/api/periods/${periodId}/verify`);
+  const { data } = await apiClient.post(`/api/periods/${periodId}/verify`);
   return data;
 };
 
-export const pdfFileUrl = (periodId, fileId) =>
-  `${baseURL}/api/periods/${periodId}/files/${fileId}`;
+export const fetchPdfBlob = async (periodId, fileId) => {
+  const { data } = await apiClient.get(`/api/periods/${periodId}/files/${fileId}`, {
+    responseType: "blob",
+  });
+  return URL.createObjectURL(data);
+};
 
 export const deletePeriodFile = async (periodId, fileId) => {
-  await api.delete(`/api/periods/${periodId}/files/${fileId}`);
+  await apiClient.delete(`/api/periods/${periodId}/files/${fileId}`);
 };
 
 export const deleteFinancialPeriod = async (companyId, periodId) => {
-  await api.delete(`/api/companies/${companyId}/periods/${periodId}`);
+  await apiClient.delete(`/api/companies/${companyId}/periods/${periodId}`);
 };

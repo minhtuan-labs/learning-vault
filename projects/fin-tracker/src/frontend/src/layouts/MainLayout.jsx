@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
+
+import { useAuth } from "../contexts/AuthContext";
 import AlertDropdown from "../components/AlertDropdown";
 
 export default function MainLayout({ children }) {
+  const { user, logout } = useAuth();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-slate-900 text-white shadow">
@@ -20,6 +24,9 @@ export default function MainLayout({ children }) {
               <Link to="/analytics/compare" className="hover:text-emerald-400">
                 So sánh DN
               </Link>
+              <Link to="/settings" className="hover:text-emerald-400">
+                Cài đặt
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -30,6 +37,15 @@ export default function MainLayout({ children }) {
             >
               Thêm doanh nghiệp
             </Link>
+            <div className="flex items-center gap-3 border-l border-slate-600 pl-4">
+              <span className="text-sm text-slate-300">{user?.display_name || user?.username}</span>
+              <button
+                onClick={logout}
+                className="rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white"
+              >
+                Đăng xuất
+              </button>
+            </div>
           </div>
         </div>
       </header>

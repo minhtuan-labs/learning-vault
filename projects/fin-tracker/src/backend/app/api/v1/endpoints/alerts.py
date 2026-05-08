@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db_session
+from app.api.deps import get_current_user, get_db_session
 from app.models.alert import Alert
 from app.models.company import Company
 from app.models.financial import FinancialPeriod
+from app.models.user import User
 from app.schemas.alert import AlertResponse, MarkReadResponse
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -19,6 +20,7 @@ def list_alerts(
     is_read: bool | None = Query(None),
     limit: int = Query(50, le=100),
     db: Session = Depends(get_db_session),
+    _current_user: User = Depends(get_current_user),
 ):
     stmt = (
         select(
@@ -70,7 +72,7 @@ def list_alerts(
 
 
 @router.put("/{alert_id}/read", response_model=MarkReadResponse)
-def mark_read(alert_id: int, db: Session = Depends(get_db_session)):
+def mark_read(alert_id: int, db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
     alert = db.get(Alert, alert_id)
     if not alert:
         raise HTTPException(404, "Alert not found")
@@ -80,7 +82,7 @@ def mark_read(alert_id: int, db: Session = Depends(get_db_session)):
 
 
 @router.put("/read-all", response_model=MarkReadResponse)
-def mark_all_read(company_id: int | None = Query(None), db: Session = Depends(get_db_session)):
+def mark_all_read(company_id: int | None = Query(None), db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
     stmt = select(Alert).where(Alert.is_read == False)
     if company_id:
         stmt = stmt.where(Alert.company_id == company_id)
@@ -92,11 +94,10 @@ def mark_all_read(company_id: int | None = Query(None), db: Session = Depends(ge
 
 
 @router.delete("/{alert_id}", status_code=204)
-def delete_alert(alert_id: int, db: Session = Depends(get_db_session)):
+def delete_alert(alert_id: int, db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
     alert = db.get(Alert, alert_id)
     if not alert:
         raise HTTPException(404, "Alert not found")
     db.delete(alert)
     db.commit()
     return None
-

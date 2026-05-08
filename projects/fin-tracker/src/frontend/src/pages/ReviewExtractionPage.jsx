@@ -6,7 +6,7 @@ import {
   extractPeriodData,
   listFinancialData,
   listPeriodFiles,
-  pdfFileUrl,
+  fetchPdfBlob,
   updateFinancialMetric,
   verifyPeriodData,
 } from "../api/periodApi";
@@ -24,6 +24,7 @@ export default function ReviewExtractionPage() {
 
   const [files, setFiles] = useState([]);
   const [fileId, setFileId] = useState(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,9 +42,29 @@ export default function ReviewExtractionPage() {
       const fid = fileIdParam ? Number(fileIdParam) : fList[0]?.id;
       setFileId(fid || null);
 
+      if (fid) {
+        try {
+          const blobUrl = await fetchPdfBlob(periodId, fid);
+          setPdfBlobUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return blobUrl;
+          });
+        } catch {
+          setPdfBlobUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return null;
+          });
+        }
+      } else {
+        setPdfBlobUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return null;
+        });
+      }
+
       const data = await listFinancialData(periodId);
       setRows(data);
-    } catch (e) {
+    } catch {
       setError("Không tải được dữ liệu kỳ báo cáo.");
     } finally {
       setLoading(false);
@@ -52,6 +73,12 @@ export default function ReviewExtractionPage() {
 
   useEffect(() => {
     load();
+    return () => {
+      setPdfBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
   }, [periodId, fileIdParam]);
 
   const handleChangeValue = (id, value) => {
@@ -147,12 +174,14 @@ export default function ReviewExtractionPage() {
 
       {!fileId ? (
         <p className="text-sm text-slate-600">Chưa có file PDF cho kỳ này.</p>
+      ) : pdfBlobUrl === null && !loading ? (
+        <p className="text-sm text-red-600">Không thể tải file PDF. Có thể do không có quyền truy cập.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="min-h-[70vh] overflow-hidden rounded-xl border border-slate-200 bg-white shadow">
             <iframe
               title="PDF gốc"
-              src={pdfFileUrl(periodId, fileId)}
+              src={pdfBlobUrl || ""}
               className="h-[70vh] w-full"
             />
           </div>

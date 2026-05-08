@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     claude_api_key: str = ""
     claude_model: str = "claude-sonnet-4-6"
 
+    jwt_secret_key: str = "change-me-in-production"
+    jwt_expire_hours: int = 24
+
     # Extra fields from .env (not used by backend but needed for pydantic)
     backend_port: int = 8000
     frontend_port: int = 3000
