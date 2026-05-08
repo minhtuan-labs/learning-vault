@@ -10,17 +10,17 @@
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                  User (Browser)                  │
+│                  User (Browser)                 │
 └─────────────────┬───────────────────────────────┘
-                   │ HTTP/HTTPS
+                  │ HTTP/HTTPS
 ┌─────────────────▼───────────────────────────────┐
-│            React Frontend (Port 3000)            │
+│            React Frontend (Port 3000)           │
 │     TailwindCSS + Recharts + Axios + JWT        │
 └─────────────────┬───────────────────────────────┘
                    │ REST API (Bearer Token)
 ┌─────────────────▼───────────────────────────────┐
-│           FastAPI Backend (Port 8000)            │
-│     Python + PyMuPDF + Claude API + JWT Auth     │
+│           FastAPI Backend (Port 8000)           │
+│    Python + PyMuPDF + Claude API + JWT Auth     │
 └──────┬──────────────────────────┬───────────────┘
        │                          │
 ┌──────▼──────┐          ┌────────▼────────┐
