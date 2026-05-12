@@ -69,10 +69,16 @@ CREATE TABLE users (
     username        VARCHAR(50) UNIQUE NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
     display_name    VARCHAR(100),
-    is_active       BOOLEAN DEFAULT TRUE,
+    is_active       BOOLEAN DEFAULT FALSE,   -- mới đăng ký cần admin phê duyệt
+    is_admin        BOOLEAN DEFAULT FALSE,    -- quản trị viên
     created_at      TIMESTAMP DEFAULT NOW()
 );
 ```
+
+**Quy ước:**
+- Tài khoản đầu tiên tự động là admin (`is_admin=true, is_active=true`).
+- Tài khoản đăng ký sau phải được admin phê duyệt mới đăng nhập được.
+- Admin thấy mục "Quản lý người dùng" trên trang Cài đặt.
 
 ### Bảng: `companies` — Doanh nghiệp
 
@@ -189,6 +195,20 @@ CREATE TABLE settings (
 ### Auth (công khai)
 
 ```
+POST   /api/auth/register    → Tạo tài khoản mới (is_active=false cần admin phê duyệt)
+POST   /api/auth/login       → Đăng nhập, nhận JWT token (từ chối nếu is_active=false)
+GET    /api/auth/me           → Thông tin user hiện tại (cần token)
+```
+
+### Users (chỉ quản trị viên)
+
+```
+GET    /api/users                → Danh sách tất cả người dùng
+PUT    /api/users/{id}/approve   → Phê duyệt người dùng (is_active → true)
+PUT    /api/users/{id}/deactivate → Vô hiệu hóa người dùng (is_active → false)
+PUT    /api/users/{id}            → Cập nhật quyền (is_admin, is_active)
+DELETE /api/users/{id}            → Xoá người dùng
+```
 POST   /api/auth/register    → Tạo tài khoản mới
 POST   /api/auth/login       → Đăng nhập, nhận JWT token
 GET    /api/auth/me           → Thông tin user hiện tại (cần token)
@@ -296,6 +316,7 @@ fin-tracker/
 │       │   │       └── endpoints/
 │       │   │           ├── auth.py
 │       │   │           ├── settings.py
+│       │   │           ├── users.py
 │       │   │           ├── companies.py
 │       │   │           ├── periods.py
 │       │   │           ├── dashboard.py
@@ -317,6 +338,7 @@ fin-tracker/
 │       │   │   └── setting.py
 │       │   ├── schemas/
 │       │   │   ├── auth.py
+│       │   │   ├── user.py
 │       │   │   ├── setting.py
 │       │   │   ├── company.py
 │       │   │   ├── financial.py
@@ -352,10 +374,11 @@ fin-tracker/
 - **Token寿命:** 24 giờ (cấu hình qua `JWT_EXPIRE_HOURS`)
 - **Password hashing:** bcrypt (4.2.1)
 - **Flow:**
-  1. `POST /api/auth/register` → tạo user mới (công khai)
-  2. `POST /api/auth/login` → trả về JWT access token (công khai)
-  3. Mọi request khác → header `Authorization: Bearer <token>`
-  4. Token hết hạn / không hợp lệ → HTTP 401 → frontend redirect `/login`
+1. `POST /api/auth/register` → tạo user mới (mặc định `is_active=false`, trừ user đầu tiên tự là admin)
+2. `POST /api/auth/login` → trả về JWT access token (từ chối nếu `is_active=false`)
+3. Mọi request khác → header `Authorization: Bearer <token>`
+4. Token hết hạn / không hợp lệ → HTTP 401 → frontend redirect `/login`
+5. Admin quản lý người dùng qua `GET/PUT/DELETE /api/users`
 
 ### CORS
 
@@ -370,11 +393,12 @@ Các endpoint gọi AI/API có thể bị khoá qua bảng `settings`:
 
 |Endpoint|Setting key|Khi tắt|
 |---|---|---|
-|`POST /periods/{id}/extract`|`ai_extraction_enabled`|Trả về 403|
-|`POST /analysis/companies/{id}/analyze`|`ai_analysis_enabled`|Trả về 403|
-|`POST /companies/{id}/summary`|`ai_summary_enabled`|Trả về 403|
+|`POST /periods/{id}/extract`|`ai_extraction_enabled`|Trả về 403 — "Chức năng trích xuất AI đang tắt"|
+|`POST /analysis/companies/{id}/analyze`|`ai_analysis_enabled`|Trả về 403 — "Chức năng phân tích AI đang tắt"|
+|`POST /companies/{id}/summary`|`ai_summary_enabled`|Trả về 403 — "Chức năng tóm tắt AI đang tắt"|
 |Background alert check|`alert_enabled`|Bỏ qua|
 |Background AI analysis|`ai_analysis_enabled`|Bỏ qua|
+|`GET/PUT/DELETE /users/*`|—|Yêu cầu `is_admin=true`, trả về 403 nếu không phải admin|
 
 ---
 

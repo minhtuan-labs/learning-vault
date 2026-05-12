@@ -13,10 +13,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(payload: RegisterRequest, db: Session = Depends(get_db_session)):
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
+    is_first_user = db.query(User).count() == 0
     user = User(
         username=payload.username,
         hashed_password=hash_password(payload.password),
         display_name=payload.display_name or payload.username,
+        is_active=is_first_user,
+        is_admin=is_first_user,
     )
     db.add(user)
     db.commit()
@@ -30,7 +33,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db_session)):
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account is disabled")
+        raise HTTPException(status_code=403, detail="Tài khoản chưa được phê duyệt hoặc đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.")
     token = create_access_token(str(user.id))
     return TokenResponse(access_token=token)
 

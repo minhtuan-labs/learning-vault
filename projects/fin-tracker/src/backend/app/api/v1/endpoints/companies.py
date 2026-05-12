@@ -98,7 +98,7 @@ def get_company_summary(company_id: int, db: Session = Depends(get_db_session), 
 @router.post("/{company_id}/summary", response_model=CompanySummaryResponse)
 def generate_company_summary(company_id: int, db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
     if not is_enabled(db, "ai_summary_enabled"):
-        raise HTTPException(status_code=403, detail="Tóm tắt AI đang bị tắt trong cài đặt hệ thống.")
+        raise HTTPException(status_code=403, detail="Chức năng tóm tắt AI đang tắt. Vui lòng bật lại trong Cài đặt hệ thống.")
     CompanyService(db).get_company(company_id)
     summary = SummaryService(db).generate_and_save(company_id)
     return CompanySummaryResponse.model_validate(summary)

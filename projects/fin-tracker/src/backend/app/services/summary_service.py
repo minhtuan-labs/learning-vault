@@ -38,7 +38,7 @@ class SummaryService:
         if not settings.claude_api_key:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Chưa cấu hình CLAUDE_API_KEY.",
+                detail="Anthropic API chưa được cấu hình (thiếu CLAUDE_API_KEY). Vui lòng liên hệ quản trị viên.",
             )
 
         company = self.db.get(Company, company_id)

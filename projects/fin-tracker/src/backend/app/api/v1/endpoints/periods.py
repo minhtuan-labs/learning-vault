@@ -75,7 +75,7 @@ def extract_financial_data(
     _current_user: User = Depends(get_current_user),
 ):
     if not is_enabled(db, "ai_extraction_enabled"):
-        raise HTTPException(status_code=403, detail="Trích xuất AI đang bị tắt trong cài đặt hệ thống.")
+        raise HTTPException(status_code=403, detail="Chức năng trích xuất AI đang tắt. Vui lòng bật lại trong Cài đặt hệ thống.")
     svc = PeriodService(db)
     payload = body or ExtractRequest()
     rows, entity_type = svc.extract_from_file(period_id, payload)

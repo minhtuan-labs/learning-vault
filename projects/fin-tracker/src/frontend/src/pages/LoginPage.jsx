@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,20 +23,23 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
-        const user = await registerApi(username, password, displayName || null);
-        const tokenData = await loginApi(username, password);
-        login(tokenData.access_token, user);
-      } else {
-        const tokenData = await loginApi(username, password);
-        const { data: user } = await apiClient.get("/api/auth/me", {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        });
-        login(tokenData.access_token, user);
+        await registerApi(username, password, displayName || null);
+        setPendingApproval(true);
+        return;
       }
+      const tokenData = await loginApi(username, password);
+      const { data: user } = await apiClient.get("/api/auth/me", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      login(tokenData.access_token, user);
       navigate("/dashboard");
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(detail || (isRegister ? "Không thể tạo tài khoản." : "Tên đăng nhập hoặc mật khẩu không đúng."));
+      if (err?.response?.status === 403) {
+        setError(detail || "Tài khoản chưa được phê duyệt hoặc đã bị vô hiệu hóa.");
+      } else {
+        setError(detail || (isRegister ? "Không thể tạo tài khoản." : "Tên đăng nhập hoặc mật khẩu không đúng."));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -87,6 +91,14 @@ export default function LoginPage() {
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
+
+          {pendingApproval && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-sm text-emerald-800">
+                Đăng ký thành công! Tài khoản của bạn đang chờ quản trị viên phê duyệt. Vui lòng đăng nhập lại sau khi được duyệt.
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"

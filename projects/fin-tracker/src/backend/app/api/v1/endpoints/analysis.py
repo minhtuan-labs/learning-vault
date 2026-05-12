@@ -82,7 +82,7 @@ def list_analysis(company_id: int, db: Session = Depends(get_db_session), _curre
 @router.post("/companies/{company_id}/analyze")
 def trigger_analysis(company_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db_session), _current_user: User = Depends(get_current_user)):
     if not is_enabled(db, "ai_analysis_enabled"):
-        raise HTTPException(status_code=403, detail="Phân tích AI đang bị tắt trong cài đặt hệ thống.")
+        raise HTTPException(status_code=403, detail="Chức năng phân tích AI đang tắt. Vui lòng bật lại trong Cài đặt hệ thống.")
     company = db.get(Company, company_id)
     if not company:
         raise HTTPException(404, "Company not found")

@@ -359,9 +359,11 @@ export default function CompanyAnalyticsPage() {
       const result = await generateCompanySummary(companyId);
       setSummary(result);
     } catch (err) {
-      const msg = err?.response?.data?.detail || "Không thể tạo tóm tắt. Vui lòng thử lại.";
-      setSummaryError(msg);
-    } finally {
+        const msg = err?.response?.status === 403
+          ? err?.response?.data?.detail
+          : (err?.response?.data?.detail || "Không thể tạo tóm tắt. Vui lòng thử lại.");
+        setSummaryError(msg);
+      } finally {
       setSummaryGenerating(false);
     }
   };
@@ -372,12 +374,13 @@ export default function CompanyAnalyticsPage() {
        await triggerAnalysis(companyId);
        const status = await fetchAnalyses();
        setAnalysisStatus(status);
-     } catch (err) {
-       console.error('Error triggering analysis:', err);
-       alert('Error: ' + (err.message || 'Failed to trigger analysis'));
-     } finally {
-       setAnalysesGenerating(false);
-     }
+} catch (err) {
+        const detail = err?.response?.data?.detail;
+        const alertMsg = err?.response?.status === 403
+          ? detail || "Chức năng AI đang tắt."
+          : (detail || err.message || "Không thể phân tích. Vui lòng thử lại.");
+        alert(alertMsg);
+      }
    };
 
   if (loading) {

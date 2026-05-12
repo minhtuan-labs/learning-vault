@@ -101,7 +101,9 @@ export default function UploadReportPage() {
       navigate(`/companies/${companyId}/periods/${periodId}/review?fileId=${uploaded.id}`);
     } catch (err) {
       let msg = "Có lỗi xảy ra.";
-      if (err?.response?.data) {
+      if (err?.response?.status === 403 && err?.response?.data?.detail) {
+        msg = err.response.data.detail;
+      } else if (err?.response?.data) {
         if (typeof err.response.data === "string") {
           msg = err.response.data;
         } else if (err.response.data.detail) {

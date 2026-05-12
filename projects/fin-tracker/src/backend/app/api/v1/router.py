@@ -8,6 +8,7 @@ from app.api.v1.endpoints.periods import router as periods_router
 from app.api.v1.endpoints.alerts import router as alerts_router
 from app.api.v1.endpoints.analytics import router as analytics_router
 from app.api.v1.endpoints.settings import router as settings_router
+from app.api.v1.endpoints.users import router as users_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
@@ -18,3 +19,4 @@ api_router.include_router(analytics_router)
 api_router.include_router(alerts_router)
 api_router.include_router(analysis_router)
 api_router.include_router(settings_router)
+api_router.include_router(users_router)
