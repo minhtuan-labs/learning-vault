@@ -1,6 +1,86 @@
 # Template Version
 
-Version: 10.11
+Version: 10.12
+
+## Changes from v10.11
+
+### 1. Engine choice — pluggable OpenCode / Claude Code
+
+Through v10.11 the framework hard-coded `opencode` as the CLI binary
+everywhere (model IDs, config file paths, validation commands, run
+syntax). v10.12 abstracts the engine so the user picks at session
+start:
+
+```bash
+$ bash scripts/start_agents_tmux.sh my-project              # default: opencode
+$ bash scripts/start_agents_tmux.sh my-project --engine opencode
+$ bash scripts/start_agents_tmux.sh my-project --engine claude
+```
+
+New files:
+
+- `config/engines/opencode.env` — per-engine binary, run command,
+  config path, auto-context filename, model-validation mode, and 9
+  per-role model IDs.
+- `config/engines/claude.env` — same, for Claude Code (3-tier mapping:
+  Haiku for cheap roles, Sonnet for balanced, Opus for strong).
+- `config/engines/README.md` — guide to adding a new engine.
+- `CLAUDE.md` — Claude Code's auto-context file. Regenerated from
+  `AGENTS.md` whenever `--engine claude` is used.
+
+Modified scripts (engine-aware):
+
+- `scripts/start_agents_tmux.sh` — parses `--engine`, sources
+  `config/engines/<name>.env`, validates models per engine's mode
+  (dynamic for opencode via `opencode models`; static whitelist for
+  claude). Writes `ENGINE=<name>` into `.agent_session`. Generates
+  the engine's policy file (`.opencode/config.json` or
+  `.claude/settings.json`) inline at startup.
+- `scripts/route_to_pane.sh` — reads engine from `.agent_session`,
+  dispatches `$ENGINE_RUN_BASE $ENGINE_MODEL_FLAG <model> "<task>"`.
+- `scripts/run_agent_task.sh` — same.
+- `scripts/check_models.sh` (new) — engine-aware model validator.
+  `scripts/check_opencode_models.sh` kept as backward-compat alias.
+- `scripts/agent_banner.sh` — shows engine + window assignment per
+  pane.
+
+The 11 markers from v10.0–v10.11 (refuse-ORCHESTRATOR routing,
+clarification loop, auto-relaunch, [INBOX] auto-wake, memory layer,
+resume detection, lean read list, Tech Stack Confirmation Protocol,
+Prerequisite check, Phase gates, Stay-in-lane, Framework files
+immutable) are all preserved.
+
+### 2. 3-window tmux layout
+
+Single-window 3×3 grid replaced with **3 windows** for better
+ergonomics:
+
+```text
+Window 0 — OC       (1 pane)     ORCHESTRATOR — full size for chat
+Window 1 — DESIGN   (2×2 panes)  PM, SA, BA, UX
+Window 2 — DEV      (2×2 panes)  BE, FE, QA, DELIVERY
+```
+
+Switch windows with `Ctrl+B 0/1/2`. Routing scripts target panes by
+pane ID (unique session-wide), so they work unchanged regardless of
+window.
+
+### 3. Prompt genericisation
+
+`AGENTS.md` + 9 worker prompts had their few OpenCode-specific
+mentions broadened to "the engine's built-in Task tool" etc. so
+prompts work for either engine. No behavioural changes.
+
+### Meta — preserving prior agreements
+
+v10.0–v10.11 markers verified intact before AND after this change.
+v10.12 is **purely additive**:
+
+- Default engine = opencode → users on v10.11 get identical behaviour
+  by re-running `start_agents_tmux.sh` without `--engine`.
+- All existing prompts, scripts, memory files, phase gates,
+  prerequisite checks, build-failure routing, and the framework-
+  immutable rule continue to work.
 
 ## Changes from v10.10
 

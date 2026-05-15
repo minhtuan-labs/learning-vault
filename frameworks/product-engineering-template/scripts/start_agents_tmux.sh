@@ -1,26 +1,43 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# v10.1 — Start the 9-pane tmux session for the product engineering workflow.
+# v10.12 — Start the 9-pane tmux session with engine choice + 3-window layout.
 #
-# Key fixes vs v9/v10.0:
-#   - Do NOT pass --config to opencode. The opencode-go fork doesn't accept
-#     that flag and exits with an error, which made the Orchestrator pane
-#     drop back to bash and (in v10.0) get a racy boot-prompt paste that
-#     left it stuck at  dquote>  .
-#   - Rely on (a) OPENCODE_CONFIG=<path> env var, and (b) opencode's
-#     auto-load of .opencode/config.json and opencode.json from the
-#     project root. Both mechanisms are supported by SST OpenCode and
-#     by opencode-go.
-#   - Do NOT auto-paste a boot prompt into the Orchestrator pane. Instead
-#     OpenCode auto-loads AGENTS.md at startup, which contains the
-#     role-aware instructions (Orchestrator + every worker role).
-#   - If you ever need to inject a boot prompt manually after OpenCode
-#     TUI is loaded, run: bash scripts/inject_boot_prompt.sh ORCHESTRATOR
+# Usage:
+#   bash scripts/start_agents_tmux.sh <project_name> [--engine opencode|claude]
+#
+# Window layout:
+#   Window 0 — OC      : 1 pane  (ORCHESTRATOR — full)
+#   Window 1 — DESIGN  : 4 panes (PM, SA, BA, UX) in 2×2 tiled
+#   Window 2 — DEV     : 4 panes (BE, FE, QA, DELIVERY) in 2×2 tiled
+#
+# Engine selection (v10.12, additive):
+#   --engine opencode  (default) — opencode-go fork, multi-provider, 7-tier mix
+#   --engine claude               — Anthropic Claude Code, 3-tier
+#   See config/engines/*.env + config/engines/README.md.
 
-INPUT_PROJECT_NAME="${1:-}"
+# ---------- arg parsing ----------
+INPUT_PROJECT_NAME=""
+ENGINE="opencode"          # default
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --engine)
+      ENGINE="$2"; shift 2 ;;
+    --engine=*)
+      ENGINE="${1#--engine=}"; shift ;;
+    -h|--help)
+      echo "Usage: bash scripts/start_agents_tmux.sh <project_name> [--engine opencode|claude]"
+      exit 0 ;;
+    *)
+      if [[ -z "$INPUT_PROJECT_NAME" ]]; then
+        INPUT_PROJECT_NAME="$1"
+      fi
+      shift ;;
+  esac
+done
+
 CURRENT_FOLDER_NAME="$(basename "$(pwd)")"
-
 if [[ -n "$INPUT_PROJECT_NAME" ]]; then
   SESSION_NAME="$INPUT_PROJECT_NAME"
 else
@@ -34,22 +51,25 @@ if [[ ! "$SESSION_NAME" =~ ^[A-Za-z0-9_.-]+$ ]]; then
 fi
 
 PROJECT_DIR="$(pwd)"
+
+# ---------- engine config ----------
+ENGINE_CFG="config/engines/${ENGINE}.env"
+if [[ ! -f "$ENGINE_CFG" ]]; then
+  echo "ERROR: engine config not found: $ENGINE_CFG"
+  echo "Available engines:"
+  ls -1 config/engines/*.env 2>/dev/null | sed 's|config/engines/||;s|.env$||' | sed 's/^/  - /'
+  exit 2
+fi
+# shellcheck disable=SC1090
+source "$ENGINE_CFG"
+
+# Backward-compat: still source the old opencode.env runtime flags if present.
+if [[ -f "config/opencode.env" ]]; then
+  # shellcheck disable=SC1090
+  source "config/opencode.env"
+fi
+
 AGENTS=(ORCHESTRATOR PM SA BA UX BE FE QA DELIVERY)
-
-MODEL_CONFIG_FILE="config/agent_models.env"
-if [[ -f "$MODEL_CONFIG_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$MODEL_CONFIG_FILE"
-else
-  echo "Missing $MODEL_CONFIG_FILE"
-  exit 1
-fi
-
-OPENCODE_CONFIG_FILE="config/opencode.env"
-if [[ -f "$OPENCODE_CONFIG_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$OPENCODE_CONFIG_FILE"
-fi
 
 AUTO_START_ORCHESTRATOR="${AUTO_START_ORCHESTRATOR:-true}"
 AUTO_START_WORKER_AGENTS="${AUTO_START_WORKER_AGENTS:-false}"
@@ -63,43 +83,60 @@ get_agent_model() {
   echo "${!var_name:-not_configured}"
 }
 
+# ---------- existing-session check ----------
 if tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
   echo "Session '$SESSION_NAME' already exists."
   echo "Attach with: tmux attach -t '$SESSION_NAME'"
   exit 0
 fi
 
-# Strict model validation
+# ---------- model validation ----------
 if [[ "$STRICT_MODEL_CHECK" == "true" ]]; then
-  if ! command -v opencode >/dev/null 2>&1; then
-    echo "ERROR: opencode command not found. Install OpenCode or set AUTO_START_ORCHESTRATOR=false in config/opencode.env"
+  if ! command -v "$ENGINE_BINARY" >/dev/null 2>&1; then
+    echo "ERROR: engine binary '$ENGINE_BINARY' not found in PATH."
+    echo "Install $ENGINE_BINARY, or set STRICT_MODEL_CHECK=false in config/opencode.env."
     exit 1
   fi
 
-  MODELS_OUTPUT="$(opencode models 2>/dev/null || true)"
-  if [[ -z "$MODELS_OUTPUT" ]]; then
-    echo "ERROR: Could not fetch 'opencode models'."
-    echo "Run manually: opencode models"
-    exit 1
-  fi
-
-  for agent in "${AGENTS[@]}"; do
-    model="$(get_agent_model "$agent")"
-    if ! echo "$MODELS_OUTPUT" | grep -Fq "$model"; then
-      echo "ERROR: Configured model for $agent not found: $model"
-      echo "Run: opencode models"
-      echo "Then edit: config/agent_models.env"
-      exit 2
+  if [[ "$ENGINE_MODEL_CHECK_MODE" == "dynamic" ]]; then
+    MODELS_OUTPUT="$($ENGINE_MODELS_LIST_CMD 2>/dev/null || true)"
+    if [[ -z "$MODELS_OUTPUT" ]]; then
+      echo "ERROR: Could not fetch model list from: $ENGINE_MODELS_LIST_CMD"
+      exit 1
     fi
-  done
+    for agent in "${AGENTS[@]}"; do
+      model="$(get_agent_model "$agent")"
+      if ! echo "$MODELS_OUTPUT" | grep -Fq "$model"; then
+        echo "ERROR: Model for $agent not found in engine: $model"
+        echo "Run: $ENGINE_MODELS_LIST_CMD"
+        echo "Then edit: $ENGINE_CFG"
+        exit 2
+      fi
+    done
+  elif [[ "$ENGINE_MODEL_CHECK_MODE" == "static" ]]; then
+    for agent in "${AGENTS[@]}"; do
+      model="$(get_agent_model "$agent")"
+      found=false
+      for known in $ENGINE_KNOWN_MODELS; do
+        if [[ "$known" == "$model" ]]; then found=true; break; fi
+      done
+      if ! $found; then
+        echo "ERROR: Model for $agent ($model) not in ENGINE_KNOWN_MODELS for $ENGINE."
+        echo "Known: $ENGINE_KNOWN_MODELS"
+        echo "Edit:  $ENGINE_CFG"
+        exit 2
+      fi
+    done
+  fi
 fi
 
-# v10.1: regenerate the OpenCode config in two locations so autoload works
-# whether your opencode fork looks for .opencode/config.json or opencode.json
-# at project root.
-OPENCODE_CONFIG_PATH="$PROJECT_DIR/.opencode/config.json"
-mkdir -p "$PROJECT_DIR/.opencode"
-cat > "$OPENCODE_CONFIG_PATH" <<'EOF'
+# ---------- engine config file (per-engine policy) ----------
+# OpenCode: .opencode/config.json   |   Claude: .claude/settings.json
+ENGINE_CONFIG_ABS="$PROJECT_DIR/$ENGINE_CONFIG_PATH"
+mkdir -p "$(dirname "$ENGINE_CONFIG_ABS")"
+case "$ENGINE" in
+  opencode)
+    cat > "$ENGINE_CONFIG_ABS" <<'EOF'
 {
   "$schema": "https://opencode.ai/config.json",
   "permission": {
@@ -108,63 +145,49 @@ cat > "$OPENCODE_CONFIG_PATH" <<'EOF'
     "webfetch": "allow"
   },
   "agent": {
-    "build": {
-      "tools": {
-        "task": false,
-        "general-task": false
-      }
-    },
-    "plan": {
-      "tools": {
-        "task": false,
-        "general-task": false
-      }
-    }
+    "build": { "tools": { "task": false, "general-task": false } },
+    "plan":  { "tools": { "task": false, "general-task": false } }
   }
 }
 EOF
-# Mirror as opencode.json at project root for forks that prefer that name.
-cp "$OPENCODE_CONFIG_PATH" "$PROJECT_DIR/opencode.json"
-echo "[v10.1] Wrote OpenCode config:"
-echo "        $OPENCODE_CONFIG_PATH"
-echo "        $PROJECT_DIR/opencode.json (mirror)"
-echo "[v10.1] AGENTS.md at $PROJECT_DIR/AGENTS.md will be auto-loaded by OpenCode."
+    cp "$ENGINE_CONFIG_ABS" "$PROJECT_DIR/opencode.json"  # mirror for forks
+    ;;
+  claude)
+    cat > "$ENGINE_CONFIG_ABS" <<'EOF'
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(bash:*)", "Bash(tmux:*)", "Bash(git:*)",
+      "Bash(opencode:*)", "Bash(claude:*)", "Bash(docker:*)",
+      "Bash(curl:*)", "Bash(npm:*)", "Bash(pip:*)",
+      "Bash(pytest:*)", "Bash(node:*)",
+      "Read", "Write", "Edit", "WebFetch"
+    ],
+    "deny": [ "Task" ]
+  }
+}
+EOF
+    ;;
+esac
+echo "[v10.12] Engine = $ENGINE"
+echo "[v10.12] Wrote engine config: $ENGINE_CONFIG_ABS"
 
-tmux new-session -d -s "$SESSION_NAME" -n agents -c "$PROJECT_DIR"
+# Mirror AGENTS.md → ENGINE_AUTO_CONTEXT_FILE if different
+if [[ "$ENGINE_AUTO_CONTEXT_FILE" != "AGENTS.md" ]] && [[ -f AGENTS.md ]]; then
+  # Replace placeholder header in CLAUDE.md with actual AGENTS.md content.
+  cp AGENTS.md "$ENGINE_AUTO_CONTEXT_FILE"
+  echo "[v10.12] Synced AGENTS.md → $ENGINE_AUTO_CONTEXT_FILE for Claude Code auto-load"
+fi
 
-# Make 9 panes in a tiled grid.
-tmux split-window -h -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"
-tmux split-window -h -t "$SESSION_NAME:0.1" -c "$PROJECT_DIR"
-tmux select-layout -t "$SESSION_NAME:0" even-horizontal
-
-tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"
-tmux split-window -v -t "$SESSION_NAME:0.1" -c "$PROJECT_DIR"
-tmux split-window -v -t "$SESSION_NAME:0.2" -c "$PROJECT_DIR"
-tmux select-layout -t "$SESSION_NAME:0" tiled
-
-tmux split-window -v -t "$SESSION_NAME:0.0" -c "$PROJECT_DIR"
-tmux split-window -v -t "$SESSION_NAME:0.2" -c "$PROJECT_DIR"
-tmux split-window -v -t "$SESSION_NAME:0.4" -c "$PROJECT_DIR"
-tmux select-layout -t "$SESSION_NAME:0" tiled
-
-tmux set-option -t "$SESSION_NAME" pane-border-status top
-tmux set-option -t "$SESSION_NAME" pane-border-format " #{pane_title} "
-tmux set-option -t "$SESSION_NAME" status-left-length 80
-tmux set-option -t "$SESSION_NAME" status-left "[#S] "
-tmux set-option -t "$SESSION_NAME" status-right "#(date '+%H:%M %d-%b')"
-
+# ---------- session-state file ----------
 : > .agent_panes
 mkdir -p .agent_boot_prompts .agent_tasks .agent_logs .pane_tasks .pane_logs memory
 
-# v10.5: detect whether this is a RESUME or a FRESH start by inspecting
-# memory/ and docs/. Resume mode tells the Orchestrator (via an env var
-# exported into pane 1) to run scripts/rescan_project.sh on the very
-# first user turn and recap progress instead of treating the request as
-# a brand-new project.
+# Detect RESUME vs FRESH (v10.5 logic preserved)
 RESUME_MODE=false
 RESUME_REASON=""
 if [[ -d memory ]]; then
-  # Any role memory file with more than the boilerplate skeleton (> 400 bytes)?
   for f in memory/*.md; do
     [[ -f "$f" ]] || continue
     sz=$(wc -c < "$f" 2>/dev/null | tr -d ' ')
@@ -176,7 +199,6 @@ if [[ -d memory ]]; then
   done
 fi
 if ! $RESUME_MODE; then
-  # Also resume if docs/ has substantive content even without memory/.
   if find docs -type f -name '*.md' 2>/dev/null | xargs -I{} wc -c {} 2>/dev/null \
       | awk '$1 > 400 { found=1 } END { exit (found?0:1) }'; then
     RESUME_MODE=true
@@ -184,72 +206,141 @@ if ! $RESUME_MODE; then
   fi
 fi
 if $RESUME_MODE; then
-  echo "[v10.5] RESUME mode — $RESUME_REASON"
-  echo "[v10.5] Orchestrator will run scripts/rescan_project.sh on first turn"
-  echo "[v10.5] to recap progress instead of treating this as a fresh project."
+  echo "[v10.12] RESUME mode — $RESUME_REASON"
+  echo "[v10.12] Orchestrator will run scripts/rescan_project.sh on first turn."
 else
-  echo "[v10.5] FRESH project — no prior memory or docs detected."
+  echo "[v10.12] FRESH project — no prior memory or docs detected."
 fi
-# Record the mode so Orchestrator's prompt-time env can read it.
 echo "$([ $RESUME_MODE = true ] && echo RESUME || echo FRESH)" > .agent_session_mode
 
 {
   echo "SESSION_NAME=${SESSION_NAME}"
   echo "PROJECT_DIR=${PROJECT_DIR}"
-  echo "TEMPLATE_VERSION=10.1"
+  echo "TEMPLATE_VERSION=10.12"
+  echo "ENGINE=${ENGINE}"
   echo "AUTO_START_ORCHESTRATOR=${AUTO_START_ORCHESTRATOR}"
   echo "AUTO_START_WORKER_AGENTS=${AUTO_START_WORKER_AGENTS}"
-  echo "OPENCODE_CONFIG_PATH=${OPENCODE_CONFIG_PATH}"
+  echo "ENGINE_CONFIG_ABS=${ENGINE_CONFIG_ABS}"
 } > .agent_session
 
-# Build a per-pane boot prompt file (used only if user runs
-# scripts/inject_boot_prompt.sh manually after the TUI is up).
+# Generate boot prompts for each agent
 for AGENT in "${AGENTS[@]}"; do
   FULL_MODEL="$(get_agent_model "$AGENT")"
   bash scripts/agent_boot_prompt.sh "$AGENT" "$FULL_MODEL" \
     > ".agent_boot_prompts/${AGENT}.txt"
 done
 
-for i in "${!AGENTS[@]}"; do
-  AGENT="${AGENTS[$i]}"
-  FULL_MODEL="$(get_agent_model "$AGENT")"
+# ---------- helpers for engine-specific pane setup ----------
+# Returns the export+launch prefix that puts engine config into env, if needed.
+engine_env_prefix() {
+  if [[ -n "$ENGINE_CONFIG_ENV_VAR" ]]; then
+    echo "export ${ENGINE_CONFIG_ENV_VAR}='${ENGINE_CONFIG_ABS}';"
+  fi
+}
 
-  PANE_ID=$(tmux list-panes -t "$SESSION_NAME:0" -F "#{pane_index}:#{pane_id}" | sort -n | sed -n "$((i+1))p" | cut -d: -f2)
-  tmux select-pane -t "$PANE_ID" -T "$((i+1))-$AGENT"
-  echo "${AGENT}=${PANE_ID}" >> .agent_panes
+engine_tui_launch_cmd() {
+  local model="$1"
+  local prefix
+  prefix="$(engine_env_prefix)"
+  if [[ -n "$prefix" ]]; then
+    echo "${prefix} ${ENGINE_TUI_LAUNCH} ${ENGINE_MODEL_FLAG} '${model}' ${OPENCODE_EXTRA_ARGS}"
+  else
+    echo "${ENGINE_TUI_LAUNCH} ${ENGINE_MODEL_FLAG} '${model}' ${OPENCODE_EXTRA_ARGS}"
+  fi
+}
+
+# ---------- create 3 windows ----------
+# Window 0 — OC (ORCHESTRATOR alone)
+tmux new-session -d -s "$SESSION_NAME" -n "OC" -c "$PROJECT_DIR"
+
+# Window 1 — DESIGN (PM, SA, BA, UX) — 2×2 tiled
+tmux new-window -t "$SESSION_NAME:1" -n "DESIGN" -c "$PROJECT_DIR"
+tmux split-window -h -t "$SESSION_NAME:1.0" -c "$PROJECT_DIR"
+tmux split-window -v -t "$SESSION_NAME:1.0" -c "$PROJECT_DIR"
+tmux split-window -v -t "$SESSION_NAME:1.2" -c "$PROJECT_DIR"
+tmux select-layout -t "$SESSION_NAME:1" tiled
+
+# Window 2 — DEV (BE, FE, QA, DELIVERY) — 2×2 tiled
+tmux new-window -t "$SESSION_NAME:2" -n "DEV" -c "$PROJECT_DIR"
+tmux split-window -h -t "$SESSION_NAME:2.0" -c "$PROJECT_DIR"
+tmux split-window -v -t "$SESSION_NAME:2.0" -c "$PROJECT_DIR"
+tmux split-window -v -t "$SESSION_NAME:2.2" -c "$PROJECT_DIR"
+tmux select-layout -t "$SESSION_NAME:2" tiled
+
+# Status bar — show all 3 windows + engine + notif count.
+# v10.12 fix: pane-border-status / pane-border-format are WINDOW-scoped
+# options. Setting them with `-t <session>` only applies to the
+# currently-selected window at that moment (typically the last one
+# created). To get pane titles in ALL 3 windows we must set them
+# per-window via set-window-option.
+for win in 0 1 2; do
+  tmux set-window-option -t "$SESSION_NAME:$win" pane-border-status top
+  tmux set-window-option -t "$SESSION_NAME:$win" pane-border-format " #{pane_title} "
+done
+# Session-level (status bar): these ARE session-scoped, so single set is fine.
+tmux set-option -t "$SESSION_NAME" status-left-length 80
+tmux set-option -t "$SESSION_NAME" status-left "[#S | ${ENGINE}] "
+tmux set-option -t "$SESSION_NAME" status-right "#(date '+%H:%M %d-%b')"
+
+# ---------- assign role → pane_id ----------
+# Window 0: ORCHESTRATOR
+# Window 1: PM (pane index 0), SA (1), BA (2), UX (3)
+# Window 2: BE (0), FE (1), QA (2), DELIVERY (3)
+get_pane_id_at() {
+  local win="$1" idx="$2"
+  tmux list-panes -t "${SESSION_NAME}:${win}" -F "#{pane_index}:#{pane_id}" \
+    | sort -n | sed -n "$((idx + 1))p" | cut -d: -f2
+}
+
+# Mapping
+assign_role() {
+  local role="$1" win="$2" idx="$3"
+  local pane_id
+  pane_id="$(get_pane_id_at "$win" "$idx")"
+  echo "${role}=${pane_id}" >> .agent_panes
+  tmux select-pane -t "$pane_id" -T "${role}"
+  echo "  ${role} → window ${win} pane ${idx} (${pane_id})"
+}
+
+echo "[v10.12] Pane assignments:"
+assign_role ORCHESTRATOR 0 0
+assign_role PM           1 0
+assign_role SA           1 1
+assign_role BA           1 2
+assign_role UX           1 3
+assign_role BE           2 0
+assign_role FE           2 1
+assign_role QA           2 2
+assign_role DELIVERY     2 3
+
+# ---------- initial bootstrap per pane ----------
+for AGENT in "${AGENTS[@]}"; do
+  FULL_MODEL="$(get_agent_model "$AGENT")"
+  PANE_ID="$(grep "^${AGENT}=" .agent_panes | cut -d= -f2-)"
 
   tmux send-keys -t "$PANE_ID" "cd '$PROJECT_DIR'" C-m
   tmux send-keys -t "$PANE_ID" "export PROJECT_NAME='$SESSION_NAME'" C-m
   tmux send-keys -t "$PANE_ID" "export AGENT_NAME='$AGENT'" C-m
   tmux send-keys -t "$PANE_ID" "export AGENT_MODEL='$FULL_MODEL'" C-m
-  tmux send-keys -t "$PANE_ID" "export OPENCODE_FULL_MODEL='$FULL_MODEL'" C-m
-  tmux send-keys -t "$PANE_ID" "export OPENCODE_CONFIG='$OPENCODE_CONFIG_PATH'" C-m
+  tmux send-keys -t "$PANE_ID" "export ENGINE='$ENGINE'" C-m
   tmux send-keys -t "$PANE_ID" "export AGENT_SESSION_MODE='$([ $RESUME_MODE = true ] && echo RESUME || echo FRESH)'" C-m
+  if [[ -n "$ENGINE_CONFIG_ENV_VAR" ]]; then
+    tmux send-keys -t "$PANE_ID" "export ${ENGINE_CONFIG_ENV_VAR}='${ENGINE_CONFIG_ABS}'" C-m
+  fi
 
   if [[ "$SHOW_AGENT_BANNER" == "true" ]]; then
     tmux send-keys -t "$PANE_ID" "bash scripts/agent_banner.sh '$AGENT' '$FULL_MODEL' '$SESSION_NAME'" C-m
   fi
 
   if [[ "$AGENT" == "ORCHESTRATOR" && "$AUTO_START_ORCHESTRATOR" == "true" ]]; then
-    # Launch OpenCode interactively and AUTO-RELAUNCH on exit. The
-    # Orchestrator pane is the user's primary chat session; if opencode
-    # ever exits (model hiccup, tool-call error, etc.) we don't want the
-    # user dropped silently to bash. The while-loop offers a quick
-    # confirmation before relaunching so the user can still abort if
-    # they really want a shell.
-    tmux send-keys -t "$PANE_ID" "echo '[v10.2] Launching Orchestrator OpenCode (model=$FULL_MODEL). Will auto-relaunch on exit.'" C-m
-    tmux send-keys -t "$PANE_ID" "echo '[v10.2] AGENTS.md is auto-loaded by OpenCode.'" C-m
-    # Build the launch command as a single line. If opencode exits with
-    # any non-zero rc or even rc=0, prompt user to relaunch. Pressing
-    # Ctrl+C at the prompt or EOF (Ctrl+D) breaks the loop.
-    LAUNCH_CMD="while :; do opencode --model '$FULL_MODEL' $OPENCODE_EXTRA_ARGS; rc=\$?; printf '\\n[v10.2] opencode exited (rc=%s).\\n  Press <Enter> to relaunch, or Ctrl+C / Ctrl+D to stay at shell.\\n' \"\$rc\"; if ! read -r _; then break; fi; done"
-    tmux send-keys -t "$PANE_ID" "$LAUNCH_CMD" C-m
+    tmux send-keys -t "$PANE_ID" "echo '[v10.12] Engine=${ENGINE} | launching ${ENGINE_TUI_LAUNCH} for ORCHESTRATOR (model=${FULL_MODEL})'" C-m
+    tmux send-keys -t "$PANE_ID" "echo '[v10.12] Auto-relaunch on exit — press Enter to relaunch, Ctrl+C/Ctrl+D for shell.'" C-m
+    LAUNCH=$(engine_tui_launch_cmd "$FULL_MODEL")
+    LAUNCH_LOOP="while :; do ${LAUNCH}; rc=\$?; printf '\\n[v10.12] ${ENGINE_BINARY} exited (rc=%s).\\n  Press <Enter> to relaunch, or Ctrl+C / Ctrl+D to stay at shell.\\n' \"\$rc\"; if ! read -r _; then break; fi; done"
+    tmux send-keys -t "$PANE_ID" "$LAUNCH_LOOP" C-m
 
-    # If resuming, send a kickoff message to the Orchestrator TUI a few
-    # seconds after opencode loads. This is essentially an [INBOX]-style
-    # auto-ping, but for "session resumed" instead of a worker question.
     if $RESUME_MODE; then
-      KICKOFF="[RESUME] Session resumed (memory/ exists from a prior run). Your VERY FIRST action: run 'bash scripts/rescan_project.sh' to see where the team left off, then greet the user in 3-5 short bullets summarising current phase, who is mid-task, any pending questions, and the last deployed URL if any. Do not start any new phase until the user confirms direction."
+      KICKOFF="[RESUME] Session resumed (memory/ exists). Your VERY FIRST action: run 'bash scripts/rescan_project.sh' to see where the team left off, then greet the user in 3-5 short bullets summarising current phase, active workstreams, pending questions, and the last deployed URL. Do not start any new phase until the user confirms direction."
       (
         sleep 8
         tmux send-keys -t "$PANE_ID" "$KICKOFF" 2>/dev/null || true
@@ -259,13 +350,16 @@ for i in "${!AGENTS[@]}"; do
     fi
   else
     if [[ "$AUTO_START_WORKER_AGENTS" == "true" ]]; then
-      tmux send-keys -t "$PANE_ID" "echo '[v10.1] AUTO_START_WORKER_AGENTS=true is not recommended; workers should stay idle until routed.'" C-m
-      tmux send-keys -t "$PANE_ID" "opencode --model '$FULL_MODEL' $OPENCODE_EXTRA_ARGS" C-m
+      tmux send-keys -t "$PANE_ID" "echo '[v10.12] AUTO_START_WORKER_AGENTS=true is not recommended; workers stay idle until routed.'" C-m
+      LAUNCH=$(engine_tui_launch_cmd "$FULL_MODEL")
+      tmux send-keys -t "$PANE_ID" "$LAUNCH" C-m
     else
-      tmux send-keys -t "$PANE_ID" "echo '[v10.1] Worker pane ready. Will be activated by  bash scripts/route_to_pane.sh $AGENT \"...\".'" C-m
+      tmux send-keys -t "$PANE_ID" "echo '[v10.12] Worker pane ready (engine=${ENGINE}). Will be activated by  bash scripts/route_to_pane.sh ${AGENT} \"...\".'" C-m
     fi
   fi
 done
 
+# Focus pane 0 of window 0 (ORCHESTRATOR), select OC window
+tmux select-window -t "$SESSION_NAME:0"
 tmux select-pane -t "$(grep '^ORCHESTRATOR=' .agent_panes | cut -d= -f2-)"
 tmux attach -t "$SESSION_NAME"

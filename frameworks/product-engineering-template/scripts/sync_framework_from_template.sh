@@ -72,6 +72,7 @@ fi
 # the TEMPLATE.
 FRAMEWORK_PATHS=(
   "AGENTS.md"
+  "CLAUDE.md"
   "README.md"
   "VERSION.md"
   "LICENSE"
@@ -89,7 +90,8 @@ FRAMEWORK_PATHS=(
 FRAMEWORK_GLOBS=(
   "scripts/*.sh"
   "prompts/agents/*.md"
-  "config/*"
+  "config/*"                       # top-level config files
+  "config/engines/*"               # v10.12 — engine env files + README
 )
 
 TS="$(date +%Y%m%d_%H%M%S)"

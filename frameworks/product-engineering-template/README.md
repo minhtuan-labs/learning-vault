@@ -1,4 +1,4 @@
-# Product Engineering Agent Template — v10.11
+# Product Engineering Agent Template — v10.12
 
 > A tmux-based, multi-model agent framework for running an entire
 > product-engineering team — Orchestrator, PM, SA, BA, UX, BE, FE, QA,
@@ -90,12 +90,21 @@ chmod +x scripts/*.sh
 # 2. Write a one-pager about what you want to build
 $EDITOR PRODUCT_IDEA.md
 
-# 3. Verify your OpenCode models exist
-bash scripts/check_opencode_models.sh
+# 3. Pick an engine and verify models (v10.12)
+bash scripts/check_models.sh opencode    # default
+# or: bash scripts/check_models.sh claude
 
-# 4. Start the 9-pane tmux session
+# 4. Start the 9-pane / 3-window tmux session
 bash scripts/start_agents_tmux.sh my-new-project
+# or explicit engine:
+bash scripts/start_agents_tmux.sh my-new-project --engine claude
 ```
+
+Engine choice persists in `.agent_session` so subsequent
+`route_to_pane.sh` / `answer_role.sh` calls pick the right CLI
+automatically. See
+[`config/engines/README.md`](config/engines/README.md) for adding
+new engines (aider, goose, codex, gemini-cli…).
 
 Then **only talk to pane 1 (Orchestrator)**. Try:
 
@@ -383,9 +392,11 @@ the Orchestrator pane, the framework is broken — file an issue.
 ├── opencode.json                   mirror of above, for fork compatibility
 │
 ├── config/
-│   ├── agent_models.env            <ROLE>_MODEL=<provider/id> pairs
-│   ├── agent_models.json           same, JSON form
-│   ├── AGENT_MODELS.md             prose explanation
+│   ├── engines/                    pluggable engine layer (v10.12)
+│   │   ├── opencode.env            OpenCode binary + 9 model IDs
+│   │   ├── claude.env              Claude Code binary + 9 model IDs
+│   │   └── README.md               how to add an engine
+│   ├── agent_models.env            (legacy, replaced by engines/opencode.env)
 │   ├── opencode.env                runtime flags
 │   └── OPENCODE_PERMISSION_POLICY.md
 │
@@ -425,7 +436,8 @@ the Orchestrator pane, the framework is broken — file an issue.
     ├── verify_routing.sh           audit that routing really fired
     ├── inject_boot_prompt.sh       paste a role prompt manually
     ├── run_agent_task.sh           run a task file in the foreground
-    ├── check_opencode_models.sh    validate config/agent_models.env
+    ├── check_models.sh             engine-aware model validator
+    ├── check_opencode_models.sh    legacy alias → check_models.sh opencode
     ├── bootstrap_docs.sh           create the docs/ skeleton
     ├── agent_banner.sh             pretty banner per pane
     ├── agent_boot_prompt.sh        generates role boot prompts
@@ -498,6 +510,12 @@ fix `config/agent_models.env` with IDs from `opencode models`.
 See [`VERSION.md`](VERSION.md) for the full changelog. Most recent
 fixes:
 
+- **v10.12** — **Engine choice** (OpenCode or Claude Code) + **3-window
+  tmux layout** (OC / DESIGN / DEV). `--engine claude` adds Anthropic
+  Claude Code as an alternative to `opencode-go` — backward-compatible
+  default is `opencode`. Window 0 hosts Orchestrator full-size; window
+  1 (DESIGN) tiles PM/SA/BA/UX; window 2 (DEV) tiles BE/FE/QA/DELIVERY.
+  Purely additive — all v10.0–v10.11 rules preserved.
 - **v10.11** — **Framework files marked immutable** + **safe sync
   script**. New `scripts/sync_framework_from_template.sh` upgrades
   the framework on a running project without clobbering the team's

@@ -1,9 +1,14 @@
-# AGENTS.md — Project-wide instructions (auto-loaded by OpenCode)
+# AGENTS.md — Project-wide instructions (auto-loaded by the engine)
 
-OpenCode reads this file automatically at startup. It applies to **every**
-OpenCode session running inside this project — including the interactive
+The active CLI engine (OpenCode or Claude Code — chosen at session start
+via `--engine`) reads this file automatically. It applies to **every**
+engine session running inside this project — including the interactive
 Orchestrator pane and every non-interactive worker pane started by
 `scripts/route_to_pane.sh`.
+
+> If the engine is **Claude Code**, this file is auto-synced to
+> `CLAUDE.md` by `start_agents_tmux.sh` because Claude Code prefers the
+> latter filename. Always edit `AGENTS.md` — `CLAUDE.md` is regenerated.
 
 Each session is also given an `AGENT_NAME` env var (one of:
 `ORCHESTRATOR PM SA BA UX BE FE QA DELIVERY`). Behave according to that
@@ -13,8 +18,10 @@ role.
 
 ## Universal rules (every pane)
 
-The built-in `Task` / `general-task` subagent tool is disabled in
-`.opencode/config.json`. Never call it; never describe calling it.
+The engine's built-in `Task` / `general-task` subagent tool is disabled
+by the engine's config file (`.opencode/config.json` for OpenCode,
+`.claude/settings.json` for Claude Code). Never call it; never describe
+calling it.
 
 If another pane role should act next, execute a real shell command:
 

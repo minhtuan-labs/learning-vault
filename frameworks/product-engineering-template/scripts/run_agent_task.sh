@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# v10 — Run a routed task file in the current shell (used by tooling/tests).
-# Same v10 fix as route_to_pane.sh: real .opencode/config.json + --config flag.
+# v10.12 — Run a routed task file in the current shell (engine-aware).
+# Same v10 fix as route_to_pane.sh: real engine config + correct CLI.
 
 ROLE="${1:-}"
 TASK_FILE="${2:-}"
@@ -17,23 +17,38 @@ if [[ ! -f "$TASK_FILE" ]]; then
   exit 1
 fi
 
-source config/agent_models.env
+# v10.12 — read engine choice from .agent_session, source engine config
+ENGINE="opencode"
+if [[ -f ".agent_session" ]]; then
+  # shellcheck disable=SC1090
+  source .agent_session
+fi
+ENGINE_CFG="config/engines/${ENGINE}.env"
+if [[ ! -f "$ENGINE_CFG" ]]; then
+  echo "Missing engine config: $ENGINE_CFG"
+  exit 1
+fi
+# shellcheck disable=SC1090
+source "$ENGINE_CFG"
 
 MODEL_VAR="${ROLE}_MODEL"
 MODEL="${!MODEL_VAR:-}"
 
 if [[ -z "$MODEL" ]]; then
-  echo "No model configured for $ROLE"
+  echo "No model configured for $ROLE in engine $ENGINE"
   exit 1
 fi
 
-OPENCODE_CONFIG_PATH="$(pwd)/.opencode/config.json"
-if [[ ! -f "$OPENCODE_CONFIG_PATH" ]]; then
-  echo "Missing $OPENCODE_CONFIG_PATH"
+ENGINE_CONFIG_ABS="$(pwd)/${ENGINE_CONFIG_PATH}"
+if [[ ! -f "$ENGINE_CONFIG_ABS" ]]; then
+  echo "Missing $ENGINE_CONFIG_ABS"
   echo "Run scripts/start_agents_tmux.sh first; it regenerates the config."
   exit 1
 fi
 
-OPENCODE_CONFIG="$OPENCODE_CONFIG_PATH" opencode run \
-  --model "$MODEL" \
-  "Execute the routed pane task described in $TASK_FILE. Read the file, perform the work, update files as needed, and report completion. Do not use internal subagents (task tool is disabled in .opencode/config.json and AGENTS.md)."
+if [[ -n "$ENGINE_CONFIG_ENV_VAR" ]]; then
+  export "${ENGINE_CONFIG_ENV_VAR}=${ENGINE_CONFIG_ABS}"
+fi
+
+$ENGINE_RUN_BASE $ENGINE_MODEL_FLAG "$MODEL" \
+  "Execute the routed pane task described in $TASK_FILE. Read the file, perform the work, update files as needed, and report completion. Do not use internal subagents (task tool is disabled in $ENGINE_CONFIG_PATH and AGENTS.md)."

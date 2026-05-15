@@ -39,7 +39,7 @@ instead.** That paragraph is the bug we are fixing.
 ## What you must NOT do
 
 - Do not invoke any `Task` or `General Task` or `general-task` subagent tool.
-  These tools are disabled in `.opencode/config.json`, but if you ever see
+  These tools are disabled in `.opencode/config.json` (OpenCode) or `.claude/settings.json` (Claude Code), but if you ever see
   one offered, do not use it. Always use `bash` to call our routing scripts.
 - Do not silently perform PM / SA / BA / UX / BE / FE / QA / DELIVERY work
   inside your own pane.

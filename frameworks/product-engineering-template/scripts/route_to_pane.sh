@@ -37,27 +37,33 @@ if [[ "$TARGET" == "ORCHESTRATOR" ]]; then
 fi
 
 MAP_FILE=".agent_panes"
-MODEL_CONFIG_FILE="config/agent_models.env"
-OPENCODE_CONFIG_PATH="$(pwd)/.opencode/config.json"
+SESSION_FILE=".agent_session"
 
 if [[ ! -f "$MAP_FILE" ]]; then
   echo "Missing .agent_panes. Run scripts/start_agents_tmux.sh <project_name> first."
   exit 1
 fi
 
-if [[ ! -f "$MODEL_CONFIG_FILE" ]]; then
-  echo "Missing $MODEL_CONFIG_FILE"
+# v10.12 — read engine choice from .agent_session
+ENGINE="opencode"  # fallback
+if [[ -f "$SESSION_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$SESSION_FILE"
+fi
+ENGINE_CFG="config/engines/${ENGINE}.env"
+if [[ ! -f "$ENGINE_CFG" ]]; then
+  echo "Missing engine config: $ENGINE_CFG"
   exit 1
 fi
+# shellcheck disable=SC1090
+source "$ENGINE_CFG"
 
-if [[ ! -f "$OPENCODE_CONFIG_PATH" ]]; then
-  echo "Missing $OPENCODE_CONFIG_PATH"
+ENGINE_CONFIG_ABS="$(pwd)/${ENGINE_CONFIG_PATH}"
+if [[ ! -f "$ENGINE_CONFIG_ABS" ]]; then
+  echo "Missing $ENGINE_CONFIG_ABS"
   echo "Run scripts/start_agents_tmux.sh first; it regenerates the config."
   exit 1
 fi
-
-# shellcheck disable=SC1090
-source "$MODEL_CONFIG_FILE"
 
 if [[ -f "config/opencode.env" ]]; then
   # shellcheck disable=SC1090
@@ -79,12 +85,12 @@ MODEL_VAR="${TARGET}_MODEL"
 TARGET_MODEL="${!MODEL_VAR:-}"
 
 if [[ -z "$TARGET_MODEL" ]]; then
-  echo "No model configured for $TARGET. Expected variable: $MODEL_VAR"
+  echo "No model configured for $TARGET in engine $ENGINE. Expected variable: $MODEL_VAR in $ENGINE_CFG"
   exit 1
 fi
 
-if ! command -v opencode >/dev/null 2>&1; then
-  echo "ERROR: opencode command not found in PATH."
+if ! command -v "$ENGINE_BINARY" >/dev/null 2>&1; then
+  echo "ERROR: engine binary '$ENGINE_BINARY' not found in PATH."
   exit 1
 fi
 
@@ -279,11 +285,16 @@ EOF
   echo "  message=$MESSAGE"
 } >> "$ROUTING_RECEIPT"
 
-# Compose the worker command. We rely on OPENCODE_CONFIG env var (file path)
-# and on opencode's auto-load of .opencode/config.json / opencode.json from
-# the project root. We deliberately do NOT pass --config because opencode-go
-# does not accept that CLI flag and would exit immediately.
-WORKER_CMD="OPENCODE_CONFIG='$OPENCODE_CONFIG_PATH' opencode run --model '$TARGET_MODEL' \"Execute the routed pane task described in $TASK_FILE. Read the file, perform the work, update files as needed, and report completion. Do not use internal subagents (the task tool is disabled in .opencode/config.json and AGENTS.md).\""
+# v10.12 — compose the worker command for the active engine.
+# Both opencode and claude auto-load their config file from the project
+# CWD (.opencode/config.json or .claude/settings.json). For engines that
+# need an env var hint (opencode does), we prepend it.
+ENGINE_ENV_PREFIX=""
+if [[ -n "$ENGINE_CONFIG_ENV_VAR" ]]; then
+  ENGINE_ENV_PREFIX="${ENGINE_CONFIG_ENV_VAR}='${ENGINE_CONFIG_ABS}' "
+fi
+TASK_PROMPT="Execute the routed pane task described in $TASK_FILE. Read the file, perform the work, update files as needed, and report completion. Do not use internal subagents (the task tool is disabled in $ENGINE_CONFIG_PATH and AGENTS.md)."
+WORKER_CMD="${ENGINE_ENV_PREFIX}${ENGINE_RUN_BASE} ${ENGINE_MODEL_FLAG} '${TARGET_MODEL}' \"${TASK_PROMPT}\""
 
 tmux send-keys -t "$PANE_ID" C-c
 tmux send-keys -t "$PANE_ID" "cd '$(pwd)'" C-m
@@ -295,7 +306,7 @@ tmux send-keys -t "$PANE_ID" "echo '[v10] Log file: $LOG_FILE'" C-m
 if [[ "$WORKER_OPENCODE_MODE" == "run" ]]; then
   tmux send-keys -t "$PANE_ID" "$WORKER_CMD 2>&1 | tee '$LOG_FILE'" C-m
 else
-  tmux send-keys -t "$PANE_ID" "OPENCODE_CONFIG='$OPENCODE_CONFIG_PATH' opencode --model '$TARGET_MODEL' 2>&1 | tee '$LOG_FILE'" C-m
+  tmux send-keys -t "$PANE_ID" "${ENGINE_ENV_PREFIX}${ENGINE_TUI_LAUNCH} ${ENGINE_MODEL_FLAG} '${TARGET_MODEL}' 2>&1 | tee '$LOG_FILE'" C-m
 fi
 
 # Backward compatible mirror for old tooling that reads .agent_tasks/.

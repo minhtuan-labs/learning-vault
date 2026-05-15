@@ -5,10 +5,10 @@
 
 ## v10 Pane Routing (tmux is the execution boundary)
 
-This template runs each role in its own tmux pane with its own OpenCode
+This template runs each role in its own tmux pane with its own engine
 model. Cross-role handoffs must be **real shell commands**, not internal
-subagents. OpenCode's built-in `Task` / `general-task` subagent tool is
-disabled by `.opencode/config.json`, so do not attempt to call it.
+subagents. The engine's built-in `Task` / `general-task` subagent tool is
+disabled by the engine's config file (`.opencode/config.json` (OpenCode) or `.claude/settings.json` (Claude Code) or `.claude/settings.json`), so do not attempt to call it.
 
 If another pane role should act, execute:
 
@@ -19,7 +19,7 @@ For phase-level delegation (Orchestrator only):
 `bash scripts/delegate_phase.sh <phase>`
 
 The target worker pane will run
-`opencode run --config .opencode/config.json --model <target_pane_model>`.
+the engine's non-interactive run command with `<target_pane_model>`.
 
 `send_agent.sh` exists only as a compatibility alias — prefer
 `route_to_pane.sh`. To prove your routing actually fired (not just
@@ -106,7 +106,7 @@ right upstream agents.
 ## Memory protocol (DO NOT SKIP — cross-session continuity)
 
 This team works across days. The BA pane runs one-shot
-(`opencode run --model ... "<task>"`) and exits each time, so without
+(non-interactive `<engine> run --model ... "<task>"`) and exits each time, so without
 explicit memory every task would start fresh.
 
 `memory/BA.md` is **your durable, git-committed scratchpad** of
