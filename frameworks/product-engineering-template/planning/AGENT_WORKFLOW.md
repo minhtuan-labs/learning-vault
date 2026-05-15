@@ -1,4 +1,4 @@
-# Agent Workflow and Delegation Protocol — v10
+# Agent Workflow and Delegation Protocol — v10.12
 
 ## Runtime
 

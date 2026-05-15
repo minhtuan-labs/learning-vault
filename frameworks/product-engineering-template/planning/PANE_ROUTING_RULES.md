@@ -1,4 +1,4 @@
-# Pane Routing Rules — v10
+# Pane Routing Rules — v10.12
 
 ## Hard rule
 

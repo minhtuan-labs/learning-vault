@@ -157,20 +157,22 @@ differ between engines (configured in `config/engines/<engine>.env`).
 The framework ships defaults for both engines. Override in
 `config/engines/<engine>.env`.
 
-| Role | OpenCode (`opencode-go/…`) | Claude Code |
-|---|---|---|
-| ORCHESTRATOR | `glm-5.1` | `claude-sonnet-4-6` |
-| PM           | `deepseek-v4-flash` | `claude-haiku-4-5` |
-| SA           | `deepseek-v4-pro`   | `claude-opus-4-6` |
-| BA           | `qwen3.6-plus`      | `claude-haiku-4-5` |
-| UX           | `mimo-v2.5`         | `claude-haiku-4-5` |
-| BE           | `deepseek-v4-pro`   | `claude-opus-4-6` |
-| FE           | `kimi-k2.6`         | `claude-sonnet-4-6` |
-| QA           | `qwen3.5-plus`      | `claude-haiku-4-5` |
-| DELIVERY     | `glm-5`             | `claude-haiku-4-5` |
+| Role | OpenCode (`opencode-go/…`) | Claude Code | Why this model |
+|---|---|---|---|
+| ORCHESTRATOR | `glm-5.1` | `sonnet-4-6` | **Balanced router** — talks every user turn, needs decent reasoning to dispatch correctly + cost-efficient because used most. |
+| PM           | `deepseek-v4-flash` | `haiku-4-5` | **Templated planning** — PRD, roadmap, backlog are structured docs. Fast/cheap tier is plenty. |
+| SA           | `deepseek-v4-pro`   | `opus-4-6`   | **High stakes, hard to reverse** — architecture + tech stack choices echo through every later phase. Wrong call = expensive rework, so invest in the strongest tier. |
+| BA           | `qwen3.6-plus`      | `haiku-4-5`  | **Rule extraction** — user stories + Given-When-Then ACs are pattern-driven, cheap tier handles them well. |
+| UX           | `mimo-v2.5`         | `haiku-4-5`  | **Pattern-following** — UX flows/wireframes draw on well-known interaction patterns. `mimo-v2.5` is OpenCode's multimodal-leaning option. |
+| BE           | `deepseek-v4-pro`   | `opus-4-6`   | **Code correctness matters** — backend logic, schemas, auth, transactions. Bugs are expensive; pay for the strong tier same as SA. |
+| FE           | `kimi-k2.6`         | `sonnet-4-6` | **Code aesthetics + UI logic** — simpler than backend business logic but still wants good code quality. Balanced tier; `kimi-k2.6` has a good code-gen reputation. |
+| QA           | `qwen3.5-plus`      | `haiku-4-5`  | **Structured test work** — test plan, test cases, parsing test output, writing `VERDICT: PASS/FAIL`. Cheap tier is enough. |
+| DELIVERY     | `glm-5`             | `haiku-4-5`  | **Highly templated** — Dockerfile/compose patterns, env handling, release notes. Cheap tier; `glm-5` is solid for scripting. |
 
 The defaults mix "strong / medium / cheap" tiers to keep cost down —
-PM/BA/UX/QA/DELIVERY don't need expensive models, SA/BE/FE do.
+PM/BA/UX/QA/DELIVERY don't need expensive models, SA/BE/FE do, and
+the ORCHESTRATOR sits in the middle because it's invoked on every
+single user turn (cost per turn matters more than raw power).
 
 ---
 

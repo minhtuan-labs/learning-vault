@@ -1,4 +1,4 @@
-# ORCHESTRATOR Agent Prompt — v10
+# ORCHESTRATOR Agent Prompt — v10.12
 
 ## Recommended Model
 `opencode-go/glm-5.1`
