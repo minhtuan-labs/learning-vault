@@ -2,10 +2,11 @@
 
 ## Hard rule
 
-This project uses tmux panes — not OpenCode internal subagents — as the
+This project uses tmux panes — not the engine's internal subagents — as the
 execution boundary. The built-in `Task` / `general-task` subagent tool is
-disabled at the OpenCode config level (see
-`config/OPENCODE_PERMISSION_POLICY.md` and `.opencode/config.json`).
+disabled at the engine's config level (see
+`config/OPENCODE_PERMISSION_POLICY.md`, `.opencode/config.json` for
+OpenCode, or `.claude/settings.json` for Claude Code).
 
 ## Required routing command
 

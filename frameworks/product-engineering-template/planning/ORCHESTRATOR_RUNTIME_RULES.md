@@ -62,6 +62,6 @@ Orchestrator pane.
 
 ## Why this matters
 
-Each pane role has its own OpenCode model. Internal subagents would keep
+Each pane role has its own engine model (OpenCode or Claude). Internal subagents would keep
 all work inside the Orchestrator's session and on the Orchestrator's
 model, defeating the multi-model design.

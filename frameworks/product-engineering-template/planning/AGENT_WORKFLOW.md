@@ -2,15 +2,16 @@
 
 ## Runtime
 
-Only Orchestrator runs interactive OpenCode. The other 8 panes stay as
+Only Orchestrator runs the interactive engine TUI. The other 8 panes stay as
 idle shells until `route_to_pane.sh` (or `delegate_phase.sh`) starts
-OpenCode in them with that pane's configured model. Every delegated
+the engine in them with that pane's configured model. Every delegated
 task therefore runs under the target role's model, not Orchestrator's.
 
 ## Strict delegation rule
 
-OpenCode's built-in `Task` / `general-task` subagent tool is disabled by
-`.opencode/config.json` (see `config/OPENCODE_PERMISSION_POLICY.md`).
+The engine's built-in `Task` / `general-task` subagent tool is
+disabled by the engine's config file (`.opencode/config.json` or
+`.claude/settings.json`) (see `config/OPENCODE_PERMISSION_POLICY.md`).
 Every cross-role handoff must be a real shell command:
 
 ```bash
@@ -29,11 +30,12 @@ Use `bash scripts/verify_routing.sh` to confirm a real handoff fired.
 Worker panes execute delegated tasks with:
 
 ```bash
+# Engine=opencode:
 OPENCODE_CONFIG=<project>/.opencode/config.json \
-  opencode run \
-    --config <project>/.opencode/config.json \
-    --model <target_agent_model> \
-    "<task prompt>"
+  opencode run --model <target_agent_model> "<task prompt>"
+
+# Engine=claude:
+claude --print --model <target_agent_model> "<task prompt>"
 ```
 
 ## Core rule

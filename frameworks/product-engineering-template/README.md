@@ -11,9 +11,18 @@ Orchestrator gửi việc qua các pane còn lại bằng `bash`. Không subagen
 không simulate — mỗi pane là một process thật, mỗi role được chạy bởi
 một model phù hợp với chi phí và năng lực.
 
-Built on top of [OpenCode](https://github.com/sst/opencode) (and the
-`opencode-go` provider), driven by tmux, glued together with shell
-scripts.
+Built on top of a **pluggable CLI engine** — pick one at session start:
+
+- **[OpenCode](https://github.com/sst/opencode)** (`opencode-go` provider) —
+  default, multi-provider, fine-grained cost mix; best for newbies and
+  experimenters on free / cheap tiers.
+- **[Claude Code](https://docs.claude.com/en/docs/claude-code)** (Anthropic) —
+  single API key, 3-tier model lineup (Haiku / Sonnet / Opus); best for
+  single-vendor production-style use.
+
+Driven by tmux (3-window layout: OC / DESIGN / DEV), glued together with
+shell scripts. See [`config/engines/`](config/engines/README.md) for
+how to add a third engine (aider, goose, codex, gemini-cli…).
 
 ---
 
@@ -30,11 +39,11 @@ model, same context, same tools. That hides three problems:
    ends up writing code anyway.
 
 This template makes each role a **separate tmux pane running a
-separate OpenCode session under a separate model**. The Orchestrator
+separate engine session under a separate model**. The Orchestrator
 delegates by literally typing `bash scripts/route_to_pane.sh <ROLE>
-"<message>"` — which spawns OpenCode in that pane with the right model
-and the right prompt. You can attach to any pane and watch the work
-happen in real time.
+"<message>"` — which spawns the chosen engine (OpenCode or Claude Code)
+in that pane with the right model and the right prompt. You can attach
+to any pane and watch the work happen in real time.
 
 ---
 
@@ -45,30 +54,30 @@ happen in real time.
                     |          you (user)        |
                     +-------------+--------------+
                                   |
-                          chat (tmux pane 1)
+                       chat (tmux window 0, OC)
                                   v
                     +----------------------------+
                     |        ORCHESTRATOR        |
-                    |   opencode-go/glm-5.1      |
+                    |   <engine>/<orch_model>    |
+                    |   e.g. opencode-go/glm-5.1 |
+                    |        claude-sonnet-4-6   |
                     +-------------+--------------+
                                   |
                 bash scripts/route_to_pane.sh <ROLE> "<msg>"
                                   |
-   +----------+----------+--------+--------+----------+----------+
-   |          |          |        |        |          |          |
-   v          v          v        v        v          v          v
-+------+  +------+  +------+  +------+  +------+  +------+  +------+
-|  PM  |  |  SA  |  |  BA  |  |  UX  |  |  BE  |  |  FE  |  |  QA  |  |DELIV.|
-| pane2|  | pane3|  | pane4|  | pane5|  | pane6|  | pane7|  | pane8|  | pane9|
-+------+  +------+  +------+  +------+  +------+  +------+  +------+  +------+
+       window 1: DESIGN            window 2: DEV
+    +----+----+----+----+    +----+----+----+----+
+    | PM | SA | BA | UX |    | BE | FE | QA |DEL |
+    +----+----+----+----+    +----+----+----+----+
 
-each pane: its own OpenCode process, its own model, its own .pane_logs/<role>_<ts>.log
+each pane: its own engine process, its own model, its own .pane_logs/<role>_<ts>.log
 ```
 
-Pane 1 runs interactive OpenCode (auto-relaunched if it ever exits, so
-your chat session stays alive). Panes 2–9 stay as idle bash workers
-until `route_to_pane.sh` (or `delegate_phase.sh`) wakes them with
-`opencode run --model <role_model> "<task>"`. Every routing call leaves
+Pane 1 (window 0) runs the chosen engine interactively (auto-relaunched
+if it ever exits, so your chat session stays alive). The other 8 panes
+in windows 1–2 stay as idle bash workers until `route_to_pane.sh`
+(or `delegate_phase.sh`) wakes them with
+the engine's non-interactive run command. Every routing call leaves
 a receipt in `.pane_logs/_routing_receipts.log` so you can audit what
 actually fired vs. what the Orchestrator only described in chat.
 
@@ -80,11 +89,10 @@ Workers can pause mid-task to ask the user a question — see
 ## Quick start
 
 ```bash
-# 1. Copy the template into your new project folder
-cp -R /path/to/product-engineering-template/* my-new-project/
-cp -R /path/to/product-engineering-template/.opencode my-new-project/
-cp /path/to/product-engineering-template/AGENTS.md my-new-project/
-cd my-new-project
+# 1. Clone (or copy) the template into your new project folder
+git clone https://github.com/minhtuan-labs/learning-vault.git
+cd learning-vault/frameworks/product-engineering-template
+cp -R . ~/my-new-project && cd ~/my-new-project
 chmod +x scripts/*.sh
 
 # 2. Write a one-pager about what you want to build
@@ -94,11 +102,15 @@ $EDITOR PRODUCT_IDEA.md
 bash scripts/check_models.sh opencode    # default
 # or: bash scripts/check_models.sh claude
 
-# 4. Start the 9-pane / 3-window tmux session
-bash scripts/start_agents_tmux.sh my-new-project
+# 4. Start the 3-window tmux session
+bash scripts/start_agents_tmux.sh my-new-project              # engine=opencode
 # or explicit engine:
 bash scripts/start_agents_tmux.sh my-new-project --engine claude
 ```
+
+The engine config file (`.opencode/config.json` for OpenCode,
+`.claude/settings.json` for Claude Code) is **auto-generated** at
+session start — you don't need to copy or edit it manually.
 
 Engine choice persists in `.agent_session` so subsequent
 `route_to_pane.sh` / `answer_role.sh` calls pick the right CLI
@@ -125,31 +137,51 @@ bash scripts/verify_routing.sh
 
 ## Roles, models, and outputs
 
-| Pane | Role | Default model | Owns | Writes |
-|---|---|---|---|---|
-| 1 | ORCHESTRATOR | `opencode-go/glm-5.1` | routing, phase gates | `TASK.md` |
-| 2 | PM | `opencode-go/deepseek-v4-flash` | scope, PRD, roadmap | `docs/product/PRD.md`, `docs/product/ROADMAP.md` |
-| 3 | SA | `opencode-go/deepseek-v4-pro` | architecture, API boundary | `docs/architecture/*.md` |
-| 4 | BA | `opencode-go/qwen3.6-plus` | business rules, user stories | `docs/business/*.md` |
-| 5 | UX | `opencode-go/mimo-v2.5` | UX flow, wireframes | `docs/product/UX_FLOW.md`, `docs/product/WIREFRAMES.md` |
-| 6 | BE | `opencode-go/deepseek-v4-pro` | backend code & tests | `backend/`, `planning/BE_PLAN.md` |
-| 7 | FE | `opencode-go/kimi-k2.6` | frontend code & tests | `frontend/`, `planning/FE_PLAN.md` |
-| 8 | QA | `opencode-go/qwen3.5-plus` | test plan, test report | `docs/qa/*.md`, `reports/*.md` |
-| 9 | DELIVERY | `opencode-go/glm-5` | docker, build, release | `docs/delivery/*.md`, `docker-compose.yml` |
+Each role owns a write boundary and runs on a per-role model. Models
+differ between engines (configured in `config/engines/<engine>.env`).
 
-Change any of these in `config/agent_models.env`. The defaults mix
-"strong / medium / cheap" tiers to keep cost down — PM and BA roles
-don't need expensive models, but SA/BE/FE do.
+| Pane / Window | Role | Owns | Writes |
+|---|---|---|---|
+| W0 — OC | ORCHESTRATOR | routing, phase gates | `TASK.md`, `memory/_PROJECT_STATE.md` |
+| W1 — DESIGN | PM | scope, PRD, roadmap, MVP | `docs/product/PRD.md`, `docs/product/ROADMAP.md`, `planning/BACKLOG.md` |
+| W1 — DESIGN | SA | architecture, tech stack, API boundary | `docs/architecture/*.md` |
+| W1 — DESIGN | BA | business rules, user stories | `docs/business/*.md` |
+| W1 — DESIGN | UX | UX flow, wireframes | `docs/product/UX_FLOW.md`, `docs/product/WIREFRAMES.md`, `docs/product/DESIGN_NOTES.md` |
+| W2 — DEV | BE | backend code & tests | `backend/`, `planning/BE_PLAN.md` |
+| W2 — DEV | FE | frontend code & tests | `frontend/`, `planning/FE_PLAN.md` |
+| W2 — DEV | QA | test plan, test execution, release gate | `docs/qa/*.md`, `reports/*.md` |
+| W2 — DEV | DELIVERY | Docker, deploy, release notes | `Dockerfile`, `docker-compose.yml`, `docs/delivery/*.md` |
+
+### Default model per role — per engine
+
+The framework ships defaults for both engines. Override in
+`config/engines/<engine>.env`.
+
+| Role | OpenCode (`opencode-go/…`) | Claude Code |
+|---|---|---|
+| ORCHESTRATOR | `glm-5.1` | `claude-sonnet-4-6` |
+| PM           | `deepseek-v4-flash` | `claude-haiku-4-5` |
+| SA           | `deepseek-v4-pro`   | `claude-opus-4-6` |
+| BA           | `qwen3.6-plus`      | `claude-haiku-4-5` |
+| UX           | `mimo-v2.5`         | `claude-haiku-4-5` |
+| BE           | `deepseek-v4-pro`   | `claude-opus-4-6` |
+| FE           | `kimi-k2.6`         | `claude-sonnet-4-6` |
+| QA           | `qwen3.5-plus`      | `claude-haiku-4-5` |
+| DELIVERY     | `glm-5`             | `claude-haiku-4-5` |
+
+The defaults mix "strong / medium / cheap" tiers to keep cost down —
+PM/BA/UX/QA/DELIVERY don't need expensive models, SA/BE/FE do.
 
 ---
 
 ## Cross-session memory (resume the next day)
 
-Workers run one-shot (`opencode run ... "<task>"`) and exit each
-time. Without an explicit memory layer, every task would start from
-scratch — the team would forget decisions made yesterday. v10.5 adds
-a `memory/` directory that is **committed to git** and acts as the
-team's durable scratchpad.
+Workers run one-shot (e.g. `opencode run … "<task>"` or
+`claude --print … "<task>"`) and exit each time. Without an explicit
+memory layer, every task would start from scratch — the team would
+forget decisions made yesterday. v10.5 adds a `memory/` directory
+that is **committed to git** and acts as the team's durable
+scratchpad.
 
 ```text
 memory/
@@ -186,7 +218,7 @@ content. If found:
 - Prints `[v10.5] RESUME mode — <reason>`
 - Writes `AGENT_SESSION_MODE=RESUME` into pane 1's env
 - Auto-pings the Orchestrator TUI with a `[RESUME]` kickoff message
-  a few seconds after OpenCode loads
+  a few seconds after the engine loads
 
 The Orchestrator's first action then is:
 
@@ -355,9 +387,9 @@ cat docs/delivery/RUNNING_APP.md     # or ask the Orchestrator
 
 ## The first-action rule (why this isn't just prompt engineering)
 
-Older versions of the template tried to disable OpenCode's built-in
+Older versions of the template tried to disable the engine's built-in
 `Task` subagent through prompt warnings ("don't use subagents…"). It
-didn't work — weak models ignore negative instructions, and OpenCode
+didn't work — weak models ignore negative instructions, and the engine
 launched with the subagent tool still enabled.
 
 v10 fixes it at three layers:
@@ -380,7 +412,7 @@ the Orchestrator pane, the framework is broken — file an issue.
 
 ```text
 .
-├── AGENTS.md                       OpenCode auto-loads this (role rules)
+├── AGENTS.md                       engine auto-loads this (role rules)
 ├── PRODUCT_IDEA.md                 YOU write this — what to build
 ├── PRODUCT_ENGINEERING.md          governance rules
 ├── TASK.md                         current phase + status (Orchestrator owns)
@@ -451,10 +483,10 @@ the Orchestrator pane, the framework is broken — file an issue.
 **Pane 1 keeps showing "opencode exited — Press Enter to relaunch"** —
 that's intentional. v10.2 wraps the Orchestrator in an auto-relaunch
 loop so a crash never drops you to bash. Press Enter and you're back
-in chat with the previous OpenCode model. If you really do want a
+in chat with the previous engine model. If you really do want a
 shell, press Ctrl+C or Ctrl+D at that prompt.
 
-**Pane 1 stuck at `dquote>`** — OpenCode in pane 1 exited *and* something
+**Pane 1 stuck at `dquote>`** — the engine in pane 1 exited *and* something
 got pasted into the raw shell before the relaunch wrapper could catch
 it (rare in v10.2). Press **Ctrl+C**, then the auto-relaunch loop
 should re-prompt you to press Enter.
@@ -489,19 +521,29 @@ fix `config/agent_models.env` with IDs from `opencode models`.
 
 ## Customizing
 
-- **Swap models per role.** Edit `config/agent_models.env`.
-- **Swap providers** (e.g. anthropic, openrouter, ollama). Set the
-  provider in `config/opencode.env` and use full IDs like
-  `anthropic/claude-sonnet-4-6` in `config/agent_models.env`. The
-  framework doesn't care which provider — only that each role's model
-  resolves in `opencode models`.
-- **Tighten / loosen permissions.** Edit `.opencode/config.json`. The
-  defaults allow `bash`, `edit`, and `webfetch` for all panes; the
-  built-in `Task` subagent is hard-disabled.
+- **Pick engine at session start.** `--engine opencode` (default) or
+  `--engine claude`. Persisted in `.agent_session`.
+- **Swap models per role within an engine.** Edit
+  `config/engines/opencode.env` or `config/engines/claude.env`.
+- **Add a new engine** (aider, goose, codex, gemini-cli…). Copy one
+  of the existing `config/engines/*.env` to a new filename, fill in
+  `ENGINE_BINARY`, `ENGINE_RUN_BASE`, `ENGINE_MODEL_FLAG`, etc., plus
+  9 `<ROLE>_MODEL=…`. Then `bash scripts/check_models.sh <new>` to
+  validate. Full guide: [`config/engines/README.md`](config/engines/README.md).
+- **Swap providers** within an engine (anthropic, openrouter, ollama,
+  etc.). For OpenCode, use full IDs like `anthropic/claude-sonnet-4-6`
+  in `config/engines/opencode.env` — the framework doesn't care which
+  provider, only that each role's model resolves in `opencode models`.
+- **Tighten / loosen permissions.** Edit `.opencode/config.json` (for
+  OpenCode) or `.claude/settings.json` (for Claude Code — auto-generated
+  at session start, edit the generator in `scripts/start_agents_tmux.sh`
+  if needed). Both engines have the built-in `Task` subagent
+  hard-disabled by default.
 - **Add a new role.** Add it to `AGENTS=(...)` in
   `scripts/start_agents_tmux.sh`, drop a `prompts/agents/<NAME>.md`,
-  set `<NAME>_MODEL=...` in `config/agent_models.env`, and reference
-  it in `planning/AGENT_WORKFLOW.md`.
+  set `<NAME>_MODEL=…` in BOTH `config/engines/opencode.env` and
+  `config/engines/claude.env` (or whichever engines you use), and
+  reference the role in `planning/AGENT_WORKFLOW.md`.
 
 ---
 
@@ -603,7 +645,7 @@ fixes:
 ## Contributing
 
 This is a personal hobby project. PRs, issues, and ideas are welcome —
-especially if you've tried it with a different OpenCode fork or model
+especially if you've tried it with a different engine fork or model
 provider and hit something the template assumes about `opencode-go`.
 
 If you're trying it on a project of your own, I'd love to hear what
