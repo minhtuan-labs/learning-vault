@@ -29,7 +29,7 @@ echo " Notify user : bash scripts/notify_orchestrator.sh <AGENT> \"event\""
 echo " Inbox       : bash scripts/list_pending_questions.sh   (Qs + notifs)"
 echo " Answer Q    : bash scripts/answer_role.sh <ROLE> <qid> \"answer\""
 echo " Verify      : bash scripts/verify_routing.sh"
-echo " Template    : v10.12 (engine choice + 3-window tmux layout)"
+echo " Template    : v10.12.1 (engine choice + 3-window + auto-wake fix)"
 echo "$line"
 
 if [[ "$AGENT" == "ORCHESTRATOR" ]]; then

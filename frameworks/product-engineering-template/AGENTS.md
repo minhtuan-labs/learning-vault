@@ -315,7 +315,11 @@ treat important decisions as user-only. Do not assume "my role is
 allowed to decide this" — if the user would plausibly want to weigh in,
 you must stop and ask.
 
-#### Stop-and-ask threshold
+#### Stop-and-ask threshold — DEFAULT TO ASKING
+
+The user has explicitly said: "I want to interact and confirm important
+things. Tech stack was the only one I felt prompted on — that's not
+enough." So when in doubt, **err on the side of asking**.
 
 Stop and ask if **any** of these is true:
 
@@ -335,6 +339,35 @@ Stop and ask if **any** of these is true:
   can tell from `PRODUCT_IDEA.md` or earlier messages).
 - You'd guess differently if the user said "minimize cost" vs
   "maximize polish" vs "ship as fast as possible".
+- **You're about to write more than 50 lines of content / code in a
+  direction the user hasn't explicitly endorsed.** Even if you feel
+  confident, stop and confirm the direction before producing the
+  deliverable. "I drafted the whole PRD then asked" is too late —
+  ask before drafting if scope/direction wasn't pinned in
+  `PRODUCT_IDEA.md`.
+
+#### Each role MUST ask at least one substantive question per phase
+
+If a role goes through an entire phase without filing a single
+`ask_orchestrator.sh` request, that role probably guessed silently.
+Notable role-phase pairs that almost always have legitimate questions:
+
+- **PM** at phase 0 (Discovery): "What's in scope for v1 vs deferred?
+  Which Must vs Should vs Could from the user's idea?"
+- **BA** at phase 0/2: edge cases the spec didn't cover, conflicts
+  between user request and standard practice.
+- **UX** at phase 0/2: critical UI flow patterns, accessibility
+  level, primary navigation style, brand/language preference.
+- **SA** at phase 1: full Tech Stack Confirmation Protocol (12 dims).
+- **BE/FE** at phase 3 (Planning): second-order tech choices SA left
+  open (state mgmt, ORM, queue, auth provider…).
+- **QA** at phase 3: coverage target, severity threshold for release
+  blockers, manual-vs-automated split.
+- **DELIVERY** at phase 6: host ports, secret handling, deployment
+  target, rollback strategy.
+
+If your role + current phase isn't in this list, you can still ask —
+the list is illustrative, not exhaustive.
 
 **Special case — Tech Stack Confirmation Protocol.** SA (and BE/FE
 for second-order choices) MUST follow the Tech Stack Confirmation

@@ -129,11 +129,24 @@ those questions and the user.
    the user (their input got appended to the auto-ping), address
    that separately AFTER the inbox.
 
-2. **Manual.** Also, at the **start of every user turn** (even when
-   no `[INBOX]` marker is present), run
-   `bash scripts/list_pending_questions.sh` — it's cheap and catches
-   anything the auto-ping might have missed (e.g. you were already
-   processing something when the ping arrived).
+2. **Manual (MANDATORY — DO NOT SKIP).** At the **start of EVERY
+   single user turn** — even when no `[INBOX]` marker is present, even
+   if the user's message looks unrelated to inbox — run:
+
+   ```bash
+   bash scripts/list_pending_questions.sh
+   ```
+
+   This is non-negotiable. The auto-wake `[INBOX]` ping is best-effort
+   (it depends on what command is running in your pane at the moment a
+   worker fires; if you're mid-response or the user just pressed Enter
+   on the relaunch prompt, the ping may not reach you). The only
+   guarantee that questions and notifications surface to the user is
+   YOU running `list_pending_questions.sh` at the top of every turn.
+
+   If a worker reports "Notification filed to Orchestrator: …" in its
+   output but you didn't surface it on the next turn, that was YOUR
+   failure to run the inbox check.
 
 If the list is non-empty, your reply should:
 

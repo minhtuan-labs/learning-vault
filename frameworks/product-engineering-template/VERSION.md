@@ -1,6 +1,58 @@
 # Template Version
 
-Version: 10.12
+Version: 10.12.1
+
+## Patch v10.12.1 (over v10.12)
+
+Three regressions / UX issues discovered after v10.12 was tagged.
+Purely additive fixes — no behavior removed.
+
+### 1. Auto-wake `[INBOX]` ping silently dropped when engine=claude
+
+`ask_orchestrator.sh` and `notify_orchestrator.sh` checked
+`tmux display-message #{pane_current_command}` and only fired the
+`tmux send-keys` ping when the foreground process matched
+`opencode|node|go|main`. **`claude` was missing from the regex**, so
+every clarification / notification filed while engine=claude wrote
+its file to `.pane_questions/` or `.pane_notifications/` but never
+woke up the Orchestrator. The user had to ask "any pending
+questions?" by hand for things to surface.
+
+Fix: replaced regex with a case statement that includes
+`opencode|claude|node|go|main|bash|sh|zsh`. `bash` is now also
+allowed because the Orchestrator's auto-relaunch loop sits at
+`read -r _` between engine runs — sending `[INBOX]` + Enter to that
+loop triggers a relaunch with the inbox message as the first user
+turn, which is fine.
+
+### 2. Orchestrator must always run `list_pending_questions.sh` at
+turn start (auto-wake is best-effort)
+
+`prompts/agents/ORCHESTRATOR.md` now says explicitly: the
+`[INBOX]` auto-ping is best-effort (depends on what's running in
+pane 1 at the moment a worker fires). The only guarantee that
+clarifications + notifications surface is the Orchestrator running
+`list_pending_questions.sh` at the **start of every user turn** —
+even when no `[INBOX]` is visible, even when the user's message
+looks unrelated. Worded as "non-negotiable" to push weaker models
+to comply.
+
+### 3. Agents weren't asking proactively beyond Tech Stack
+
+User feedback: "Only SA Tech Stack triggered prompts. Other agents
+silently decided." Strengthened `AGENTS.md` Stop-and-ask threshold:
+
+- Added an explicit "DEFAULT TO ASKING — err on the side of asking"
+  preamble quoting the user's own words.
+- Added a new trigger: "About to write > 50 lines of content/code in
+  a direction the user hasn't endorsed → ask first."
+- Added a per-role-per-phase checklist of questions that "almost
+  always" have legitimate clarifications (PM at Discovery, UX at
+  Discovery/Backlog, BE/FE at Planning, QA at Planning, DELIVERY at
+  Delivery, etc.).
+- Spelled out: "If a role goes through an entire phase without
+  filing a single `ask_orchestrator.sh`, that role probably guessed
+  silently."
 
 ## Changes from v10.11
 

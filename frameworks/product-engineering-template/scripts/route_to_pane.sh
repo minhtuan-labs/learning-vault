@@ -296,17 +296,62 @@ fi
 TASK_PROMPT="Execute the routed pane task described in $TASK_FILE. Read the file, perform the work, update files as needed, and report completion. Do not use internal subagents (the task tool is disabled in $ENGINE_CONFIG_PATH and AGENTS.md)."
 WORKER_CMD="${ENGINE_ENV_PREFIX}${ENGINE_RUN_BASE} ${ENGINE_MODEL_FLAG} '${TARGET_MODEL}' \"${TASK_PROMPT}\""
 
+# v10.12 — Wrap the worker command in `script` so the engine sees a PTY
+# (defeats stdio block-buffering). This gives LIVE streaming output in
+# the pane WHILE still capturing everything to the log file. Without
+# the PTY, opencode/claude buffer their output and the pane stays
+# blank until the run completes.
+#
+# We write a temp shell wrapper to avoid nested-quote escaping nightmares.
+WORKER_SH=".pane_tasks/_run_${TARGET}_${TS}.sh"
+{
+  echo "#!/bin/bash"
+  echo "set -e"
+  echo "$WORKER_CMD"
+} > "$WORKER_SH"
+chmod +x "$WORKER_SH"
+WORKER_SH_ABS="$(pwd)/$WORKER_SH"
+
+# Build invocation according to platform's `script` flavor.
+if command -v script >/dev/null 2>&1; then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    # macOS BSD script:  script [-q] LOGFILE COMMAND [ARGS...]
+    INVOCATION="script -q '$LOG_FILE' '$WORKER_SH_ABS'"
+  else
+    # GNU util-linux script:  script -q -e -c COMMAND LOGFILE
+    INVOCATION="script -q -e -c '$WORKER_SH_ABS' '$LOG_FILE'"
+  fi
+else
+  # `script` not available — fall back to tee (output may buffer).
+  INVOCATION="'$WORKER_SH_ABS' 2>&1 | tee '$LOG_FILE'"
+fi
+
 tmux send-keys -t "$PANE_ID" C-c
 tmux send-keys -t "$PANE_ID" "cd '$(pwd)'" C-m
 tmux send-keys -t "$PANE_ID" "clear" C-m
 tmux send-keys -t "$PANE_ID" "bash scripts/agent_banner.sh '$TARGET' '$TARGET_MODEL' \"\${PROJECT_NAME:-unknown}\"" C-m
-tmux send-keys -t "$PANE_ID" "echo '[v10] Running routed pane task: $TASK_FILE'" C-m
-tmux send-keys -t "$PANE_ID" "echo '[v10] Log file: $LOG_FILE'" C-m
+tmux send-keys -t "$PANE_ID" "echo '[v10.12] Running routed pane task: $TASK_FILE'" C-m
+tmux send-keys -t "$PANE_ID" "echo '[v10.12] Log file: $LOG_FILE   (live output below + captured to log)'" C-m
 
 if [[ "$WORKER_OPENCODE_MODE" == "run" ]]; then
-  tmux send-keys -t "$PANE_ID" "$WORKER_CMD 2>&1 | tee '$LOG_FILE'" C-m
+  tmux send-keys -t "$PANE_ID" "$INVOCATION" C-m
 else
-  tmux send-keys -t "$PANE_ID" "${ENGINE_ENV_PREFIX}${ENGINE_TUI_LAUNCH} ${ENGINE_MODEL_FLAG} '${TARGET_MODEL}' 2>&1 | tee '$LOG_FILE'" C-m
+  # TUI mode: also through script for live output
+  TUI_CMD="${ENGINE_ENV_PREFIX}${ENGINE_TUI_LAUNCH} ${ENGINE_MODEL_FLAG} '${TARGET_MODEL}'"
+  TUI_SH=".pane_tasks/_run_${TARGET}_${TS}_tui.sh"
+  { echo "#!/bin/bash"; echo "$TUI_CMD"; } > "$TUI_SH"
+  chmod +x "$TUI_SH"
+  TUI_SH_ABS="$(pwd)/$TUI_SH"
+  if command -v script >/dev/null 2>&1; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+      TUI_INVOCATION="script -q '$LOG_FILE' '$TUI_SH_ABS'"
+    else
+      TUI_INVOCATION="script -q -e -c '$TUI_SH_ABS' '$LOG_FILE'"
+    fi
+  else
+    TUI_INVOCATION="'$TUI_SH_ABS' 2>&1 | tee '$LOG_FILE'"
+  fi
+  tmux send-keys -t "$PANE_ID" "$TUI_INVOCATION" C-m
 fi
 
 # Backward compatible mirror for old tooling that reads .agent_tasks/.

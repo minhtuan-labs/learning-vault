@@ -511,6 +511,21 @@ first-action rule by pasting `AGENTS.md`, or run:
 bash scripts/inject_boot_prompt.sh ORCHESTRATOR
 ```
 
+**Worker pane shows nothing during a long task (output appears only
+when it finishes)** — this is the classic stdio block-buffering issue:
+when an engine's stdout goes to a pipe (`| tee log`), it switches to
+4 KB chunks instead of line-buffered. v10.12 fixes this by wrapping
+the worker command in `script` (POSIX), which allocates a PTY so the
+engine streams output live to the pane AND captures everything to
+`.pane_logs/<role>_<ts>.log` at the same time. If you want to monitor
+from a different pane: `tail -f .pane_logs/<role>_*.log`.
+
+If `script` isn't installed (rare on macOS/Linux; most BSDs ship it
+in `/usr/bin/script`), the routing falls back to plain `tee` and you
+lose live streaming. Install it with your package manager
+(`brew install util-linux` on macOS for the GNU variant, but the
+BSD `script` shipped in macOS base works too).
+
 **Worker filed a question and now its pane is idle at bash** — expected
 behavior. The worker exits after calling `ask_orchestrator.sh`. Tell
 the Orchestrator "có câu hỏi nào đang chờ?" / "any pending questions?"

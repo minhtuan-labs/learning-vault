@@ -116,16 +116,25 @@ if [[ -n "$ORCH_PANE" ]] && command -v tmux >/dev/null 2>&1; then
   tmux set-option status-right "Pending Q: ${OPEN} | #(date '+%H:%M %d-%b')" 2>/dev/null || true
 
   if [[ "$AUTO_PING_ORCHESTRATOR" == "true" ]]; then
-    # Only auto-ping if the Orchestrator pane appears to be running
-    # opencode (TUI). If it's at bash, the keystrokes would become a
-    # botched command — skip and rely on the next user turn to surface.
+    # v10.12.1 — auto-ping if the Orchestrator pane is running an engine
+    # TUI OR is in the auto-relaunch bash loop waiting for Enter to relaunch.
+    # In both cases, sending `[INBOX] ... <Enter>` does the right thing:
+    #   • engine TUI → becomes a user message → engine processes
+    #   • bash `read -r _` prompt → Enter triggers engine relaunch +
+    #                              engine then sees [INBOX] as first msg
+    # v10.12 regression: regex was missing `claude` — only opencode worked.
     PANE_CMD="$(tmux display-message -p -t "$ORCH_PANE" '#{pane_current_command}' 2>/dev/null || echo unknown)"
-    if [[ "$PANE_CMD" =~ ^(opencode|node|go|main)$ ]] || [[ "$PANE_CMD" == "opencode" ]]; then
-      PING_MSG="[INBOX] new clarification from ${FROM} (id: ${QID}). Run: bash scripts/list_pending_questions.sh — read the question to me and ask the user for an answer."
-      tmux send-keys -t "$ORCH_PANE" "$PING_MSG" 2>/dev/null || true
-      sleep 0.2
-      tmux send-keys -t "$ORCH_PANE" C-m 2>/dev/null || true
-    fi
+    case "$PANE_CMD" in
+      opencode|claude|node|go|main|bash|sh|zsh)
+        PING_MSG="[INBOX] new clarification from ${FROM} (id: ${QID}). Run: bash scripts/list_pending_questions.sh — read the question to me and ask the user for an answer."
+        tmux send-keys -t "$ORCH_PANE" "$PING_MSG" 2>/dev/null || true
+        sleep 0.2
+        tmux send-keys -t "$ORCH_PANE" C-m 2>/dev/null || true
+        ;;
+      *)
+        echo "  (skipped auto-wake — Orchestrator pane is running '$PANE_CMD', not a known engine/shell)"
+        ;;
+    esac
   fi
 fi
 
