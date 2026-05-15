@@ -525,6 +525,17 @@ fix `config/agent_models.env` with IDs from `opencode models`.
 
 - **Pick engine at session start.** `--engine opencode` (default) or
   `--engine claude`. Persisted in `.agent_session`.
+- **Claude Code auth mode — IMPORTANT for cost.** Claude Code can bill
+  either via per-token API (env var `ANTHROPIC_API_KEY`) or via your
+  Pro/Max **subscription** (OAuth login). Multi-agent workflows can
+  burn through API credit fast. If you have Pro/Max:
+  - `unset ANTHROPIC_API_KEY` in your shell (also comment out the
+    `export` in `~/.zshrc` / `~/.bashrc`)
+  - `claude /login` → choose **"Log in with Claude.ai account"**
+  - Verify with `claude /status`
+  - `start_agents_tmux.sh --engine claude` now refuses to launch if
+    `ANTHROPIC_API_KEY` is set (override with `CLAUDE_API_MODE_ACK=1`
+    if you really want API billing).
 - **Swap models per role within an engine.** Edit
   `config/engines/opencode.env` or `config/engines/claude.env`.
 - **Add a new engine** (aider, goose, codex, gemini-cli…). Copy one

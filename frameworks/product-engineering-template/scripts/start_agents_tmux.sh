@@ -98,6 +98,39 @@ if [[ "$STRICT_MODEL_CHECK" == "true" ]]; then
     exit 1
   fi
 
+  # v10.12 — Claude Code auth-mode warning (avoid accidentally burning API
+  # billing when the user has a Pro/Max subscription).
+  if [[ "$ENGINE" == "claude" ]] && [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo ""
+    echo "============================================================"
+    echo "  ⚠  WARNING: ANTHROPIC_API_KEY is set in your environment."
+    echo "============================================================"
+    echo "  Claude Code will use the **Anthropic API** (billed per"
+    echo "  token), NOT your Claude Pro / Max subscription."
+    echo ""
+    echo "  Multi-agent workflows on Opus/Sonnet can rack up real \$\$\$"
+    echo "  on the API. If you have a Pro/Max plan, switch by:"
+    echo ""
+    echo "    1) For THIS session only:"
+    echo "         unset ANTHROPIC_API_KEY    # in this shell, then re-run"
+    echo ""
+    echo "    2) Permanent (recommended if you have Pro/Max):"
+    echo "         - Comment out 'export ANTHROPIC_API_KEY=…' in"
+    echo "           ~/.zshrc or ~/.bashrc"
+    echo "         - Run: claude /login  → 'Log in with Claude.ai account'"
+    echo "         - Verify: claude /status"
+    echo ""
+    echo "  To proceed anyway with API mode (you'll be billed), set"
+    echo "  CLAUDE_API_MODE_ACK=1 in your environment and re-run."
+    echo "============================================================"
+    if [[ "${CLAUDE_API_MODE_ACK:-0}" != "1" ]]; then
+      echo "Aborting. Re-run with CLAUDE_API_MODE_ACK=1 to bypass this check."
+      exit 3
+    fi
+    echo "[v10.12] CLAUDE_API_MODE_ACK=1 — proceeding with API mode (billed)."
+    echo ""
+  fi
+
   if [[ "$ENGINE_MODEL_CHECK_MODE" == "dynamic" ]]; then
     MODELS_OUTPUT="$($ENGINE_MODELS_LIST_CMD 2>/dev/null || true)"
     if [[ -z "$MODELS_OUTPUT" ]]; then
@@ -162,6 +195,14 @@ EOF
       "Bash(opencode:*)", "Bash(claude:*)", "Bash(docker:*)",
       "Bash(curl:*)", "Bash(npm:*)", "Bash(pip:*)",
       "Bash(pytest:*)", "Bash(node:*)",
+      "Bash(grep:*)", "Bash(sed:*)", "Bash(awk:*)", "Bash(cut:*)",
+      "Bash(find:*)", "Bash(wc:*)", "Bash(date:*)", "Bash(pwd:*)",
+      "Bash(ls:*)", "Bash(cat:*)", "Bash(echo:*)", "Bash(printf:*)",
+      "Bash(basename:*)", "Bash(dirname:*)", "Bash(head:*)", "Bash(tail:*)",
+      "Bash(mkdir:*)", "Bash(rm:*)", "Bash(cp:*)", "Bash(mv:*)",
+      "Bash(chmod:*)", "Bash(stat:*)", "Bash(test:*)",
+      "Bash(true:*)", "Bash(false:*)", "Bash(:*)",
+      "Bash(source:*)", "Bash(.:*)",
       "Read", "Write", "Edit", "WebFetch"
     ],
     "deny": [ "Task" ]
