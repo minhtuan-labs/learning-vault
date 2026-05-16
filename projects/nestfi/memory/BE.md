@@ -41,5 +41,16 @@
 ### 2026-05-16 17:36 — Phase 3 Backend Planning
 Completed BE_PLAN.md with 7 sections: module breakdown (auth/users/families/transactions/categories/admin/analytics), ORM strategy (SQLAlchemy 2.0 + Alembic), 21 P0 API endpoints prioritized, identified risks + mitigations, and 6-7 day build timeline. All prerequisites met; ready for Phase 4 (Build). No blocking questions identified.
 
-### 2026-05-16 17:46 — Phase 4 Backend Scaffold Complete
-Implemented complete FastAPI backend scaffold with all 21 P0 endpoints. Includes: SQLAlchemy models (User, Family, FamilyMember, Invitation, Transaction, Category, AuditLog) with TimestampMixin; Pydantic schemas for validation; JWT auth (HS256, bcrypt) with get_current_user dependency; role-based access control (superadmin/owner/member); core routes for auth, users, families, transactions, categories, analytics, admin; soft deletes on transactions; invitation system with token-based acceptance; default category seeding (15 per type); pagination and filtering on transactions; error handling with custom exceptions. Dockerfile, requirements.txt, and pytest fixtures created. Code committed. Next: test coverage, seeding superadmin, SMTP integration, optional: caching/async improvements.
+### 2026-05-16 17:46 — Phase 4 Backend Implementation Complete
+Fully implemented FastAPI backend for Phase 4 BUILD with 21 P0 endpoints (all routes functional). Deliverables:
+- Models: User, Family, FamilyMember, Invitation, Transaction, Category, AuditLog with TimestampMixin
+- Auth: JWT HS256 (24h expiry), bcrypt password hashing, get_current_user dependency
+- RBAC: superadmin/owner/member roles with per-endpoint authorization checks
+- Routes: auth (login/me), users (change-password), families (list/get/create/update), members (invite/remove), invitations (accept/decline), transactions (CRUD+soft-delete+pagination+filtering), categories (CRUD+archival), analytics (summary+trends), admin (family creation with defaults)
+- Features: Soft deletes with audit trail, invitation expiry (30d), default category seeding (15 per type), pagination (skip/limit), filtering (category/member/type/date range)
+- Error handling: Custom HTTPException subclasses (NotFoundException, UnauthorizedException, ForbiddenException, ConflictException, ValidationException)
+- Testing: 13+ tests covering auth, families, transactions (CRUD, soft-delete, pagination)
+- Database: Alembic migrations (001_initial_schema with all tables and indexes), seed script for superadmin
+- Deployment: docker-compose.yml (postgres+backend+frontend), Dockerfile for backend, requirements.txt, DEPLOYMENT.md guide
+- Code quality: Type hints on all functions, docstrings where non-obvious, proper imports
+- Ready for: QA testing phase, integration with FE, Docker deployment, SMTP/email integration
