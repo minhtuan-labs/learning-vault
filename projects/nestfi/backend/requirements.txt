@@ -9,6 +9,7 @@ python-jwt==1.2.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 python-dotenv==1.0.0
+python-dateutil==2.8.2
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2

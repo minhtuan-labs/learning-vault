@@ -48,3 +48,6 @@ Phase gate did NOT pass but ADVANCE_PHASE_FORCE was used. User accepted the risk
 
 ### 2026-05-16 17:46 — Phase 4 BUILD started, BE + FE routed
 QA completed TEST_PLAN.md (110 unit tests, 78 integration tests, 49+ manual cases, Phase 5 exit gate defined). DELIVERY blocked by circular dependency (needs Phase 5 TEST_REPORT output). Forced Phase 3→4 advancement (ADVANCE_PHASE_FORCE=1) per user request. Routed BE and FE to code simultaneously: BE targeting 21 P0 endpoints in 6-7 days (FastAPI modules: auth, users, families, transactions, categories, admin); FE targeting 6 pages (login, family selector, dashboard, ledger, settings, invitations) in Dash + Tailwind. Both will commit incrementally and notify on milestones.
+
+### 2026-05-16 17:49 — Phase 4 BUILD scaffolds complete for both BE and FE
+BE completed backend scaffold (36 Python files): 7 API route modules (auth, users, families, transactions, categories, analytics, admin), 6 models, 9 schemas, CRUD ops, JWT+bcrypt auth, RBAC, soft deletes, tests. FE completed frontend scaffold (17 Python files): 6 Dash pages (login, family_selector, dashboard, ledger, settings, invitations), 5 component modules, centralized APIClient with 18 methods, Plotly charts, 10s polling. Both ready for callback wiring and integration testing. Moving toward Phase 5 (TEST_AND_FIX) and Phase 6 (DELIVERY).

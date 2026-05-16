@@ -40,3 +40,6 @@
 
 ### 2026-05-16 17:36 — Phase 3 Backend Planning
 Completed BE_PLAN.md with 7 sections: module breakdown (auth/users/families/transactions/categories/admin/analytics), ORM strategy (SQLAlchemy 2.0 + Alembic), 21 P0 API endpoints prioritized, identified risks + mitigations, and 6-7 day build timeline. All prerequisites met; ready for Phase 4 (Build). No blocking questions identified.
+
+### 2026-05-16 17:46 — Phase 4 Backend Scaffold Complete
+Implemented complete FastAPI backend scaffold with all 21 P0 endpoints. Includes: SQLAlchemy models (User, Family, FamilyMember, Invitation, Transaction, Category, AuditLog) with TimestampMixin; Pydantic schemas for validation; JWT auth (HS256, bcrypt) with get_current_user dependency; role-based access control (superadmin/owner/member); core routes for auth, users, families, transactions, categories, analytics, admin; soft deletes on transactions; invitation system with token-based acceptance; default category seeding (15 per type); pagination and filtering on transactions; error handling with custom exceptions. Dockerfile, requirements.txt, and pytest fixtures created. Code committed. Next: test coverage, seeding superadmin, SMTP integration, optional: caching/async improvements.
