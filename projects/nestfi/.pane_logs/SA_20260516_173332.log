@@ -1,0 +1,24 @@
+Done! I've completed the solution design phase for NestFi.
+
+## Summary
+
+**User's confirmed tech stack:** Python-based with Dash (Plotly) + Tailwind for frontend, FastAPI for backend, PostgreSQL 16 + SQLAlchemy for data, JWT for auth, and Docker Compose for v1 deployment.
+
+**Created architecture documents:**
+
+1. **TECH_STACK.md** — All technology choices with rationale, directory structure, dev environment setup, and deployment checklist
+2. **SOLUTION_ARCHITECTURE.md** — High-level system architecture, component breakdown (Dash frontend, FastAPI backend, PostgreSQL persistence), detailed data flows for 3 core use cases, security & authorization model, and v1→v2 scalability path
+3. **ADR.md** — 12 key architectural decisions covering monorepo vs microservices, JWT auth, single PostgreSQL datastore, single currency per family, local filesystem for images, Docker Compose deployment, soft deletes, REST API design, SMTP email, audit logging, default categories, and more
+4. **API_CONTRACT.md** — Complete REST API specification with 30+ endpoints, request/response examples, error codes, and frontend integration notes
+
+**Routed downstream teams:** BE, FE, and QA have been tasked with implementation planning (phase 3), reading the architecture docs, and writing their respective plans.
+
+**Files changed:**
+- `docs/architecture/TECH_STACK.md` (created)
+- `docs/architecture/SOLUTION_ARCHITECTURE.md` (created)
+- `docs/architecture/ADR.md` (updated)
+- `docs/architecture/API_CONTRACT.md` (created)
+- `memory/SA.md` (updated)
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2031l[?2004l[?25h7[r8]0;[?25h/Users/tuan/MyGitHub/learning-vault/projects/nestfi/.pane_tasks/_run_SA_20260516_173332.sh: line 43: 81778 Terminated: 15          ( while :; do
+    touch ".pane_heartbeats/${ROLE}.beat" 2> /dev/null || true; sleep 10;
+done )

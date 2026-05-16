@@ -5,8 +5,12 @@ AGENT="${1:-${AGENT_NAME:-UNKNOWN}}"
 MODEL="${2:-${AGENT_MODEL:-UNKNOWN}}"
 PROJECT="${3:-${PROJECT_NAME:-UNKNOWN}}"
 
-# v10.14 — also surface engine + window
+# v10.16 — also surface engine + window + free-mode flag
 ENGINE_TXT="${ENGINE:-?}"
+FREE_TXT=""
+if [[ "${FREE_MODE:-false}" == "true" ]]; then
+  FREE_TXT=" (--free)"
+fi
 case "$AGENT" in
   ORCHESTRATOR) WIN="0:OC" ;;
   PM|SA|BA|UX)  WIN="1:DESIGN" ;;
@@ -18,7 +22,7 @@ line="======================================================================"
 echo "$line"
 printf " AGENT: %-14s | PROJECT: %-24s\n" "$AGENT" "$PROJECT"
 printf " MODEL: %s\n" "$MODEL"
-printf " ENGINE: %-10s | WINDOW: %s\n" "$ENGINE_TXT" "$WIN"
+printf " ENGINE: %-10s%-9s | WINDOW: %s\n" "$ENGINE_TXT" "$FREE_TXT" "$WIN"
 echo "$line"
 echo " Role prompt : prompts/agents/$AGENT.md"
 echo " Instructions: AGENTS.md  (CLAUDE.md is auto-synced for Claude engine)"
@@ -29,7 +33,9 @@ echo " Notify user : bash scripts/notify_orchestrator.sh <AGENT> \"event\""
 echo " Inbox       : bash scripts/list_pending_questions.sh   (Qs + notifs)"
 echo " Answer Q    : bash scripts/answer_role.sh <ROLE> <qid> \"answer\""
 echo " Verify      : bash scripts/verify_routing.sh"
-echo " Template    : v10.15 (bracketed-paste auto-wake fix for Claude)"
+echo " Template    : v10.18.1 (auto-wake permissive pane detection)"
+echo " Wake log    : .pane_logs/_auto_wake.log     (tail to audit auto-wake)"
+echo " Manual wake : Prefix+W  OR  bash scripts/wake_orchestrator.sh"
 echo "$line"
 
 if [[ "$AGENT" == "ORCHESTRATOR" ]]; then

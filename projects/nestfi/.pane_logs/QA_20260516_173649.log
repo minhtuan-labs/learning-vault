@@ -1,0 +1,17 @@
+^C[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2031l[?2004l[?25h7[r8]0;Execution errorcd '/Users/tuan/MyGitHub/learning-vault/projects/nestfi'
+clear
+bash scripts/agent_banner.sh 'QA' 'claude-haiku-4-5' "${PROJECT_NAME:-unknown}"
+echo '[v10.12] Running routed pane task: .pane_tasks/QA_20260516_173850.md'
+echo '[v10.12] Log file: .pane_logs/QA_20260516_173850.log   (live output below + captured to log)'
+script -q '.pane_logs/QA_20260516_173850.log' '/Users/tuan/MyGitHub/learning-vault/projects/nestfi/.pane_tasks/_run_QA_20260516_173850.sh'
+[?25h================================================================
+ NOTIFICATION FILED (from QA)
+================================================================
+ Subject : Engine session exited (code=0) without an explicit completion notify. Check artifacts under role's output paths to verify status. (Auto-fired by framework safety net — worker may have legitimately finished without calling notify_orchestrator.sh, or may have crashed.)
+ File    : .pane_notifications/QA_20260516_173850.md
+ The Orchestrator will surface this on the next user turn via
+   bash scripts/list_pending_questions.sh
+================================================================
+/Users/tuan/MyGitHub/learning-vault/projects/nestfi/.pane_tasks/_run_QA_20260516_173649.sh: line 43: 82319 Terminated: 15          ( while :; do
+    touch ".pane_heartbeats/${ROLE}.beat" 2> /dev/null || true; sleep 10;
+done )

@@ -1,0 +1,31 @@
+**PENDING CLARIFICATION**
+
+I've submitted the tech stack confirmation question to the user (ID: `SA_20260516_172526`).
+
+**Proposed stack for user review:**
+- Frontend: Next.js 15 + TypeScript + Tailwind + shadcn/ui
+- Backend: NestJS + TypeScript
+- Database: PostgreSQL 16 + Prisma
+- Auth: Session-based (Postgres-backed)
+- Hosting: Docker Compose (v1); Fly.io/Railway (later)
+- Layout: Monorepo with backend/ + frontend/
+- Package manager: pnpm
+
+**Changed files:**
+- `memory/SA.md` — noted pending tech stack confirmation question
+
+Awaiting user answer in `.pane_answers/SA_20260516_172526.md`. When resumed with the answer, I'll write:
+- `docs/architecture/TECH_STACK.md` (confirmed selections)
+- `docs/architecture/SOLUTION_ARCHITECTURE.md` (system design, components, data flow)
+- `docs/architecture/ADR.md` (architectural decisions)
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2031l[?2004l[?25h7[r8]0;[?25h================================================================
+ NOTIFICATION FILED (from SA)
+================================================================
+ Subject : Engine session exited (code=0) without an explicit completion notify. Check artifacts under role's output paths to verify status. (Auto-fired by framework safety net — worker may have legitimately finished without calling notify_orchestrator.sh, or may have crashed.)
+ File    : .pane_notifications/SA_20260516_172539.md
+ The Orchestrator will surface this on the next user turn via
+   bash scripts/list_pending_questions.sh
+================================================================
+/Users/tuan/MyGitHub/learning-vault/projects/nestfi/.pane_tasks/_run_SA_20260516_172459.sh: line 43: 80814 Terminated: 15          ( while :; do
+    touch ".pane_heartbeats/${ROLE}.beat" 2> /dev/null || true; sleep 10;
+done )

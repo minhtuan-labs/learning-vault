@@ -1,6 +1,590 @@
 # Template Version
 
-Version: 10.15
+Version: 10.18.1
+
+## Patch v10.18.1 (over v10.18) — Auto-wake pane detection
+
+Discovered via the nestfi `.pane_logs/_auto_wake.log` after v10.18 ship:
+
+```
+[2026-05-16 17:09:24] FIRE pane=%0 running=2.1.143 msglen=213
+[2026-05-16 17:09:24] SKIP — Orchestrator pane running '2.1.143', not a known engine/shell
+```
+
+**Root cause**: `tmux display-message #{pane_current_command}` returns
+Claude Code's **version string** (`"2.1.143"`) on the user's macOS,
+not the literal `"claude"`. The v10.18 case statement's allow-list
+(`claude|opencode|node|go|main`) didn't match this, so the entire
+multi-method delivery block was skipped. The three methods
+(paste-buffer / send-keys-l / typewriter) were never actually
+attempted — they couldn't fail because they didn't run.
+
+This explains the user's report: "Notif: 3 visible in status bar but
+Claude pane idle for 24+ seconds" — workers fired notifications
+correctly, helper was invoked, but the case statement bailed early
+with `SKIP`.
+
+### Fix
+
+`scripts/_ping_orchestrator_pane.sh` case statement rewritten:
+
+1. **Known shells** (`bash|sh|zsh|fish|tcsh|ksh|dash`) → handle as
+   auto-relaunch loop (same as before).
+2. **Known engines** (`claude|opencode|node|...`) → try delivery.
+3. **Empty / `unknown`** → genuinely no info, skip.
+4. **Anything else** (catch-all `*)`) → assume engine TUI and try
+   delivery. Logs `ASSUMING engine TUI (pane_current_command='$X')`.
+
+This replaces the brittle allow-list approach with a much more
+permissive "shell-or-engine" partition. If the delivery methods can't
+deliver to whatever's running, the visible-alert fallback fires —
+same as before. The change is purely about giving the methods a chance
+to run.
+
+### Files touched
+
+```
+~ scripts/_ping_orchestrator_pane.sh    (permissive case statement)
+~ scripts/agent_banner.sh               (template label v10.18.1)
+~ VERSION.md                            (this entry)
+```
+
+### Verification (please run after sync)
+
+```bash
+cd <project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+bash scripts/stop_agents_tmux.sh
+bash scripts/start_agents_tmux.sh <project> --engine claude --free
+
+# Tab 1: live log
+tail -f .pane_logs/_auto_wake.log
+
+# Tab 2 (in tmux, from any worker pane):
+bash scripts/ask_orchestrator.sh PM "Test v10.18.1"
+```
+
+Expected log lines now:
+
+```
+[...] FIRE pane=%0 running=2.1.143 msglen=...
+[...] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[...] SENT via paste-buffer to pane=%0    # or send-keys-literal / typewriter
+```
+
+If `SENT via X` appears AND Claude pane still doesn't react → it's a
+genuine Ink TUI delivery problem (Cause A in v10.17 analysis) and we
+escalate to Option A (non-interactive `claude --print` per turn) in
+v10.19.
+
+If `FAIL — all methods failed` → all three delivery methods executed
+but none of them got the ping text onto Claude's input box. That's
+useful data — share the post-FAIL `tmux capture-pane` output and we'll
+design the next iteration.
+
+---
+
+## Release v10.18 (over v10.17) — Comprehensive Claude/framework reliability batch
+
+Bundles five independent fixes identified through testing. All
+engine-agnostic except where noted; nothing breaks OpenCode behaviour.
+
+### Fix #1 — Auto-wake multi-method delivery with verification (Claude focus)
+
+The single most-reported friction with engine=claude: workers fire
+`notify_orchestrator.sh`, notifications land in `.pane_notifications/`,
+the status bar `Notif:` counter increments — but Claude's Ink TUI
+doesn't react. v10.15 (manual ESC bracketed-paste) and v10.17
+(`paste-buffer -p`) both failed in practice.
+
+`scripts/_ping_orchestrator_pane.sh` rewritten:
+
+1. **Method 1** — `tmux load-buffer` + `paste-buffer -p` (bracketed paste).
+2. **Method 2** — `tmux send-keys -l "$msg"` (literal characters).
+3. **Method 3** — typewriter mode: char-by-char `send-keys -l` with a
+   40ms delay between characters. Slow (~6s for a 150-char ping) but
+   mimics real human typing and bypasses any rapid-input filtering Ink
+   may apply.
+
+Each method is **verified** by calling `tmux capture-pane` and
+grep'ing for a 30-character sentinel from the ping body. If the
+sentinel appears in the pane buffer, delivery succeeded → send Enter
+(twice, in case the first is eaten by Claude's filter). Otherwise
+move to the next method.
+
+If all three methods fail to land the text on screen:
+
+- Set the tmux pane bell, surface a `display-message` toast.
+- Fire a macOS `osascript` notification (sound: Glass) so the user
+  sees an alert outside the tmux window.
+- Log everything to `.pane_logs/_auto_wake.log` so the user can audit
+  which method (if any) is working in their environment.
+
+User-facing fallback: a new `scripts/wake_orchestrator.sh` types
+`.` + Enter into the Orchestrator pane on demand, triggering the
+mandatory `list_pending_questions.sh` from the v10.12.1 rule. Bound
+to **Prefix + W** in tmux by `start_agents_tmux.sh`.
+
+### Fix #2 — Framework safety net for workers that exit silently
+
+`scripts/route_to_pane.sh` builds a per-task wrapper script
+(`.pane_tasks/_run_<ROLE>_<ts>.sh`). v10.18 extends this wrapper:
+
+```bash
+# After the worker command returns:
+LATEST_NOTIF=$(ls -t .pane_notifications/${ROLE}_*.md 2>/dev/null | head -1)
+NEED_FALLBACK=true
+if [[ -n "$LATEST_NOTIF" ]] && (( $(date +%s) - $(stat -c%Y "$LATEST_NOTIF") < 30 )); then
+  NEED_FALLBACK=false   # role already filed a notify, don't duplicate
+fi
+if $NEED_FALLBACK; then
+  bash scripts/notify_orchestrator.sh "$ROLE" "Engine session exited (code=…) without an explicit completion notify."
+fi
+```
+
+Engine-agnostic. Dedup by 30-second window so OpenCode workers that
+correctly call `notify_orchestrator.sh` aren't doubled. Targets the
+exact failure mode the user saw with BE after the build phase (worker
+finished artifacts but didn't fire notify → Orchestrator stalled
+until the user prompted manually).
+
+### Fix #3 — Stay-in-lane strengthening + lint script
+
+A new top section in `prompts/agents/ORCHESTRATOR.md` (v10.18 title):
+**"STAY IN YOUR LANE — files you MUST NOT write yourself"**, with a
+table mapping every owner-specific file pattern to its owner role and
+the exact `route_to_pane.sh` invocation to use instead. The "you can
+edit these" allow-list is explicit and short: TASK.md +
+memory/_PROJECT_STATE.md + memory/ORCHESTRATOR.md.
+
+New `scripts/check_lane_violations.sh` audits recently-modified files
+against expected owners. Informational only (no hard block) — useful
+for post-phase review. Run `bash scripts/check_lane_violations.sh 60`
+to see what changed in the last 60 minutes and who should have owned
+each change.
+
+### Fix #4 — Heartbeat for long-running tasks
+
+`route_to_pane.sh` worker wrapper now spawns a background loop that
+touches `.pane_heartbeats/<ROLE>.beat` every 10 seconds. On
+`EXIT`/signal trap, the heartbeat process is killed and the beat file
+removed.
+
+`scripts/watcher_daemon.sh` extended with `check_stalled_heartbeats()`
+that runs every poll cycle:
+
+- If a `.beat` file's mtime is > 90 seconds old, the worker hasn't
+  pulsed in too long → file an `notify_orchestrator.sh` on its behalf
+  with a "may be stalled" message.
+- 5-minute cooldown per role (`.pane_heartbeats/<ROLE>.stalled` marker)
+  so the user doesn't get a "still stalled" alert every 15 seconds.
+
+Tunable via `HEARTBEAT_STALE_SECS` and `HEARTBEAT_ALERT_COOLDOWN`.
+
+### Fix #5 — PRODUCT_IDEA.md write reliability on Claude fresh projects
+
+User reported Write tool error when pasting idea on fresh Claude
+session. Without an exact error log, the fix is defensive on both
+sides:
+
+- `scripts/bootstrap_docs.sh` pre-creates `PRODUCT_IDEA.md` with a
+  placeholder template if it doesn't exist. This means the Write/Edit
+  tool's "create new file" path is never hit on fresh projects — only
+  the "modify existing" path, which works reliably.
+- New `scripts/set_product_idea.sh` is the recommended path for the
+  Orchestrator on fresh Claude sessions: it reads the idea from stdin
+  (heredoc-friendly) and writes via plain shell I/O. Bypasses any
+  Write-tool path resolution quirks. The Orchestrator prompt now
+  documents this pattern explicitly.
+
+### Files touched in v10.18
+
+```
+~ scripts/_ping_orchestrator_pane.sh   (multi-method + verification + visible fallback)
++ scripts/wake_orchestrator.sh          (manual wake helper, bound to Prefix+W)
+~ scripts/route_to_pane.sh              (worker wrapper: heartbeat + safety-net notify)
+~ scripts/watcher_daemon.sh             (stale heartbeat detection)
++ scripts/check_lane_violations.sh      (lint for Stay-in-lane discipline)
++ scripts/set_product_idea.sh           (robust PRODUCT_IDEA.md writer)
+~ scripts/bootstrap_docs.sh             (pre-creates PRODUCT_IDEA.md + .pane_heartbeats/)
+~ scripts/start_agents_tmux.sh          (installs Prefix+W binding)
+~ prompts/agents/ORCHESTRATOR.md        (STAY-IN-LANE table + idea pattern, v10.18)
+~ scripts/agent_banner.sh               (template label v10.18 + wake hint)
+~ VERSION.md                            (this entry)
+```
+
+### Migration
+
+```bash
+cd <project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+bash scripts/stop_agents_tmux.sh
+bash scripts/start_agents_tmux.sh <project> --engine claude --free
+# OR:
+bash scripts/start_agents_tmux.sh <project> --engine opencode --free
+```
+
+### Recommended verification after sync
+
+1. **Auto-wake**: in one tmux window run `tail -f .pane_logs/_auto_wake.log`,
+   in another fire `bash scripts/ask_orchestrator.sh PM "Test v10.18"`.
+   Expect log line `SENT via <method> to pane=…` and Orchestrator
+   reacting in its pane. If `FAIL — all methods failed` appears,
+   collect the log + capture-pane output for the next iteration.
+2. **Silent-exit safety net**: route any worker, watch
+   `.pane_notifications/` for the auto-fired "Engine session exited"
+   notification 30s after exit if the worker didn't notify itself.
+3. **Heartbeat**: kill -STOP a worker process (`kill -STOP $(pgrep -n claude)`)
+   and wait 90+ seconds; a "may be stalled" notification should arrive.
+   Then `kill -CONT` to resume.
+4. **Lane lint**: `bash scripts/check_lane_violations.sh 30`.
+5. **PRODUCT_IDEA.md**: start a fresh project, paste an idea via the
+   Orchestrator. File should be written without Write-tool errors.
+
+---
+
+## Patch v10.17 (over v10.16.4) — Claude auto-wake reliability + ACT-not-announce
+
+User confirmed OpenCode + Big Pickle workflow auto-flows beautifully
+(PM answered → auto-reroute to BA/UX/SA → phase 0 gate → SA tech stack
+clarification → user answer → auto-reroute SA — zero manual nudging).
+Same flow on engine=claude still stalls: user has to type "check inbox"
+to advance.
+
+Two independent root causes were identified and fixed together.
+
+### Cause A — Delivery: `tmux send-keys -l` with manual ESC sequences unreliable for Claude's Ink TUI
+
+v10.15 wrapped the ping in bracketed-paste markers (`ESC[200~ … ESC[201~`)
+sent via `tmux send-keys -l "$wrapped"`. In practice this didn't reach
+Claude's Ink TUI reliably — Ink's Node-readline raw-mode reader is
+finicky about externally-injected literal escape sequences.
+
+**Fix.** `scripts/_ping_orchestrator_pane.sh` now uses tmux's native
+paste mechanism:
+
+```bash
+printf '%s' "$msg" | tmux load-buffer -
+tmux paste-buffer -p -t "$pane"     # -p = bracketed-paste mode
+sleep 0.8
+tmux send-keys -t "$pane" Enter
+```
+
+`paste-buffer -p` is tmux-aware: it handles bracketed paste signalling
+internally, with proper handshake to the target terminal. Two fallback
+paths if the primary errors: `paste-buffer` without `-p`, then the old
+`send-keys -l` route.
+
+Every attempt is logged to `.pane_logs/_auto_wake.log` with timestamp,
+target pane, method used, and message prefix. The banner now mentions
+this log so users can `tail -f .pane_logs/_auto_wake.log` while
+testing to verify pings actually fire.
+
+### Cause B — Behaviour: Claude announces intent instead of acting
+
+Even when the `[INBOX]` ping arrives, Claude Sonnet/Opus replies
+"let me check the inbox" first, *then* runs the script. The
+intervening English/Vietnamese sentence costs a turn of latency and
+appears to the user as "Claude isn't autonomous". Big Pickle (qwen3-
+coder) skips the announcement and emits the bash call immediately.
+
+**Fix.** `prompts/agents/ORCHESTRATOR.md` now opens with a new
+section titled **"ACT, DO NOT ANNOUNCE"** (v10.17) which:
+
+1. Names the failure mode explicitly with the user's actual phrasing
+   ("Để tôi kiểm tra inbox…").
+2. Pairs each common stall ("Let me check inbox", "OK tôi sẽ gửi cho
+   PM", "Let me look at SA's progress") with a `Wrong` vs `Right`
+   example.
+3. Bans the lead-in phrases: "let me", "I'll", "tôi sẽ", "để tôi"
+   when followed by a tool call.
+
+This is a prompt-engineering nudge — Claude follows literal-style
+instructions better than soft guidance.
+
+### How to verify after sync
+
+```bash
+# Tail the log while triggering a worker ping
+tail -f .pane_logs/_auto_wake.log &
+
+# From a worker pane:
+bash scripts/ask_orchestrator.sh PM "Test ping for v10.17 — please reply 'received'."
+
+# Expect to see:
+# [HH:MM:SS] FIRE pane=%0 running=claude msglen=…
+# [HH:MM:SS] SENT via paste-buffer-p to pane=%0 msg='[INBOX] new clarification…'
+#
+# AND the Orchestrator pane should react immediately by running
+# list_pending_questions.sh (no "let me check" preamble).
+```
+
+### Files touched
+
+```
+~ scripts/_ping_orchestrator_pane.sh   (paste-buffer -p primary + log)
+~ prompts/agents/ORCHESTRATOR.md       (ACT-DO-NOT-ANNOUNCE preamble + v10.17 title)
+~ scripts/agent_banner.sh              (template label + wake-log hint)
+~ VERSION.md                           (this entry)
+```
+
+### Recommended isolation test for the user
+
+If you suspect Cause B (Claude's verbosity) more than Cause A
+(delivery), try Claude with **haiku** for the Orchestrator role:
+
+```bash
+bash scripts/start_agents_tmux.sh nestfi --engine claude --free
+```
+
+`--free` forces every role to `claude-haiku-4-5`. Haiku is more
+prompt-compliant than Sonnet (closer to qwen3-coder's act-immediately
+behaviour). If Haiku auto-flows but Sonnet stalls, Cause B was the
+dominant factor. If Haiku also stalls, Cause A is real and we need
+to dig further (probably into Ink's input handling).
+
+---
+
+## Patch v10.16.4 (over v10.16.3) — opencode-free → `opencode/big-pickle`
+
+User confirmed `opencode/big-pickle` as the real free-model ID in their
+opencode-go fork. v10.16.3's auto-detect logic could match the wrong
+row when multiple lines in `opencode models` contain the substring
+"free", so the overlay is now hardcoded to the known-working ID and
+the detection logic removed. Cleaner and predictable.
+
+Override path retained:
+
+```bash
+# Use a different free model for one session
+OPENCODE_FREE_MODEL='opencode/some-other-free-id' \
+  bash scripts/start_agents_tmux.sh nestfi --engine opencode --free
+```
+
+### Files touched
+
+```
+~ config/engines/opencode-free.env  (hardcode opencode/big-pickle)
+~ scripts/agent_banner.sh           (template label v10.16.4)
+~ VERSION.md                        (this entry)
+```
+
+---
+
+## Patch v10.16.3 (over v10.16.2) — opencode-free auto-detect
+
+`opencode-go/qwen/qwen3-coder:free` was a guess that turned out to not
+exist in the user's fork either (`check_models.sh` reported ❌ for all
+9 roles). The catalog of free-tier IDs varies per opencode-go fork.
+
+### Fix
+
+`config/engines/opencode-free.env` is now **dynamic**. When sourced, it
+runs:
+
+```bash
+opencode models 2>/dev/null | grep -i 'free' | head -1 | awk '{print $1}'
+```
+
+and uses whatever model ID comes back as the assignment for all 9
+roles. Because that ID came from `opencode models` output verbatim,
+`check_models.sh`'s dynamic `grep -Fq` validation will always match —
+no more ❌ rows.
+
+Overrides:
+
+- `OPENCODE_FREE_MODEL='<id>'` — pre-set in shell to skip detection.
+- `OPENCODE_FREE_PATTERN='<grep-pattern>'` — change what counts as
+  "free" (default is case-insensitive substring `free`).
+
+If `opencode models` returns nothing matching, the overlay falls back
+to `opencode-go/qwen/qwen3-coder:free` and prints a WARN line pointing
+the user at `scripts/list_free_models.sh` for discovery.
+
+### Files touched
+
+```
+~ config/engines/opencode-free.env  (dynamic auto-detect)
+~ scripts/agent_banner.sh           (template label v10.16.3)
+~ VERSION.md                        (this entry)
+```
+
+---
+
+## Patch v10.16.2 (over v10.16.1) — `check_models.sh` shorthand fix
+
+`bash scripts/check_models.sh opencode-free` failed with
+`ENGINE_BINARY: unbound variable` because the script treated
+`opencode-free` as an engine name and sourced `opencode-free.env` —
+but that file is an overlay and only defines `*_MODEL` variables, not
+the engine identity (`ENGINE_BINARY`, `ENGINE_MODEL_CHECK_MODE`, etc.).
+
+### Fix
+
+`scripts/check_models.sh` and `scripts/list_free_models.sh` now:
+
+1. Detect the `-free` suffix on the engine arg and strip it,
+   remembering the user intended the overlay.
+2. Source the base engine config (`opencode.env`) first so
+   `ENGINE_BINARY` is defined.
+3. Then source the overlay (`opencode-free.env`) to override `*_MODEL`.
+
+Both forms work now:
+
+```bash
+bash scripts/check_models.sh opencode --free
+bash scripts/check_models.sh opencode-free    # shorthand
+```
+
+The "Available engines" error list now also filters out `-free.env`
+entries (they're overlays, not engines) and adds a hint pointing at
+`--free` / the shorthand.
+
+### Files touched
+
+```
+~ scripts/check_models.sh        (parse <engine>-free + --free)
+~ scripts/list_free_models.sh    (same shorthand)
+~ scripts/agent_banner.sh        (template label v10.16.2)
+~ VERSION.md                     (this entry)
+```
+
+---
+
+## Patch v10.16.1 (over v10.16) — Fix `--free` model IDs for opencode-go
+
+v10.16 shipped `config/engines/opencode-free.env` with model IDs
+guessed from common OpenRouter conventions (`deepseek-chat-v3.1:free`,
+`meta-llama/llama-3.3-70b-instruct:free`,
+`google/gemini-2.0-flash-exp:free`, etc.). Most of those IDs aren't in
+the opencode-go fork's catalog, so workers crashed at boot with:
+
+```
+Error: Model not found: opencode-go/deepseek/deepseek-chat-v3.1:free.
+  Did you mean: deepseek-v4-flash, deepseek-v4-pro?
+```
+
+Only `opencode-go/qwen/qwen3-coder:free` (SA's assignment) was
+present in this fork.
+
+### Fix
+
+1. `config/engines/opencode-free.env` — default all 9 roles to
+   `opencode-go/qwen/qwen3-coder:free`. The framework workflow does
+   not require model diversity, just a working model. Users who want
+   to diversify after discovering their fork's free-tier catalog can
+   edit the overlay.
+2. New `scripts/list_free_models.sh` — runs `opencode models` (or
+   the engine-equivalent) and filters for `:free` IDs so the user can
+   see what's actually available in their fork. Output also includes
+   the top 30 IDs so namespace conventions are visible at a glance.
+3. Overlay now sets `STRICT_MODEL_CHECK=false` by default so a
+   transient OpenRouter availability hiccup doesn't refuse the boot
+   (the script still prints a warning).
+
+### Usage
+
+```bash
+# 1. Find out what your fork actually has
+bash scripts/list_free_models.sh
+
+# 2. Edit overlay if you want to diversify across providers
+$EDITOR config/engines/opencode-free.env
+
+# 3. Start session
+bash scripts/stop_agents_tmux.sh
+bash scripts/start_agents_tmux.sh nestfi --engine opencode --free
+```
+
+### Files touched
+
+```
+~ config/engines/opencode-free.env  (single working model for all 9 roles)
++ scripts/list_free_models.sh        (new — discover free-tier IDs)
+~ scripts/agent_banner.sh            (template label v10.16.1)
+~ VERSION.md                         (this entry)
+```
+
+---
+
+## Patch v10.16 (over v10.15) — `--free` model overlay
+
+User wants to iterate on the auto-workflow many times without burning
+paid credits. Two solutions wired into a single flag.
+
+### New flag
+
+```bash
+bash scripts/start_agents_tmux.sh <project> --engine opencode --free
+bash scripts/start_agents_tmux.sh <project> --engine claude   --free
+```
+
+When `--free` is present, after sourcing the main engine config
+(`config/engines/<engine>.env`), the script also sources an overlay
+file (`config/engines/<engine>-free.env`) that rewrites every
+`<ROLE>_MODEL` variable. The overlay is engine-specific:
+
+- `config/engines/opencode-free.env` — picks free OpenRouter-tier IDs
+  (`z-ai/glm-4.5-air:free`, `deepseek/deepseek-chat-v3.1:free`,
+  `qwen/qwen3-coder:free`, etc.). Spread across providers so per-
+  provider rate limits don't all hit the wall at once. EDIT this file
+  if your `opencode-go` fork uses a different model namespace.
+- `config/engines/claude-free.env` — forces every role to
+  `claude-haiku-4-5`. Claude has no $0 tier; "free" here means
+  "cheapest available". If you're on a Pro/Max subscription (no
+  `ANTHROPIC_API_KEY` set), haiku is effectively free in the sense
+  that it minimizes monthly quota burn.
+
+`FREE_MODE` is persisted into `.agent_session`, so:
+
+- `route_to_pane.sh` re-sources the overlay before computing
+  `TARGET_MODEL` → workers get the free model on every routing call.
+- `run_agent_task.sh` does the same.
+- `check_models.sh` shows the overlaid model list when `--free` was
+  the boot mode.
+- `agent_banner.sh` adds `(--free)` next to the ENGINE line so users
+  can see at a glance which mode each pane was launched in.
+
+### Files added / touched
+
+```
++ config/engines/opencode-free.env   (new — free-tier overlay)
++ config/engines/claude-free.env     (new — all haiku overlay)
+~ scripts/start_agents_tmux.sh        (parse --free, source overlay, persist FREE_MODE, export to panes)
+~ scripts/route_to_pane.sh            (source overlay on every reroute)
+~ scripts/run_agent_task.sh           (same)
+~ scripts/check_models.sh             (same — also shows overlay banner)
+~ scripts/agent_banner.sh             (display `(--free)` after ENGINE)
+~ README.md                           (--free flag in quick-start)
+~ VERSION.md                          (this entry)
+```
+
+### Cost guardrails
+
+- For OpenCode --free → 100% free as long as OpenRouter free tier
+  allows your traffic. If it rate-limits, fall back to a paid tier
+  for one role at a time.
+- For Claude --free → still costs money if `ANTHROPIC_API_KEY` is set.
+  The existing v10.12 check (refuse to launch with `--engine claude`
+  when API key is set unless `CLAUDE_API_MODE_ACK=1`) still applies.
+  Best practice: log in via `claude /login` → Claude.ai account so
+  usage runs against Pro/Max quota.
+
+### Migration
+
+No migration needed for existing projects — `--free` is opt-in. Run
+the sync to pull the new overlay files:
+
+```bash
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+```
+
+Then on next session start, add `--free` to the command line.
+
+---
 
 ## Patch v10.15 (over v10.14) — Bracketed-paste auto-wake for Claude
 

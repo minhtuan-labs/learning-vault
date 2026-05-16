@@ -1,0 +1,43 @@
+Excellent! I've completed the FE implementation planning task for phase 3. Here's what was delivered:
+
+## Summary of Work
+
+### **Files Created:**
+1. **`planning/FE_PLAN.md`** (904 lines, 31KB)
+   - 6-page architecture: Login → Family Selector → Dashboard/Ledger/Settings → Invitations
+   - Dash multi-page routing with URL-driven state management
+   - Component layout using Dash Bootstrap Components + Tailwind CSS
+   - Centralized `APIClient` class for all backend communication
+   - Error handling strategy with user-friendly messages
+   - Multi-family switching via URL params (no re-login required)
+   - 10-second polling strategy for dashboard auto-refresh
+   - Comprehensive risk analysis and mitigations
+   - Success criteria and implementation roadmap
+
+### **Files Updated:**
+2. **`memory/FE.md`** — Added dated entries for:
+   - **Decisions:** Tech stack confirmations, state management strategy, error handling approach
+   - **Conventions:** File organization, naming patterns, API error handling
+   - **Gotchas:** Multi-family context validation, token expiry (24h), polling lag
+   - **Open Items:** v1.1 features (mobile, icon picker, large lists)
+
+## Key Design Decisions
+
+- **No Redux/Zustand** — dcc.Store + URL params sufficient for v1
+- **Tailwind + Dash Bootstrap** — Utility-first CSS + component library pairing
+- **Centralized API Client** — Single source of truth for all backend calls
+- **10s Polling** — Acceptable for household use; WebSocket upgrade in v2
+- **URL Params for Family Context** — SEO-friendly, shareable, stateless
+
+## Next Steps
+
+The FE plan is ready for the build phase (phase 4). Implementation will follow the roadmap:
+- **Week 1-2:** Scaffolding & authentication
+- **Week 2-3:** Core pages (dashboard, ledger, settings)
+- **Week 3-4:** Polish & edge cases
+- **Week 4-5:** Testing
+
+Files changed: `planning/FE_PLAN.md`, `memory/FE.md`
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2031l[?2004l[?25h7[r8]0;[?25h/Users/tuan/MyGitHub/learning-vault/projects/nestfi/.pane_tasks/_run_FE_20260516_173647.sh: line 43: 82249 Terminated: 15          ( while :; do
+    touch ".pane_heartbeats/${ROLE}.beat" 2> /dev/null || true; sleep 10;
+done )

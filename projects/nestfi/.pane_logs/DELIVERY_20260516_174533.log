@@ -1,0 +1,17 @@
+**Status: DELIVERY parked on missing upstream inputs**
+
+---
+
+**Files changed:**
+- `memory/DELIVERY.md` — appended blocked status and auto-resume watch registration entry
+
+**Action taken:**
+- ✓ Ran prerequisite check → blocked on 4 missing inputs (TEST_REPORT.md from QA, code from BE/FE)
+- ✓ Notified Orchestrator → filing visible to user on next turn
+- ✓ Registered file watch → watcher_daemon will auto-reroute when reports/TEST_REPORT.md appears (which signals QA completion)
+- ✓ Updated memory → logged the block with auto-resume strategy
+
+**Next step:** The watcher daemon will automatically reroute DELIVERY back to this task once QA produces TEST_REPORT.md and BE/FE commit source code. No user action required.
+[?1006l[?1003l[?1002l[?1000l[>4m[<u[?1004l[?2031l[?2004l[?25h7[r8]0;[?25h/Users/tuan/MyGitHub/learning-vault/projects/nestfi/.pane_tasks/_run_DELIVERY_20260516_174533.sh: line 43: 84264 Terminated: 15          ( while :; do
+    touch ".pane_heartbeats/${ROLE}.beat" 2> /dev/null || true; sleep 10;
+done )

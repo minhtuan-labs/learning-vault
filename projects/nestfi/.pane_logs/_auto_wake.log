@@ -1,0 +1,55 @@
+[2026-05-16 17:09:24] FIRE pane=%0 running=2.1.143 msglen=213
+[2026-05-16 17:09:24] SKIP — Orchestrator pane running '2.1.143', not a known engine/shell
+[2026-05-16 17:09:47] FIRE pane=%0 running=2.1.143 msglen=378
+[2026-05-16 17:09:47] SKIP — Orchestrator pane running '2.1.143', not a known engine/shell
+[2026-05-16 17:09:48] FIRE pane=%0 running=2.1.143 msglen=378
+[2026-05-16 17:09:48] SKIP — Orchestrator pane running '2.1.143', not a known engine/shell
+[2026-05-16 17:22:40] FIRE pane=%0 running=2.1.143 msglen=212
+[2026-05-16 17:22:40] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:22:43] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:22:44] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:23:05] FIRE pane=%0 running=2.1.143 msglen=378
+[2026-05-16 17:23:05] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:23:06] SENT via paste-buffer to pane=%0
+[2026-05-16 17:24:30] FIRE pane=%0 running=2.1.143 msglen=517
+[2026-05-16 17:24:30] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:24:31] SENT via paste-buffer to pane=%0
+[2026-05-16 17:24:38] FIRE pane=%0 running=2.1.143 msglen=523
+[2026-05-16 17:24:38] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:24:41] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:24:42] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:25:21] FIRE pane=%0 running=2.1.143 msglen=458
+[2026-05-16 17:25:21] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:25:23] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:25:25] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:25:26] FIRE pane=%0 running=2.1.143 msglen=161
+[2026-05-16 17:25:26] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:25:27] SENT via paste-buffer to pane=%0
+[2026-05-16 17:25:39] FIRE pane=%0 running=2.1.143 msglen=378
+[2026-05-16 17:25:39] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:25:42] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:25:43] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:36:55] FIRE pane=%0 running=2.1.143 msglen=738
+[2026-05-16 17:36:55] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:36:56] SENT via paste-buffer to pane=%0
+[2026-05-16 17:38:16] FIRE pane=%0 running=2.1.143 msglen=393
+[2026-05-16 17:38:16] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:38:19] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:38:20] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:38:43] FIRE pane=%0 running=2.1.143 msglen=597
+[2026-05-16 17:38:43] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:38:46] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:38:47] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:38:50] FIRE pane=%0 running=2.1.143 msglen=378
+[2026-05-16 17:38:50] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:38:51] SENT via paste-buffer to pane=%0
+[2026-05-16 17:39:05] FIRE pane=%0 running=2.1.143 msglen=248
+[2026-05-16 17:39:05] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:39:07] RETRY — paste-buffer not verified in pane=%0
+[2026-05-16 17:39:08] SENT via send-keys-literal to pane=%0
+[2026-05-16 17:45:23] FIRE pane=%0 running=2.1.143 msglen=454
+[2026-05-16 17:45:23] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:45:24] SENT via paste-buffer to pane=%0
+[2026-05-16 17:45:43] FIRE pane=%0 running=2.1.143 msglen=263
+[2026-05-16 17:45:43] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[2026-05-16 17:45:44] SENT via paste-buffer to pane=%0

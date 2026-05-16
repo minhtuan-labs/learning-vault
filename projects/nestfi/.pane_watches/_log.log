@@ -1,0 +1,22 @@
+================================================================
+[2026-05-16 17:08:44] watcher_daemon started (pid=76614, poll=15s, autoreroute=true)
+================================================================
+[2026-05-16 17:09:25] REGISTERED UX waiting for docs/product/PRD.md
+[2026-05-16 17:22:40] UNLOCK UX — docs/product/PRD.md ready (11933B)
+[2026-05-16 17:22:40] REROUTE -> route_to_pane.sh UX "Resume: docs/product/PRD.md is now available. Re-read upstream inputs and continue your original task."
+[v10] Routed task to UX pane (pane=%4, model=claude-haiku-4-5)
+      Task file: .pane_tasks/UX_20260516_172240.md
+      Log file : .pane_logs/UX_20260516_172240.log
+      Receipt  : .pane_logs/_routing_receipts.log
+================================================================
+ NOTIFICATION FILED (from UX)
+================================================================
+ Subject : Auto-resumed by watcher_daemon — dependency docs/product/PRD.md is now ready; resuming original task.
+ File    : .pane_notifications/UX_20260516_172240.md
+ The Orchestrator will surface this on the next user turn via
+   bash scripts/list_pending_questions.sh
+================================================================
+[2026-05-16 17:39:08] REGISTERED DELIVERY waiting for reports/TEST_REPORT.md
+[2026-05-16 17:39:09] REGISTERED DELIVERY waiting for backend/app.py
+[2026-05-16 17:39:09] REGISTERED DELIVERY waiting for frontend/
+[2026-05-16 17:45:46] REGISTERED DELIVERY waiting for reports/TEST_REPORT.md
