@@ -88,21 +88,12 @@ if command -v tmux >/dev/null 2>&1; then
   tmux set-option status-right "Notif: ${UNREAD} | #(date '+%H:%M %d-%b')" 2>/dev/null || true
 
   if [[ -n "$ORCH_PANE" && "$AUTO_PING_ORCHESTRATOR" == "true" ]]; then
-    # v10.12.1 — broader case to include `claude` engine + bash (waiting
-    # for Enter in the auto-relaunch loop). Previously only opencode/node
-    # matched → claude sessions silently lost auto-wake.
-    PANE_CMD="$(tmux display-message -p -t "$ORCH_PANE" '#{pane_current_command}' 2>/dev/null || echo unknown)"
-    case "$PANE_CMD" in
-      opencode|claude|node|go|main|bash|sh|zsh)
-        PING_MSG="[INBOX] new notification from ${FROM}: ${SUBJECT}. Run: bash scripts/list_pending_questions.sh — relay the update to the user."
-        tmux send-keys -t "$ORCH_PANE" "$PING_MSG" 2>/dev/null || true
-        sleep 0.2
-        tmux send-keys -t "$ORCH_PANE" C-m 2>/dev/null || true
-        ;;
-      *)
-        echo "  (skipped auto-wake — Orchestrator pane is running '$PANE_CMD', not a known engine/shell)"
-        ;;
-    esac
+    # v10.15 — delegate to the shared bracketed-paste helper so Claude
+    # Code's Ink TUI actually accepts the auto-wake (raw tmux send-keys
+    # is ignored by Claude). OpenCode also handles bracketed paste, so
+    # a single code path works for both engines.
+    PING_MSG="[INBOX] new notification from ${FROM}: ${SUBJECT}. Run: bash scripts/list_pending_questions.sh — relay the update to the user."
+    bash scripts/_ping_orchestrator_pane.sh "$PING_MSG" || true
   fi
 fi
 

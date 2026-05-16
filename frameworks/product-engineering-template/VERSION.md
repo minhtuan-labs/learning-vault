@@ -1,6 +1,288 @@
 # Template Version
 
-Version: 10.12.1
+Version: 10.15
+
+## Patch v10.15 (over v10.14) — Bracketed-paste auto-wake for Claude
+
+User feedback after v10.14 ship:
+
+> "OpenCode chạy rất ổn sáng nay. Nhưng Claude engine không tự động
+>  nhận send-keys từ các pane khác — tôi vẫn phải hỏi 'kiểm tra tiến
+>  độ' thì workflow mới tiếp tục."
+
+Root cause: Claude Code's TUI uses Ink (React-based terminal renderer)
+which **ignores raw `tmux send-keys` input**. Claude only treats input
+as a real user message when it arrives wrapped in bracketed-paste
+markers (`ESC[200~ ... ESC[201~`), the way a real clipboard paste
+would. OpenCode's BubbleTea TUI accepts raw keystrokes, which is why
+the same code path worked there.
+
+So the v10.12.1 "auto-wake fix for Claude" (adding `claude` to the
+`pane_current_command` allowlist) was necessary but not sufficient.
+The case statement let the script try to send keystrokes — but Claude
+silently dropped them.
+
+### Fix
+
+New helper `scripts/_ping_orchestrator_pane.sh` that:
+
+1. Detects what's running in the Orchestrator pane.
+2. If a TUI engine (`claude`, `opencode`, etc.) → sends the message
+   wrapped in `ESC[200~ ... ESC[201~` via `tmux send-keys -l`, then
+   waits 0.6s, then sends Enter. The bracketed-paste markers make
+   Claude register the text as a real message; OpenCode treats it
+   identically to a regular paste.
+3. If the pane is in the auto-relaunch shell loop (`bash`/`sh`/`zsh`
+   sitting at `read -r _`) → sends Enter first to trigger relaunch,
+   polls every 0.5s up to 6s until the engine TUI is back, waits an
+   extra 0.8s for the prompt to finish drawing, then pastes.
+
+Both `ask_orchestrator.sh` and `notify_orchestrator.sh` now delegate
+to this helper instead of doing their own `tmux send-keys`. The two
+scripts dropped ~30 lines of duplicated logic each.
+
+The watcher_daemon (v10.14) calls `notify_orchestrator.sh` after
+auto-rerouting a worker, so it picks up the fix transparently.
+
+### Why this works for both engines
+
+| Engine     | TUI library | Accepts raw `send-keys` | Accepts bracketed paste |
+|------------|-------------|-------------------------|-------------------------|
+| OpenCode   | BubbleTea   | yes                     | yes                     |
+| Claude     | Ink         | **no**                  | yes                     |
+
+By using bracketed paste unconditionally, we hit the only mode both
+engines support. OpenCode users see no behavior change (paste is just
+paste). Claude users get the auto-wake they've been missing.
+
+### Tuning knobs
+
+Environment variables for the helper (rarely needed):
+
+```text
+PING_WAIT_AFTER_PASTE   seconds between paste and Enter   (default 0.6)
+PING_BOOT_POLL_MAX      max 0.5s polls while waiting for engine boot
+                        when pane is in shell loop        (default 12 = 6s)
+AUTO_PING_ORCHESTRATOR  set to "false" to disable auto-wake entirely
+```
+
+### Files added / touched
+
+```
++ scripts/_ping_orchestrator_pane.sh   (new — shared auto-wake helper)
+~ scripts/ask_orchestrator.sh           (delegates to helper)
+~ scripts/notify_orchestrator.sh        (delegates to helper)
+~ scripts/agent_banner.sh               (template label v10.15)
+```
+
+Workers do not need to change their behavior — they still call
+`ask_orchestrator.sh` and `notify_orchestrator.sh` the same way.
+
+---
+
+## Patch v10.14 (over v10.13) — Continuous Orchestration
+
+User feedback that motivated this patch:
+
+> "Orchestrator vẫn để tôi điều phối mất 20-30% effort. PM filed a
+>  question — Orchestrator didn't surface it until I asked. UX was
+>  blocked on PRD — when PRD landed, nothing auto-rerouted UX. I want
+>  workers to self-resume autonomously when their dependencies clear."
+
+v10.13 mandated workers notify on completion + Orchestrator surface
+status on every turn. But the Orchestrator is a chat-driven LLM —
+it only "wakes" on a user keystroke or an auto-wake ping. If a worker
+was parked at 3am and its upstream file landed at 4am, nothing fired
+until the user typed something the next morning.
+
+v10.14 adds an **always-on background process** that runs independently
+of user activity:
+
+### `scripts/watcher_daemon.sh`
+
+A daemon started by `start_agents_tmux.sh` (PID stored in
+`.watcher.pid`) that polls `.pane_watches/*.watch` every 15s. Each
+watch file declares: `ROLE`, `WAIT_FOR` (path of awaited file), and
+`TASK` (base64-encoded resume message). When the WAIT_FOR file appears
+on disk with non-empty content, the daemon:
+
+1. Flips the watch's STATUS to TRIGGERED (atomically, so an interrupted
+   daemon doesn't double-fire).
+2. Calls `bash scripts/route_to_pane.sh <ROLE> "<TASK>"` to wake the
+   parked worker with its original task.
+3. Calls `bash scripts/notify_orchestrator.sh <ROLE> "Auto-resumed by
+   watcher_daemon — dependency <FILE> is now ready"` so the user
+   sees autonomous activity on the next Orchestrator turn.
+4. Archives the watch file to `.pane_watches/<name>.watch.done`.
+
+Tunable via `POLL_INTERVAL` (seconds) and `WATCHER_AUTOREROUTE`
+("true"/"false" — false logs unlocks without rerouting, for debugging).
+
+### `scripts/file_watch.sh`
+
+Workers register a watch when blocked:
+
+```bash
+bash scripts/file_watch.sh UX docs/product/PRD.md \
+  "Resume: PRD is now available. Re-read it, then write docs/ux/UX_FLOW.md."
+```
+
+Stores the task as base64 to survive quoting. Pair with
+`notify_orchestrator.sh` so the user knows you're parked.
+
+### `scripts/list_pending_watches.sh`
+
+Orchestrator-friendly status: lists all PENDING watches (which roles
+are parked, waiting for what) plus the last 5 daemon log entries (so
+the Orchestrator can tell the user "watcher auto-resumed UX at 04:12
+because PRD landed"). Called at every Orchestrator turn alongside
+`list_pending_questions.sh`.
+
+### `scripts/check_prerequisites.sh` — now prints watch-registration commands
+
+When a worker discovers a missing upstream file, the BLOCKED guidance
+now prints the exact `notify_orchestrator.sh` + `file_watch.sh` pair
+to copy-paste before exiting. Workers don't have to remember the API.
+
+### `scripts/stop_agents_tmux.sh` (new)
+
+Clean shutdown: kills the watcher_daemon (via `.watcher.pid`) then
+kills the tmux session. Use this instead of `tmux kill-session` so the
+daemon doesn't orphan.
+
+### Prompt updates
+
+- `AGENTS.md` — new "Auto-resume on dependency unlock" subsection
+  walks workers through the 3-step park (notify, file_watch, exit).
+- `prompts/agents/ORCHESTRATOR.md` — Step 1 of "Active reporting" now
+  runs `list_pending_watches.sh` alongside `list_pending_questions.sh`
+  and `check_phase_gate.sh`. The Orchestrator now tells the user:
+  "X workers parked (waiting for these files); Y resumes happened
+  autonomously while you were idle." Title bumped to v10.14.
+
+### Why this finally matches the user's mental model
+
+Before: User had to be the dependency router. "PM done? Then poke UX."
+After: User talks to Orchestrator → Orchestrator delegates → workers
+self-park when blocked → watcher_daemon auto-resumes when dependencies
+clear → Orchestrator surfaces autonomous activity on next user turn.
+
+The user's hands-on effort drops from 20-30% to "kick off + answer
+clarifications + confirm phase transitions."
+
+### Migration for existing projects
+
+```bash
+cd <existing_project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+bash scripts/stop_agents_tmux.sh   # cleanly stop old session
+bash scripts/start_agents_tmux.sh --engine claude --resume
+```
+
+The watcher daemon starts automatically on `--resume` and reads any
+existing `.pane_watches/*.watch` files (so watches survive restarts).
+
+### Files added / touched
+
+```
++ scripts/watcher_daemon.sh         (new — background poller)
++ scripts/file_watch.sh             (new — worker-side registration)
++ scripts/list_pending_watches.sh   (new — Orchestrator status)
++ scripts/stop_agents_tmux.sh       (new — clean shutdown)
+~ scripts/check_prerequisites.sh    (prints watch-registration command)
+~ scripts/start_agents_tmux.sh      (launches daemon at boot)
+~ AGENTS.md                          (auto-resume protocol)
+~ prompts/agents/ORCHESTRATOR.md    (list_pending_watches.sh in turn-start)
+~ scripts/agent_banner.sh           (template label v10.14)
+```
+
+---
+
+## Patch v10.13 (over v10.12.1)
+
+The Orchestrator was reactive-only: it dispatched phases correctly but
+never proactively surfaced the **result** of those dispatches. After
+PM/BA/UX finished Phase 0, agents returned to the prompt and waited,
+but the Orchestrator pane just sat there until the user manually typed
+"check kết quả". User feedback:
+
+> "Tôi check PM, BA, UX đều completed. Orchestrator không tự động hỏi
+>  tôi cần bổ sung gì, không hỏi sang phase mới, không summarize cho
+>  tôi review. BMAD framework chưa đúng ý tôi: User ↔ Orchestrator ↔
+>  agents, Orchestrator điều phối + tương tác."
+
+Two root causes, two fixes:
+
+### 1. Workers didn't notify on completion
+
+`notify_orchestrator.sh` existed since v10.4 but was only mandated for
+build failures and missing-input blockers — not for normal task
+completion. So when PM finished `docs/product/PRD.md`, PM's pane just
+exited silently. The Orchestrator never got an `[INBOX]` ping, the
+inbox stayed empty, `list_pending_questions.sh` returned nothing.
+
+Fix: `AGENTS.md` now has a new **Complete-and-notify** section (right
+before "ORCHESTRATOR-specific rules") that makes the final
+`notify_orchestrator.sh <ROLE> "Done — <paths>. Summary: <2-3 sentences>"`
+call non-optional for every worker. The summary must be specific
+(scope decisions, key trade-offs, open assumptions) — not just "PRD
+done".
+
+### 2. Orchestrator had no proactive phase-status protocol
+
+`prompts/agents/ORCHESTRATOR.md` covered:
+- delegating a phase (first-action rule),
+- handling `[INBOX]` items (clarification relay),
+- coordinating build failures,
+- phase-gate awareness for advancing,
+
+…but had **no instruction to actively check what's new on disk between
+turns**. So even when PM filed a "Done" notification (per fix #1), the
+Orchestrator would surface that question/notification but still not
+read the actual artifact and summarise it.
+
+Fix: new **Active reporting** section in the Orchestrator prompt
+(`v10.13`). On every user turn AFTER `list_pending_questions.sh`, the
+Orchestrator now:
+
+1. Runs `check_phase_gate.sh <current_phase>` to see what landed.
+2. Reads the new artifacts (`head -40` each) and leads its reply with
+   a per-role status report + 2-3 sentence summary.
+3. Explicitly asks: "Want to review any of these in detail? Anything
+   to change before Phase N+1? Or shall I delegate Phase N+1 now?"
+4. Never auto-advances — phase transitions are a user decision; the
+   Orchestrator only surfaces the option.
+
+The combination produces the user's intended mental model: User talks
+to Orchestrator → Orchestrator coordinates + reports back → User
+confirms direction → Orchestrator dispatches next phase.
+
+### Files touched
+
+- `AGENTS.md` — new "Complete-and-notify" subsection.
+- `prompts/agents/ORCHESTRATOR.md` — new "Active reporting" section;
+  title bumped to v10.13.
+- `scripts/agent_banner.sh` — template label bumped to v10.13.
+- `VERSION.md` — this entry.
+
+### Migration
+
+For an existing project (e.g. `nestfi`) on v10.12.1:
+
+```bash
+cd nestfi
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+# Kill + restart tmux session to reload prompts.
+tmux kill-session -t nestfi-ai-room 2>/dev/null || true
+bash scripts/start_agents_tmux.sh --engine claude --resume
+```
+
+Project artifacts (PRD, BACKLOG, memory/) are preserved by the sync
+script; only framework files are overwritten.
+
+---
 
 ## Patch v10.12.1 (over v10.12)
 

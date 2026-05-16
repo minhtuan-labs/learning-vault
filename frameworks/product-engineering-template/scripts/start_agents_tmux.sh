@@ -201,7 +201,7 @@ EOF
       "Bash(basename:*)", "Bash(dirname:*)", "Bash(head:*)", "Bash(tail:*)",
       "Bash(mkdir:*)", "Bash(rm:*)", "Bash(cp:*)", "Bash(mv:*)",
       "Bash(chmod:*)", "Bash(stat:*)", "Bash(test:*)",
-      "Bash(true:*)", "Bash(false:*)", "Bash(:*)",
+      "Bash(true:*)", "Bash(false:*)",
       "Bash(source:*)", "Bash(.:*)",
       "Read", "Write", "Edit", "WebFetch"
     ],
@@ -223,7 +223,20 @@ fi
 
 # ---------- session-state file ----------
 : > .agent_panes
-mkdir -p .agent_boot_prompts .agent_tasks .agent_logs .pane_tasks .pane_logs memory
+mkdir -p .agent_boot_prompts .agent_tasks .agent_logs .pane_tasks .pane_logs memory .pane_watches
+
+# ---------- watcher daemon (v10.14 — continuous orchestration) ----------
+# Background process that polls .pane_watches/ and auto-reroutes parked
+# workers when their awaited upstream file lands. Stopped on session
+# kill via the trap below.
+if [[ -f .watcher.pid ]] && kill -0 "$(cat .watcher.pid 2>/dev/null)" 2>/dev/null; then
+  echo "[v10.14] watcher_daemon already running (pid=$(cat .watcher.pid))"
+else
+  nohup bash scripts/watcher_daemon.sh </dev/null >/dev/null 2>&1 &
+  WATCHER_PID=$!
+  echo "$WATCHER_PID" > .watcher.pid
+  echo "[v10.14] watcher_daemon started (pid=$WATCHER_PID, poll=${POLL_INTERVAL:-15}s)"
+fi
 
 # Detect RESUME vs FRESH (v10.5 logic preserved)
 RESUME_MODE=false

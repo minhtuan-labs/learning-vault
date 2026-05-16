@@ -414,6 +414,77 @@ its own id. If you've already asked something and you're routed again
 without an answer file, do not re-ask — wait or proceed on what you
 do know.
 
+### Auto-resume on dependency unlock (v10.14)
+
+When `check_prerequisites.sh` tells you an upstream file is missing,
+do NOT just notify and exit silently — that puts the burden of
+re-rerouting back on the user. Instead, **register a watch**:
+
+```bash
+bash scripts/notify_orchestrator.sh <YOUR_ROLE> \
+  "Cannot proceed — missing <FILE>. Parking via file_watch for auto-resume."
+
+bash scripts/file_watch.sh <YOUR_ROLE> <MISSING_FILE> \
+  "Resume: <MISSING_FILE> is now available. Re-read upstream inputs and continue your original task."
+
+exit
+```
+
+A background process (`scripts/watcher_daemon.sh`, started by
+`start_agents_tmux.sh`) polls `.pane_watches/` every 15s. When
+`<MISSING_FILE>` appears on disk with non-empty content, the daemon:
+
+1. Automatically runs `route_to_pane.sh <YOUR_ROLE> "<the task>"`.
+2. Files a notification on your behalf so the Orchestrator can tell
+   the user "watcher auto-resumed UX because PRD is now ready."
+
+You don't have to wait for the user to notice. You don't have to wait
+for the Orchestrator to be smart enough to re-route you. The unlock
+happens autonomously.
+
+`check_prerequisites.sh` prints the exact `notify_orchestrator.sh` +
+`file_watch.sh` commands you should copy-paste — read its output
+verbatim. Do NOT skip the `file_watch.sh` step; without it, you stay
+parked forever.
+
+### Complete-and-notify — MANDATORY for every worker role (v10.13)
+
+The Orchestrator cannot see your pane. The user cannot see your pane.
+The ONLY way they learn your work is finished is if you file a
+completion notification. This is not optional.
+
+When you finish the deliverable for the current task — i.e. the
+artifact file(s) named in your task message exist on disk and contain
+real content (not a TODO stub) — your **last action before exiting**
+must be:
+
+```bash
+bash scripts/notify_orchestrator.sh <YOUR_ROLE> \
+  "Done — <artifact_paths>. Summary: <2-3 sentences of what's inside>"
+```
+
+The summary must be specific enough that the user can decide whether
+to dig in. Bad: "PRD done." Good:
+
+> "Done — docs/product/PRD.md. Summary: scoped v1 to budgeting +
+>  bill-split for couples; deferred investments and multi-currency to
+>  v2. 3 personas covered. One open assumption: target users have
+>  joint bank accounts (TODO: confirm with user in next round)."
+
+Rules:
+
+1. If you produced multiple files, list them all in the path field and
+   summarise each in one clause.
+2. If you exited via `ask_orchestrator.sh` (waiting for a user answer),
+   do NOT also send a "Done" notification — you are not done.
+3. If you finished but discovered a downstream blocker (e.g. SA found
+   that the spec contradicts the user's idea), still send the "Done"
+   notification with the artifact you DID produce, AND file a
+   follow-up question if needed.
+4. Skipping this step is a framework violation. The user's complaint
+   "agents finished but Orchestrator never told me" traces to a worker
+   skipping this notify.
+
 ---
 
 ## ORCHESTRATOR-specific rules (pane 1)

@@ -292,14 +292,29 @@ fi
 if [[ "$owners_csv" != "USER" && -n "$owners_csv" ]]; then
   echo
   echo "  Some missing files are owned by other agents (${owners_csv})."
-  echo "  Use notify_orchestrator.sh so Orchestrator can coordinate the"
-  echo "  upstream agents to produce them BEFORE re-routing you:"
+  echo "  Do BOTH of the following before you exit (v10.14):"
   echo
-  echo "    bash scripts/notify_orchestrator.sh $ROLE \"Cannot proceed — missing inputs: ${missing_csv}. Need ${owners_csv} to produce them first. Please coordinate the upstream agents and re-route me when ready.\""
+  echo "  (a) Notify the Orchestrator so the user can see you are parked:"
+  echo
+  echo "    bash scripts/notify_orchestrator.sh $ROLE \"Cannot proceed — missing inputs: ${missing_csv}. Need ${owners_csv}. Parking via file_watch for auto-resume.\""
+  echo
+  echo "  (b) Register a file watch for EACH agent-owned missing file so"
+  echo "      the watcher_daemon auto-reroutes you when the upstream"
+  echo "      owner produces it — no user action required:"
+  echo
+  for i in "${!missing_files[@]}"; do
+    f="${missing_files[$i]}"
+    o="${missing_owners[$i]}"
+    [[ "$o" == "USER" ]] && continue
+    # Skip synthetic tokens (start/end with _)
+    [[ "$f" == _*_ ]] && continue
+    echo "    bash scripts/file_watch.sh $ROLE $f \"Resume: $f is now available. Re-read upstream inputs and continue your original task.\""
+  done
 fi
 echo
 echo "Then append a 'blocked on missing inputs' entry to memory/$ROLE.md"
-echo "and EXIT the OpenCode turn. Do NOT proceed with placeholder /"
-echo "best-guess content for files another role owns."
+echo "and EXIT this turn. Do NOT proceed with placeholder / best-guess"
+echo "content for files another role owns. The watcher_daemon will"
+echo "auto-reroute you when the upstream file lands."
 echo "================================================================"
 exit 1

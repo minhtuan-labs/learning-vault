@@ -1,4 +1,4 @@
-# Product Engineering Agent Template — v10.12
+# Product Engineering Agent Template — v10.15
 
 > A tmux-based, multi-model agent framework for running an entire
 > product-engineering team — Orchestrator, PM, SA, BA, UX, BE, FE, QA,
@@ -580,6 +580,39 @@ fix `config/agent_models.env` with IDs from `opencode models`.
 See [`VERSION.md`](VERSION.md) for the full changelog. Most recent
 fixes:
 
+- **v10.15** — **Bracketed-paste auto-wake** for Claude Code. The
+  v10.12.1 regex fix put `claude` in the auto-wake allowlist, but
+  Claude's Ink-based TUI silently drops raw `tmux send-keys` input —
+  it only accepts bracketed-paste mode (`ESC[200~ … ESC[201~`). New
+  helper `scripts/_ping_orchestrator_pane.sh` wraps the ping in
+  bracketed-paste so Claude registers it as a real message; OpenCode
+  handles bracketed paste identically. Auto-wake now actually fires
+  for engine=claude (the workflow no longer requires the user to
+  manually type "check inbox").
+- **v10.14** — **Continuous orchestration** via background
+  `watcher_daemon`. New `scripts/watcher_daemon.sh` polls
+  `.pane_watches/` every 15s; when a worker's awaited upstream file
+  lands, the daemon auto-runs `route_to_pane.sh <ROLE> "<resume task>"`
+  + `notify_orchestrator.sh` autonomously — no user keystroke needed.
+  Workers register a watch with the new `scripts/file_watch.sh` when
+  `check_prerequisites.sh` reports a missing dependency. Orchestrator
+  now runs `list_pending_watches.sh` at every turn, surfacing parked
+  roles + recent autonomous resumes. Plus new `stop_agents_tmux.sh` for
+  clean daemon shutdown. Fixes "user is still the dependency router."
+- **v10.13** — **Complete-and-notify mandate** + **Active reporting
+  protocol**. Workers (PM/SA/BA/UX/BE/FE/QA/DELIVERY) MUST call
+  `notify_orchestrator.sh <ROLE> "Done — <paths>. Summary: <…>"` as
+  their last action before exiting any task. Orchestrator MUST, on
+  every user turn after `list_pending_questions.sh`, also run
+  `check_phase_gate.sh <current_phase>`, read any newly-landed
+  artifacts, lead its reply with a per-role status summary, and
+  explicitly ask whether the user wants to review or advance to the
+  next phase. Fixes the gap where agents finished work but the user
+  never got a summary or transition prompt.
+- **v10.12.1** — Auto-wake `[INBOX]` regression fix for `claude`
+  engine + Orchestrator `list_pending_questions.sh` now mandatory at
+  every turn + Stop-and-ask threshold strengthened with "DEFAULT TO
+  ASKING" + per-role-per-phase checklist.
 - **v10.12** — **Engine choice** (OpenCode or Claude Code) + **3-window
   tmux layout** (OC / DESIGN / DEV). `--engine claude` adds Anthropic
   Claude Code as an alternative to `opencode-go` — backward-compatible

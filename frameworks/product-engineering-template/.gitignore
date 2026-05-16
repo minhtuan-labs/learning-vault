@@ -25,6 +25,8 @@
 .pane_questions/
 .pane_answers/
 .pane_notifications/
+.pane_watches/
+.watcher.pid
 .framework_sync_backup/
 
 # NOTE: memory/ is INTENTIONALLY NOT IGNORED. It is the team's durable

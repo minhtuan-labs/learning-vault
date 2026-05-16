@@ -5,7 +5,7 @@ AGENT="${1:-${AGENT_NAME:-UNKNOWN}}"
 MODEL="${2:-${AGENT_MODEL:-UNKNOWN}}"
 PROJECT="${3:-${PROJECT_NAME:-UNKNOWN}}"
 
-# v10.12 — also surface engine + window
+# v10.14 — also surface engine + window
 ENGINE_TXT="${ENGINE:-?}"
 case "$AGENT" in
   ORCHESTRATOR) WIN="0:OC" ;;
@@ -29,7 +29,7 @@ echo " Notify user : bash scripts/notify_orchestrator.sh <AGENT> \"event\""
 echo " Inbox       : bash scripts/list_pending_questions.sh   (Qs + notifs)"
 echo " Answer Q    : bash scripts/answer_role.sh <ROLE> <qid> \"answer\""
 echo " Verify      : bash scripts/verify_routing.sh"
-echo " Template    : v10.12.1 (engine choice + 3-window + auto-wake fix)"
+echo " Template    : v10.15 (bracketed-paste auto-wake fix for Claude)"
 echo "$line"
 
 if [[ "$AGENT" == "ORCHESTRATOR" ]]; then
