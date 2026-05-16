@@ -81,3 +81,11 @@ All API calls wrapped in try/except for APIError:
 **2026-05-16 17:36 — Large Transaction Lists (v1.1)**
 - Server-side pagination (20-50 per page) sufficient for v1
 - Virtual scrolling or infinite scroll in v1.1 if performance needed
+
+### 2026-05-16 17:48 — Initial Frontend Implementation Complete
+Created all 6 pages and component library for Dash multi-page app:
+- Pages: 0_login, 1_family_selector, 2_dashboard, 3_ledger, 4_settings, 5_invitation (scaffolding with callbacks)
+- Components: navbar, forms, modals, alerts, charts (Plotly pie/bar)
+- APIClient: Centralized requests wrapper with error handling + 18 endpoint methods
+- State: URL params + dcc.Store (token, user); 10s polling on dashboard/ledger
+- Next: Wire up modal callbacks (txn logging, member invite, category CRUD) then test with backend
