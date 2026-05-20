@@ -1,286 +1,206 @@
 # Domain Model — NestFi
 
-## 1. Core Entities
+## Design Principle: Account-Centric
 
-### 1.1 User (Actor)
-**Attributes**:
-- user_id: unique identifier
-- email: email address (unique)
-- password_hash: secure password hash
-- name: full name
-- created_at: registration timestamp
-- is_superadmin: boolean (default false)
-
-**Behavior**:
-- Can belong to multiple families
-- Can switch between families
-- Can accept/decline family invitations
-- Can view only data for families they belong to
+NestFi is designed around **accounts**, not people. All financial tracking is tied to bank/investment accounts, not individual household members. This means:
+- Transactions always belong to a specific account (e.g., "Main Checking", "Savings")
+- There is no bill-splitting or person-to-person expense tracking
+- A cash withdrawal is a single transaction from the account, categorized as "Cash Withdrawal"
+- All family members have equal visibility to all accounts and transactions
+- Family members are not assigned individual spending budgets or tracked separately
 
 ---
 
-### 1.2 Family (Aggregate Root)
-**Attributes**:
-- family_id: unique identifier
-- name: family name (e.g., "Smith Household")
-- owner_id: references the User who is the primary owner
-- created_by: references Superadmin who created the family
-- created_at: family creation timestamp
-- is_active: boolean (default true)
+## Core Entities
 
-**Relationships**:
-- 1 Family → Many Users (via FamilyMember)
-- 1 Family → Many BankAccounts
-- 1 Family → Many TransactionCategories (Income, Expense, Investment)
-- 1 Family → Many Transactions
+### User
+Represents a person with a login account in the system.
 
-**Behavior**:
-- Only superadmin creates families
-- Only owner can invite members
-- Only owner can manage categories and bank accounts
-- Soft delete supported (is_active flag)
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `id` | UUID | Primary key |
+| `email` | String | Unique identifier for login |
+| `username` | String | Display name (e.g., "superadmin") |
+| `password_hash` | String | Securely hashed password |
+| `created_at` | DateTime | Account creation timestamp |
+| `updated_at` | DateTime | Last profile update |
+
+**Relationships:**
+- 1 User : Many FamilyMemberships (user can belong to multiple families)
 
 ---
 
-### 1.3 FamilyMember (Join)
-**Attributes**:
-- family_member_id: unique identifier
-- family_id: references Family
-- user_id: references User
-- role: enum (OWNER, MEMBER)
-- invitation_status: enum (PENDING, ACCEPTED, DECLINED)
-- invited_at: timestamp when invitation was sent
-- accepted_at: timestamp when invitation was accepted (null if pending)
-- joined_date: date when member was added to family
+### Family
+Represents a household or group managing finances together.
 
-**Constraints**:
-- One user can have one role per family (no duplicate memberships)
-- Owner always has ACCEPTED status
-- Members can only see data after ACCEPTED
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `id` | UUID | Primary key |
+| `name` | String | Family display name (e.g., "Smith Household") |
+| `description` | String | Optional notes about the family |
+| `created_by` | UUID | FK to User (owner who created it) |
+| `created_at` | DateTime | Family creation timestamp |
 
-**Behavior**:
-- Track invitation lifecycle (PENDING → ACCEPTED / DECLINED)
-- Support member removal by owner
+**Relationships:**
+- 1 Family : Many FamilyMemberships (members of the family)
+- 1 Family : Many Accounts (bank/investment accounts)
+- 1 Family : Many Categories (transaction categories)
+- 1 Family : Many Transactions (financial activity)
 
 ---
 
-### 1.4 BankAccount (Value Object within Family)
-**Attributes**:
-- bank_account_id: unique identifier
-- family_id: references Family
-- account_name: e.g., "Joint Checking", "Savings"
-- account_number: masked/encrypted
-- account_type: enum (CHECKING, SAVINGS, INVESTMENT, OTHER)
-- balance: current balance (calculated from transactions, not stored directly)
-- currency: currency code (e.g., USD)
-- is_active: boolean (default true)
-- created_at: timestamp
+### FamilyMembership
+Join table linking Users to Families with roles.
 
-**Behavior**:
-- Owned by family, created/managed by owner
-- Multiple accounts per family supported
-- Balance is derived from transactions (no direct balance field persisted)
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `id` | UUID | Primary key |
+| `family_id` | UUID | FK to Family |
+| `user_id` | UUID | FK to User |
+| `role` | Enum | "owner" or "member" |
+| `invited_at` | DateTime | When invitation was sent |
+| `accepted_at` | DateTime | When user accepted (NULL if pending) |
+| `status` | Enum | "pending", "active", or "disabled" |
+| `disabled_at` | DateTime | When owner disabled this membership (NULL if active) |
 
----
-
-### 1.5 Transaction (Core Domain)
-**Attributes**:
-- transaction_id: unique identifier
-- family_id: references Family
-- bank_account_id: references BankAccount
-- user_id: references User who logged the transaction
-- description: transaction description
-- amount: transaction amount (positive)
-- type: enum (INCOME, EXPENSE, INVESTMENT)
-- category_id: references TransactionCategory
-- transaction_date: date of transaction
-- created_at: timestamp when logged
-- is_deleted: boolean (soft delete)
-
-**Behavior**:
-- Immutable after creation (updates logged as adjustments)
-- Amount always positive; type (INCOME/EXPENSE/INVESTMENT) determines sign
-- Cash withdrawals have type=EXPENSE, category="Cash Withdrawal"
-- All family members can see all transactions immediately
+**Rules:**
+- Invitation lifecycle: pending → active (on email confirmation) → disabled (owner action) → active (owner re-enables)
+- Owner can add members; members have read-write access to family transactions (all members equal access)
+- Superadmin is implicit owner of all families
+- Disabled members cannot log in and cannot access family data
+- Re-enabling a disabled member restores full access; all their past edits/transactions remain intact
 
 ---
 
-### 1.6 TransactionCategory (Value Object within Family)
-**Attributes**:
-- category_id: unique identifier
-- family_id: references Family
-- category_type: enum (INCOME, EXPENSE, INVESTMENT)
-- name: category name (e.g., "Salary", "Groceries", "Stocks")
-- description: optional description
-- color: optional color tag for UI
-- is_active: boolean (default true)
-- created_at: timestamp
-- created_by: references User (owner)
+### Account
+Represents a bank or investment account within a family.
 
-**Constraints**:
-- Category names are unique per family per type (e.g., cannot have two "Salary" categories in same family)
-- Built-in category "Cash Withdrawal" for all families
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `id` | UUID | Primary key |
+| `family_id` | UUID | FK to Family |
+| `name` | String | Account name (e.g., "Checking", "Savings") |
+| `account_type` | Enum | "bank", "savings", "investment", "cash" |
+| `balance` | Decimal | Current balance (calculated from transactions) |
+| `currency` | String | ISO 4217 code (e.g., "USD", "VND") |
+| `created_at` | DateTime | Account creation date |
 
-**Behavior**:
-- Created/managed by family owner
-- Can be marked inactive (soft delete)
-- Statistics aggregated by category (sum of transactions, count, average)
+**Relationships:**
+- 1 Account : Many Transactions (all activity on this account)
 
 ---
 
-## 2. Domain Value Objects
+### Category
+Represents a classification for income, expense, or investment transactions.
 
-### 2.1 Money
-**Attributes**:
-- amount: decimal (e.g., 100.50)
-- currency: currency code (e.g., USD, VND)
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `id` | UUID | Primary key |
+| `family_id` | UUID | FK to Family |
+| `name` | String | Category name (e.g., "Salary", "Groceries") |
+| `type` | Enum | "income", "expense", "investment" |
+| `icon` | String | Optional emoji or icon identifier |
+| `created_at` | DateTime | Creation timestamp |
 
-**Behavior**:
-- Immutable
-- Supports comparison, addition
-- Always positive; sign determined by transaction type
+**Rules:**
+- Categories are family-specific (not global)
+- "Cash Withdrawal" is an expense category
+- Families can customize their category list
 
----
-
-### 2.2 Email Invitation
-**Attributes**:
-- invitation_id: unique identifier
-- family_id: references Family
-- recipient_email: email address of invitee
-- status: enum (SENT, ACCEPTED, DECLINED, EXPIRED)
-- created_at: timestamp
-- expires_at: expiration timestamp (30 days default)
-- accepted_at: timestamp of acceptance
-
-**Behavior**:
-- Email verification required
-- One-time token for acceptance link
-- Expiration enforced
+**Relationships:**
+- 1 Category : Many Transactions
 
 ---
 
-## 3. Key Domain Rules
+### Transaction
+Represents a single financial event (income, expense, or transfer). Always belongs to a specific account.
 
-### 3.1 Family Access Control
-- User can only view/edit data for families they are a member of
-- User must be OWNER to create categories or invite members
-- Superadmin has full access to all families (for support/administration)
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `id` | UUID | Primary key |
+| `family_id` | UUID | FK to Family |
+| `account_id` | UUID | FK to Account (required; all transactions belong to an account) |
+| `category_id` | UUID | FK to Category |
+| `amount` | Decimal | Transaction amount (always positive) |
+| `direction` | Enum | "in" (income) or "out" (expense) |
+| `date` | Date | When the transaction occurred |
+| `description` | String | Optional notes (e.g., "Grocery shopping") |
+| `created_by` | UUID | FK to User (who recorded it; metadata only, not ownership) |
+| `created_at` | DateTime | When it was recorded |
+| `enabled` | Boolean | True if active; False if disabled by any family member. Default: True. |
+| `updated_at` | DateTime | Last update timestamp (for tracking when edits occur) |
 
-### 3.2 Transaction Immutability
-- Transactions are immutable after creation
-- Changes are logged as new transactions or adjustments (v2+)
-- Deletions are soft deletes (is_deleted flag)
+**Related Entity — Transaction Edit History**
+Track all edits to a transaction (separate table or embedded in transaction):
 
-### 3.3 Category Isolation
-- Categories belong to families; no cross-family category sharing
-- Each family manages its own category taxonomy
-- Categories can be inactivated but not permanently deleted (history preservation)
+| Attribute | Type | Notes |
+|-----------|------|-------|
+| `transaction_id` | UUID | FK to Transaction |
+| `edited_by` | UUID | FK to User (who made the edit) |
+| `edited_at` | DateTime | When the edit occurred |
+| `change_summary` | String | What fields changed (e.g., "amount: 100 → 150, category: Groceries → Entertainment") |
 
-### 3.4 Superadmin Constraints
-- Superadmin creates families but does not automatically join them
-- Superadmin can view all families for support purposes
-- Superadmin cannot edit user passwords (only reset/generate temporary)
+**Rules:**
+- Amount is always stored as positive; direction indicates in/out
+- All transactions must have a category (enforces categorization rule)
+- Cash withdrawal is recorded as a single "out" transaction with "Cash Withdrawal" category against the account
+- No person-level expense tracking or bill-splitting (all family members have equal access to all accounts)
+- Transactions are account-specific; no cross-account transfers in v1
+- Enabled transactions count in P&L and dashboard metrics; disabled transactions are excluded but preserved
+- Only family owner can permanently delete a transaction; all other members can only disable/enable
+- Edit history is immutable and visible to all family members
 
-### 3.5 Member Invitation Lifecycle
-- Owner invites via email
-- Invitee receives email with acceptance link/token
-- Invitee accepts and is added as MEMBER
-- Declined invitations are archived (not retried automatically)
-
----
-
-## 4. Aggregates
-
-### Aggregate 1: Family (Root)
-- Aggregate ID: family_id
-- Entities: Family, FamilyMember, BankAccount, Transaction, TransactionCategory
-- Invariants:
-  - Every family has at least one owner
-  - All transactions and categories belong to exactly one family
-  - BankAccounts are family-specific
-
-### Aggregate 2: Transaction (Root)
-- Aggregate ID: transaction_id
-- Value Objects: Money, Category reference
-- Invariants:
-  - Amount is always positive
-  - Type determines sign (INCOME → +, EXPENSE → -)
-  - Category must exist in family
+**Relationships:**
+- 1 Transaction : 1 Account
+- 1 Transaction : 1 Category
+- 1 Transaction : 1 User (creator)
+- 1 Transaction : Many TransactionEditHistory entries
 
 ---
 
-## 5. Domain Events (Event Sourcing — v2+)
+### Dashboard / Reporting View (Computed)
+Not a stored entity, but a business concept. Computed from **enabled transactions only**.
 
-1. FamilyCreated
-2. MemberInvited
-3. MemberAccepted
-4. MemberDeclined
-5. MemberRemoved
-6. TransactionLogged
-7. CategoryCreated
-8. CategoryInactivated
-9. BankAccountCreated
-10. BankAccountClosed
+**Metrics:**
+- Total Income (sum of "in" transactions where enabled=True, by date range)
+- Total Expenses (sum of "out" transactions where enabled=True, by date range)
+- Net Savings (Income - Expenses)
+- Balance by Account (calculated from enabled transactions only)
+- Breakdown by Category (sum spent per category, enabled only)
+- Trends over time (month-by-month, year-over-year, enabled only)
 
----
-
-## 6. Ubiquitous Language
-
-| Term | Definition |
-|------|-----------|
-| **Family** | A group of users sharing financial data |
-| **Member** | A user belonging to a family |
-| **Owner** | A member with permission to manage family (create categories, invite members) |
-| **Superadmin** | Platform administrator who creates families and manages system-level settings |
-| **Category** | A classification for transactions (e.g., Salary, Groceries, Stocks) |
-| **Transaction** | A financial event (income, expense, investment) logged with amount, date, category |
-| **Bank Account** | A linked financial account tracked by the family |
-| **Dashboard** | Family's financial overview showing trends, savings rate, investments |
-| **Cash Withdrawal** | A transaction type representing cash taken from bank account (treated as expense) |
-| **Invitation** | Email-based request for a user to join a family |
-| **Acceptance** | Act of confirming an invitation and joining a family |
+**Note:** Disabled transactions are excluded from all P&L and reporting metrics but remain in the transaction archive for audit purposes.
 
 ---
 
-## 7. Data Consistency & Integrity
-
-### Invariants
-1. Every transaction belongs to exactly one family
-2. Every user invitation has exactly one family and one recipient email
-3. Category names are unique per family per type
-4. FamilyMember records are unique per (family_id, user_id) pair
-5. Balance calculations are derived from transactions (not stored directly)
-
-### Constraints
-- Transactions with null category_id are invalid (must have a category)
-- Invitations expire after 30 days (or configurable interval)
-- Transaction amounts must be > 0
-- Family names are unique (or allow duplicates but track by ID)
-
----
-
-## 8. Relationships Summary
+## Key Business Relationships
 
 ```
 User
-  ├─ N FamilyMember
-  │   ├─ 1 Family
-  │   └─ invitation_status (PENDING, ACCEPTED, DECLINED)
-  └─ N Transaction (logged_by)
-
-Family (Aggregate Root)
-  ├─ N FamilyMember
-  ├─ N BankAccount
-  ├─ N TransactionCategory
-  │   ├─ INCOME categories
-  │   ├─ EXPENSE categories (includes "Cash Withdrawal")
-  │   └─ INVESTMENT categories
-  └─ N Transaction
-      ├─ 1 BankAccount
-      ├─ 1 TransactionCategory
-      └─ 1 User (logged_by)
-
-Superadmin (User with is_superadmin=true)
-  └─ can create N Family
-  └─ can view all data across all families
+  |
+  +-- (1:M) FamilyMemberships
+       |
+       +-- Family
+            |
+            +-- (1:M) Accounts
+            |    |
+            |    +-- (1:M) Transactions
+            |         |
+            |         +-- Category
+            |
+            +-- (1:M) Categories
+            |
+            +-- (1:M) Transactions
 ```
+
+---
+
+## Data Constraints & Invariants
+
+1. **Email Uniqueness**: No two Users can have the same email
+2. **Account Balance**: Derived from enabled transactions only; never stored directly
+3. **Category Ownership**: A category belongs to exactly one family
+4. **Transaction Soft-Delete Default**: All members can disable/enable transactions; disabled txns preserved for audit. Only owner can hard-delete (irreversible).
+5. **Transaction Edit Audit Trail**: All edits tracked with user, timestamp, and change summary; edit history immutable
+6. **Member Disable/Enable**: Owner can disable/enable members; disabled members lose access but their transactions/edits remain. Disabling is reversible.
+7. **Multi-Tenancy**: No transaction, account, or membership from one family can be viewed/modified by a user not in that family

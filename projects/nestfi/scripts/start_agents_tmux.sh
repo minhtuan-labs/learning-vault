@@ -398,6 +398,40 @@ assign_role FE           2 1
 assign_role QA           2 2
 assign_role DELIVERY     2 3
 
+# ---------- v10.19: Generate PATH-guard wrappers ----------
+# Hard-blocks engineering commands when run from the Orchestrator pane.
+# Wrappers live in scripts/guards/ and are pre-pended to PATH for
+# Orchestrator's pane ONLY (workers keep their normal PATH).
+mkdir -p scripts/guards
+GUARD_HUB="$(pwd)/scripts/guards/_block_orchestrator.sh"
+BLOCKED_COMMANDS=(
+  # Containers / orchestration
+  docker docker-compose podman kubectl helm colima minikube
+  # Database CLIs
+  psql mongo mongosh redis-cli mysql sqlite3 pg_dump
+  # DB migrations
+  alembic prisma sequelize-cli knex flask-migrate
+  # Language runtimes (Orchestrator should not execute scripts)
+  python python3 node deno bun ruby
+  # Package managers
+  pip pip3 pipx poetry conda npm yarn pnpm npx
+  cargo gem bundle mvn gradle
+  # Local-app HTTP testing (QA's job)
+  # curl wget httpie  — DISABLED in the guard for now: curl is too
+  # commonly used legitimately (web fetches outside the app). Keep
+  # blocked at prompt level instead.
+)
+for cmd in "${BLOCKED_COMMANDS[@]}"; do
+  cat > "scripts/guards/$cmd" <<EOF
+#!/usr/bin/env bash
+# Auto-generated wrapper by start_agents_tmux.sh — DO NOT EDIT.
+# See scripts/guards/_block_orchestrator.sh for the real logic.
+exec "\$(dirname "\$0")/_block_orchestrator.sh" "$cmd" "\$@"
+EOF
+  chmod +x "scripts/guards/$cmd"
+done
+echo "[v10.19] PATH guards generated for Orchestrator pane: ${#BLOCKED_COMMANDS[@]} commands blocked"
+
 # ---------- initial bootstrap per pane ----------
 for AGENT in "${AGENTS[@]}"; do
   FULL_MODEL="$(get_agent_model "$AGENT")"
@@ -412,6 +446,14 @@ for AGENT in "${AGENTS[@]}"; do
   tmux send-keys -t "$PANE_ID" "export AGENT_SESSION_MODE='$([ $RESUME_MODE = true ] && echo RESUME || echo FRESH)'" C-m
   if [[ -n "$ENGINE_CONFIG_ENV_VAR" ]]; then
     tmux send-keys -t "$PANE_ID" "export ${ENGINE_CONFIG_ENV_VAR}='${ENGINE_CONFIG_ABS}'" C-m
+  fi
+
+  # v10.19 — Pre-pend the PATH guard for the ORCHESTRATOR pane ONLY.
+  # Workers keep their normal PATH so docker/psql/etc resolve to the
+  # real binaries when DELIVERY/BE need them.
+  if [[ "$AGENT" == "ORCHESTRATOR" ]]; then
+    tmux send-keys -t "$PANE_ID" "export PATH=\"$PROJECT_DIR/scripts/guards:\$PATH\"" C-m
+    tmux send-keys -t "$PANE_ID" "echo '[v10.19] PATH guard active — engineering commands blocked for Orchestrator pane'" C-m
   fi
 
   if [[ "$SHOW_AGENT_BANNER" == "true" ]]; then

@@ -1,49 +1,65 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.database import init_db, get_db, Base
+from app.routes import admin, auth, families, transactions, accounts, categories, dashboard
+from app.models.user import User
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from app.config import settings
-from app.db import engine
-from app.models.base import Base
-import logging
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+app = FastAPI(
+    title="NestFi API",
+    description="Family budgeting and transaction tracking API",
+    version="1.0.0",
+    docs_url="/api/v1/docs",
+    openapi_url="/api/v1/openapi.json",
+)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Initialize database schema
+init_db()
 
-app = FastAPI(title="NestFi API", version="1.0")
+# Auto-seed database if empty
+def seed_if_empty():
+    from seed import seed_database
+    try:
+        engine = create_engine(settings.database_url)
+        SessionLocal = sessionmaker(bind=engine)
+        session = SessionLocal()
+        if session.query(User).count() == 0:
+            seed_database()
+        session.close()
+    except Exception as e:
+        print(f"Warning: Could not auto-seed database: {e}")
 
-# CORS middleware
+try:
+    seed_if_empty()
+except Exception:
+    pass
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:3000", "http://localhost:8050"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3100"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Health check
-@app.get("/")
-def health_check():
-    from datetime import datetime
-    return {
-        "status": "ok",
-        "version": "1.0",
-        "timestamp": datetime.utcnow().isoformat() + "Z"
-    }
+@app.get("/health")
+async def health():
+    return {"status": "ok", "message": "NestFi backend is running"}
 
-# Import routes
-from app.api.routes import auth, users, families, transactions, categories, analytics, admin
-from app.api.routes import health
+# API routes
+api_prefix = "/api/v1"
+app.include_router(admin.router, prefix=api_prefix)
+app.include_router(auth.router, prefix=api_prefix)
+app.include_router(families.router, prefix=api_prefix)
+app.include_router(transactions.router, prefix=api_prefix)
+app.include_router(accounts.router, prefix=api_prefix)
+app.include_router(categories.router, prefix=api_prefix)
+app.include_router(dashboard.router, prefix=api_prefix)
 
-app.include_router(health.router)
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(users.router, prefix="/users", tags=["users"])
-app.include_router(families.router, prefix="/families", tags=["families"])
-app.include_router(transactions.router, tags=["transactions"])
-app.include_router(categories.router, tags=["categories"])
-app.include_router(analytics.router, tags=["analytics"])
-app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
 if __name__ == "__main__":
     import uvicorn

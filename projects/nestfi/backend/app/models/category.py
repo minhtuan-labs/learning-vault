@@ -1,18 +1,22 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
-from sqlalchemy.orm import relationship
-from .base import Base, TimestampMixin
+from sqlalchemy import Column, String, DateTime, func, ForeignKey, Boolean, Enum
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+import enum
+from app.database import Base
 
-class Category(Base, TimestampMixin):
+
+class CategoryTypeEnum(str, enum.Enum):
+    income = "income"
+    expense = "expense"
+    investment = "investment"
+
+
+class Category(Base):
     __tablename__ = "categories"
 
-    family_id = Column(Integer, ForeignKey("families.id"), nullable=False, index=True)
-    type = Column(String(50), nullable=False, index=True)  # income, expense, investment
-    name = Column(String(255), nullable=False)
-    description = Column(String(1000), nullable=True)
-    color = Column(String(7), default="#808080", nullable=False)  # hex color
-    icon = Column(String(50), nullable=True)
-    is_default = Column(Boolean, default=False, nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False, index=True)
-
-    family = relationship("Family", back_populates="categories")
-    transactions = relationship("Transaction", back_populates="category")
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family_id = Column(UUID(as_uuid=True), ForeignKey("families.id"), nullable=False)
+    name = Column(String, nullable=False)
+    type = Column(Enum(CategoryTypeEnum), nullable=False)
+    is_default = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)

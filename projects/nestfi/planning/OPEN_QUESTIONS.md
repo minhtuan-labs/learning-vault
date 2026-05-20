@@ -1,212 +1,215 @@
-# Open Questions — NestFi
+# Open Questions — Phase 0_DISCOVERY
 
-**Product:** NestFi - Family Financial Management Platform  
-**Last Updated:** 2026-05-16  
-**Owner:** PM  
+These questions require user/stakeholder clarification before proceeding to detailed design and implementation.
 
----
+## Priority: BLOCKING (Must answer before proceeding to Phase 1)
 
-## Questions Requiring User Input
+### Q1: MVP Feature Scope — Bill Splitting
+**Context**: PRODUCT_IDEA mentions "tách bill cho cặp vợ chồng" (bill splitting for couples), but user clarified that v1 focuses on **account-centric tracking** (which account money comes from) rather than person-to-person splitting.
 
-These items should be clarified with the user before advancing to Phase 1_SOLUTION_DESIGN.
+**Question**: Should bill splitting be in MVP (v1.0) or deferred to v2.0?
 
-### Q1: Multi-Currency Support — v1 vs v1.2+
+**Decision**: ✅ **DECIDED — Deferred to v2.0**
 
-**Question:**  
-Should NestFi support families with multiple currencies in v1? For example, a family with income in USD and expenses in VND (Vietnamese Dong).
+**Rationale**: 
+- V1 focus is on account-centric household tracking (track which account money comes from)
+- Bill splitting (person-to-person expense sharing) is a post-MVP feature
+- Faster MVP delivery with core tracking; bill-splitting can be added as advanced feature
 
-**Context:**
-- MVP assumes single currency per family (simplifies data model and UI)
-- Multi-currency would require: currency selection on categories, conversion rates, multiple currency displays
-- Impacts: database schema, calculation logic, dashboard complexity
-
-**Options:**
-1. **Single currency per family (MVP):** Each family picks one currency; all transactions in that currency. Multi-currency deferred to v1.2+.
-2. **Multi-currency in v1:** Implement currency selection for categories/transactions; real-time conversion rates.
-3. **Hybrid:** Allow multi-currency tracking but no conversion (just display each currency separately).
-
-**PM Recommendation:** Option 1 (single currency per family) for MVP. Reduces complexity and time-to-launch.
-
-**Decision:** Pending user input.  
-**Impact if deferred:** +2-3 weeks development time; +complexity in dashboard/analytics.
+**Impact**: 
+- MVP scope remains lean; focus on core transaction tracking and account management
+- Bill-splitting will be addressed in v2.0 roadmap
 
 ---
 
-### Q2: Bill Splitting Feature — v1 vs v1.3+
+### Q2: Superadmin Password Management
+**Context**: Default superadmin credentials are hardcoded in spec (admin123). 
 
-**Question:**  
-Should v1 include bill-splitting logic (e.g., restaurant bill split 3 ways, automatic settlement)?
+**Question**: Should the default password be forced to change on first login, or is it okay for users to keep it?
 
-**Context:**
-- MVP does not include bill splitting
-- Workaround: manually log expense with category "Shared Expense" or create custom categories
-- Full feature would require: transaction splitting, settlement tracking, payment requests between members
-- Impacts: transaction data model, payment system integration, member-to-member transfers
+**Options**:
+1. **Force change**: More secure; better for production
+2. **Allow optional change**: Simpler UX; assume private/internal use
+3. **Other**: Different security model?
 
-**Options:**
-1. **No bill splitting in v1 (MVP approach):** Manual categorization workaround. Feature v1.3+.
-2. **Simple bill splitting in v1:** Can split expense among family members, no automatic settlement.
-3. **Full bill splitting with settlement:** Split expenses, track IOUs, payment requests, settlements.
+**Impact**: 
+- Option 1: Better security posture, 1-2 days dev effort
+- Option 2: Faster time-to-MVP
 
-**PM Recommendation:** Option 1 (defer to v1.3+). Most families can manually categorize; full feature adds significant complexity.
+**Decision**: ✅ **DECIDED — Force password change on first login (for superadmin, owner, and all users)**
 
-**Decision:** Pending user input.  
-**Impact if included:** +3-4 weeks; payment system integration required.
+**Rationale**:
+- Better security posture for household financial data
+- Applies to superadmin on system initialization
+- Applies to new owners and members when they first accept invitations
+- Ensures users set a strong password before accessing family finances
 
----
-
-### Q3: Investment Portfolio Tracking Depth — v1 vs v1.2+
-
-**Question:**  
-Should v1 track detailed investment portfolio metrics (cost basis, returns, unrealized gains) or just simple category-based tracking?
-
-**Context:**
-- MVP v1: Simple tracking only (total amount by investment category, e.g., "Stock Portfolio: $10,000")
-- Full feature would require: cost basis tracking, return calculations, performance metrics, tax-loss harvesting info
-- Impacts: data model complexity, financial calculations, UI for portfolio details
-
-**Options:**
-1. **Simple tracking only (MVP):** Amount per category, no performance metrics.
-2. **Basic metrics:** Cost basis, current value, unrealized gain/loss per investment.
-3. **Advanced metrics:** Returns by holding period, tax-loss data, dividend tracking.
-
-**PM Recommendation:** Option 1 (simple tracking in v1). Deferred metrics in v1.2+.
-
-**Decision:** Pending user input.  
-**Impact if advanced:** +2 weeks; financial calculation library required.
+**Impact**: 
+- All new users must set their own password on first login
+- Medium complexity in authentication flow (1-2 days dev effort)
+- Better security for MVP release
 
 ---
 
-### Q4: Analytics Depth — ML Suggestions vs Manual v1
+### Q3: Multi-Family Dashboard Experience
+**Context**: Users can belong to multiple families and select on login.
 
-**Question:**  
-Should v1 include ML-powered categorization suggestions or rely on manual categorization?
+**Question**: What should happen when a user logs in if they belong to multiple families?
 
-**Context:**
-- MVP v1: Manual categorization only (user selects category when logging transaction)
-- ML feature would: automatically suggest categories based on transaction description, learn from user corrections
-- Impacts: ML infrastructure, training data, model maintenance
+**Options**:
+1. **Selection prompt**: Show a family selector before main dashboard
+2. **Default family**: Auto-load the last family accessed
+3. **Family switcher in dashboard**: Load one family by default, offer quick-switch dropdown
+4. **Separate dashboards**: Show combined view of all families' finances
 
-**Options:**
-1. **Manual categorization only (MVP):** User always selects category. No ML. Simple and predictable.
-2. **Suggest categories from history:** Based on past transactions, suggest most-used category for amount range.
-3. **ML-powered suggestions:** Analyze description text and suggest categories; learn from user corrections over time.
+**Impact**:
+- Option 1: Explicit but slower UX
+- Option 2/3: Faster, but risk selecting wrong family
+- Option 4: Complex analytics, not in MVP scope
 
-**PM Recommendation:** Option 1 (manual in v1). ML features deferred to v1.2+ pending user demand.
+**Decision**: ✅ **DECIDED — Family selector at login + family switcher in dashboard (Options 1 & 3 combined)**
 
-**Decision:** Pending user input.  
-**Impact if included:** +2-3 weeks; requires data science resources.
+**Rationale**:
+- Show family selector prompt at login for explicit selection (no accidental wrong family access)
+- Also provide in-dashboard family switcher for quick context switching
+- Explicit control while maintaining fast UX for repeated access
+- Aligns with account-centric design: families are the primary scope
 
----
-
-### Q5: Transaction Editing Permissions — Self-Only vs Owner-All
-
-**Question:**  
-Should family members only edit their own transactions, or should the owner be able to edit all members' transactions?
-
-**Context:**
-- MVP assumes: Each member can only edit/delete their own transactions; owner can edit/delete any.
-- Alternative: Members can only edit own; owner cannot edit others' (more privacy-focused).
-- Impacts: permission model, audit logging, data integrity controls
-
-**Options:**
-1. **Member-own + Owner-all (current MVP design):** Members edit own; owner can edit all.
-2. **Member-own only:** Members edit own; owner cannot edit others (stronger privacy guarantee).
-3. **Restricted to creator only:** No one, not even owner, can edit another's transaction (append-only ledger).
-
-**PM Recommendation:** Option 1 (current MVP design). Owner needs ability to correct errors; audit logging ensures accountability.
-
-**Decision:** Pending user input.  
-**Impact if changed:** Permission model adjustment; may reduce feature set for owner.
+**Impact**: 
+- Login flow adds family selection step (users can switch families anytime)
+- Dashboard includes family context switcher (quick toggle)
+- Better safety + usability for multi-family users
 
 ---
 
-## Questions for Technical Review (SA/BE)
+## Priority: HIGH (Should clarify before Phase 2 Backlog)
 
-These will be addressed during Phase 1_SOLUTION_DESIGN but are noted here for context.
+### Q4: Transaction Categories — Flexibility
+**Context**: MVP mentions predefined categories (salary, groceries, utilities, etc.).
 
-### T1: Email Service Provider Selection
+**Question**: Should users be able to create custom categories, or only use predefined ones?
 
-**For SA/BE to decide:**
-- Use AWS SES, SendGrid, Mailgun, or custom SMTP?
-- Cost vs reliability trade-off?
-- Recommended: SendGrid (reliable, easy to integrate, $20/month starter tier).
+**Options**:
+1. **Predefined only**: Simpler schema, better for analytics consistency
+2. **Custom categories**: More flexibility, harder to aggregate analytics
+3. **Hybrid**: Predefined + custom allowed, but analytics focus on predefined
 
----
+**Impact**:
+- Option 1: Simpler, but users frustrated by limited categories
+- Option 2: Feature creep, but better UX
+- Option 3: Best compromise, medium complexity
 
-### T2: Real-Time Updates Architecture
-
-**For SA/BE to decide:**
-- WebSocket (full duplex, lower latency) vs Server-Sent Events (SSE, simpler) vs polling (simplest)?
-- Impacts: dashboard refresh speed, infrastructure complexity, cost.
-- Recommended for MVP: Start with polling (simplest), upgrade to WebSocket if users demand <2s updates.
-
----
-
-### T3: Database Technology
-
-**For SA/BE to decide:**
-- PostgreSQL (recommended for relational data, scalable), MySQL, SQLite (dev-only), or NoSQL?
-- Impacts: schema design, query complexity, scaling story.
-- Recommended for MVP: PostgreSQL (mature, ACID compliance, strong for financial data).
+**Decision**: _[PENDING USER INPUT]_
 
 ---
 
-## Questions for Design Review (UX)
+### Q5: Investment Tracking Detail
+**Context**: PRODUCT_IDEA mentions "các loại đầu tư" (investment types) but no detail on tracking requirements.
 
-These will be addressed during Phase 2_BACKLOG_AND_SPEC.
+**Question**: What should be tracked for investments?
 
-### D1: Primary Navigation Model
+**Options**:
+1. **Simple list**: Just record investment type, amount, date (like transactions)
+2. **Portfolio view**: Track cost basis, current value, gains/losses
+3. **Advanced**: Include dividend tracking, rebalancing, asset allocation
 
-**For UX to decide:**
-- Sidebar nav vs top nav vs bottom nav?
-- Dashboard-centric (dashboard as home) vs feature-list navigation?
-- Mobile: drawer menu vs bottom tab bar?
-- Recommended: Sidebar + responsive drawer for mobile (standard for web apps).
+**Impact**:
+- Option 1: Simple MVP, easy to implement
+- Option 2: More valuable analytics, medium complexity
+- Option 3: Significantly more complex, deferred to v2.0
 
----
-
-### D2: Category Management UX
-
-**For UX to decide:**
-- Where to place category management? (Settings → Categories vs Dashboard → Categories section?)
-- How to present category selection in transaction form? (dropdown, search, recently-used?)
-- Recommended: Dashboard → Settings tab for owner; recently-used + search in transaction form.
+**Decision**: _[PENDING USER INPUT]_
 
 ---
 
-## Resolved Questions (History)
+### Q6: Cash Withdrawal Handling
+**Context**: User clarified that cash withdrawal = single spending transaction (not detailed sub-tracking). Focus is on which account money comes from.
 
-### RQ1: Product Idea Completeness — RESOLVED
+**Question**: Should cash withdrawals just be a transaction entry, or should there be subsequent tracking of how the cash was spent?
 
-**Question:** PRODUCT_IDEA.md was skeleton-only (headers with no content). What is the full product vision?
+**Decision**: ✅ **DECIDED — One-time entry**
 
-**User Answer (2026-05-16):** User provided complete product idea including problem, target users, core use cases, features, constraints, and success metrics. See PRODUCT_IDEA.md for full details.
+**Rationale**: 
+- Cash withdrawals are treated as simple "Rút Cash" transactions
+- No sub-tracking of how cash is spent (to keep MVP lean and account-centric)
+- User can categorize the withdrawal as "Cash" expense category
 
-**Resolution:** ✅ PRD, ROADMAP, and BACKLOG created based on provided product idea.
-
----
-
-## Timeline for Resolution
-
-| Question | Type | Priority | Target Resolution | Owner |
-|---|---|---|---|---|
-| Q1: Multi-currency | User | P1 | Before Phase 1_SOLUTION_DESIGN | User |
-| Q2: Bill splitting | User | P2 | Before Phase 2_BACKLOG_AND_SPEC | User |
-| Q3: Investment tracking | User | P2 | Before Phase 2_BACKLOG_AND_SPEC | User |
-| Q4: ML categorization | User | P2 | Before Phase 2_BACKLOG_AND_SPEC | User |
-| Q5: Edit permissions | User | P1 | Before Phase 1_SOLUTION_DESIGN | User |
-| T1: Email provider | Technical | P0 | Phase 1_SOLUTION_DESIGN | SA/BE |
-| T2: Real-time updates | Technical | P0 | Phase 1_SOLUTION_DESIGN | SA/BE |
-| T3: Database tech | Technical | P0 | Phase 1_SOLUTION_DESIGN | SA/BE |
-| D1: Navigation | Design | P0 | Phase 2_BACKLOG_AND_SPEC | UX |
-| D2: Category management | Design | P0 | Phase 2_BACKLOG_AND_SPEC | UX |
+**Impact**: 
+- Simpler data model and UI
+- MVP remains focused on account-based tracking, not individual cash spending details
 
 ---
 
-## Change Log
+### Q7: Data Ownership & Privacy
+**Context**: Multiple family members have access to shared financial data. Per account-centric design, NestFi tracks accounts (not people), so all family members have equal access to the family's financial information.
 
-| Date | Author | Change |
-|---|---|---|
-| 2026-05-16 | PM | Created OPEN_QUESTIONS with 5 user clarifications + 5 technical/design items |
+**Question**: Should all family members see all transactions, or should there be per-member visibility controls?
 
+**Options**:
+1. **Full transparency**: Everyone sees all transactions
+2. **Role-based**: Different roles (owner/member) see different data
+3. **Privacy controls**: Members can mark transactions as private
+
+**Decision**: ✅ **DECIDED — Full Transparency (Option 1)**
+
+**Rationale**:
+- Account-centric design: Transactions belong to accounts (not to people)
+- BUSINESS_REQUIREMENTS state family members have "Full access to family financial data"
+- No person-level spending tracking (all members are equal in v1)
+- Simpler implementation, clearer audit trail
+
+**Impact**:
+- All family members see all transactions in all family accounts
+- Transparency enables better collective financial decision-making
+- No privacy controls per transaction in v1 (can be added in v2.0)
+
+---
+
+## Priority: MEDIUM (Nice-to-clarify, can decide internally)
+
+### Q8: Reporting & Export Features
+**Question**: Should the dashboard include export/reporting features in v1.0 MVP?
+
+**Decision**: ✅ **DECIDED — Yes, include export reports in v1.0**
+
+**Rationale**:
+- Families want the ability to export financial reports for budgeting, tax prep, or external sharing
+- Core feature that adds significant value without major complexity (CSV/PDF export)
+- Can be implemented alongside dashboard analytics
+
+**Impact**: 
+- Dashboard includes export button/menu for reports (CSV/PDF formats)
+- Exports include transaction lists, category breakdowns, income/expense summaries
+- Report generation added to Phase 4 BUILD
+
+---
+
+### Q9: Transaction Approval Workflow
+**Question**: Should family transactions require approval from owner before posting, or are they visible immediately?
+
+**Decision** (PM discretion): Immediate visibility for MVP; optional approval workflow in v2.0.
+
+---
+
+### Q10: Reporting Frequency
+**Question**: What reporting/notification frequency should families expect (weekly summary, monthly report, alerts)?
+
+**Decision** (PM discretion): No automated reports in MVP; on-demand dashboard. Automated reports in v1.1.
+
+---
+
+## Summary
+
+- **DECIDED (User clarification received)**: 
+  - ✅ Q1 (bill-splitting deferred to v2.0)
+  - ✅ Q2 (force password change on first login for all users)
+  - ✅ Q3 (family selector at login + in-dashboard switcher)
+  - ✅ Q6 (cash withdrawal one-time entry)
+  - ✅ Q7 (full transparency on transactions)
+  - ✅ Q8 (include export reports in v1.0)
+  - ✅ Additional: Session timeout = NEVER (manual logout only)
+
+- **High priority (Stakeholder input wanted)**: Q4 (custom categories), Q5 (investment tracking detail)
+- **Medium priority (PM can decide)**: Q9 (transaction approval workflow), Q10 (reporting frequency)
+
+**Next step**: Phase 0_DISCOVERY complete. All blocking user decisions resolved. Ready to advance to Phase 1_SOLUTION_DESIGN with SA/UX for architecture & detailed design.

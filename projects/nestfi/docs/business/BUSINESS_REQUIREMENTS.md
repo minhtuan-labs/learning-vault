@@ -1,124 +1,75 @@
 # Business Requirements — NestFi
 
-## 1. Executive Summary
+## Overview
+NestFi is a web-based family financial management application that enables households to collectively track income, expenses, savings, and investments with categorized analytics and dashboards.
 
-NestFi is a web-based family financial management platform enabling households to collaboratively track, categorize, and analyze their finances in real-time. The platform serves couples, families, and multi-generational households needing unified financial visibility across multiple families and accounts.
+## Core Business Rules
 
-## 2. Business Objectives
+### Multi-Tenancy & Family Hierarchy
+- A single user account can belong to **multiple families** simultaneously
+- Upon login, the user selects which family they wish to manage in that session
+- Each family is an independent financial domain (transactions, accounts, members)
+- One user account = many families; one family = many users
 
-- Enable families to centralize financial tracking across household income and expenses
-- Provide real-time visibility into spending patterns and financial health
-- Support multi-family account management for users with multiple households
-- Establish secure, scalable family financial management infrastructure
+### Authentication & Authorization
+- **Superadmin account** is pre-created at system initialization
+  - Username: `superadmin`
+  - Default password: `admin123`
+  - Superadmin can change their password after first login
+  - Superadmin can create new families and invite owners
+- **Family Owner** (invited by Superadmin via email)
+  - Must accept invitation via email confirmation
+  - Can then add other members to the family
+  - Responsible for family financial management
+- **Family Member** (added by Owner)
+  - Can view and manage transactions within the family
+  - Full access to family financial data
 
-## 3. Functional Requirements
+### Financial Transactions & Categorization
+- All income, expenses, and transfers must be **categorized**
+  - Income categories (salary, bonus, investment returns, etc.)
+  - Expense categories (groceries, utilities, entertainment, etc.)
+  - Investment categories (stocks, bonds, real estate, etc.)
+- **Special case: Cash Withdrawals**
+  - ATM withdrawal is treated as an **expense transaction** with category "Cash Withdrawal"
+  - The withdrawn cash itself is not tracked as an asset (cash in wallet is not in scope)
+- Transactions require:
+  - Amount
+  - Category
+  - Date
+  - Optional description/notes
 
-### 3.1 User Management
-- **Superadmin Account**: Default credentials provided (superadmin/admin123) with password change capability
-- **Family Creation**: Superadmin creates families and invites initial owners via email
-- **Email-based Invitation**: Owner accepts invitation to join family; non-acceptance tracked
-- **Multi-family Support**: Single user can belong to and manage multiple families
-- **Family Switching**: User switches between families after login
-- **Member Invitation**: Owners add family members by email invitation after accepting family invitation
+### Financial Accounts
+- Families can maintain multiple **bank accounts** (checking, savings, investment, etc.)
+- Each account tracks balance and transaction history
+- Accounts are family-specific (not shared across families)
 
-### 3.2 Financial Tracking
-- **Transaction Logging**: Family members log purchases, income, and cash withdrawals
-- **Category Management**: Families manage custom categories for:
-  - Income (e.g., salary, bonuses, interest)
-  - Expenses (e.g., groceries, utilities, rent)
-  - Investments
-  - Cash Withdrawal (treated as expense category)
-- **Bank Account Management**: Families manage and track multiple bank accounts
-- **Transaction Categories**: Each transaction assigned to a category; categories generate statistics
+### Reporting & Analysis
+- **Dashboard** provides:
+  - Summary of all transactions by category
+  - Income vs. Expense analysis
+  - Savings tracking
+  - Investment portfolio overview
+  - Time-based trends and analytics
 
-### 3.3 Dashboard & Analytics
-- **Financial Overview**: Dashboard displays spending trends, savings rate, investment performance
-- **Category Statistics**: Automatic statistics generation per category for analysis
-- **Real-time Updates**: All family members see consistent transaction data immediately
-- **Multi-family View**: Users can access separate dashboards per family
+## Constraints
 
-### 3.4 Financial Management Sections
-- Bank Accounts: Create, list, manage family bank accounts
-- Income Categories: Configure custom income categories
-- Expense Categories: Configure custom expense categories (including "Cash Withdrawal")
-- Investment Categories: Configure custom investment categories
+### Data Ownership
+- All family data (transactions, accounts, members) is isolated per family
+- No cross-family data sharing or consolidation
+- User cannot view another family's data without being explicitly added as a member
 
-## 4. Non-functional Requirements
+### Security Requirements
+- Email-based invitation system for family creation
+- Password reset capability for all users
+- Session isolation per login (one family selected at a time)
 
-### 4.1 Security & Compliance
-- Email verification required for invitations and account changes
-- Secure password handling (e.g., hashing, secure storage)
-- Family-level access control (members can only see their family's data)
+## Out of Scope (v1)
 
-### 4.2 Performance & Usability
-- Family members can log in and view household financial overview within 2 minutes
-- All family members see consistent transaction data (no stale reads)
-- Dashboard loads within 3 seconds for typical household (100-1000 transactions)
-
-### 4.3 Deployment
-- Web-based platform (desktop-first, responsive design for tablets)
-- No mobile app in v1
-
-## 5. Data & Integrity
-
-- **Family-scoped Access**: Users can only see/modify data for families they belong to
-- **Transactional Consistency**: All family members see the same transaction data at all times
-- **Category Ownership**: Categories belong to families, not individuals
-- **Multi-currency**: Not in scope for v1 (assumption: single currency per family)
-
-## 6. Business Rules
-
-### 6.1 Account & Family Management
-- Superadmin is the only role that creates families
-- Each family has at least one owner who accepts the initial invitation
-- Owners can invite additional members; invitees can accept/decline
-- Users must belong to at least one family; can belong to multiple families
-- Deleting a family requires explicit confirmation
-
-### 6.2 Financial Operations
-- Cash withdrawals are transactions with category "Cash Withdrawal" (treated as expense)
-- All transactions must have a category; categories are family-specific
-- Categories can be created/edited/deleted only by family owners (or superadmin)
-- Income, expenses, and investments are tracked separately for analysis
-
-### 6.3 Dashboard & Reporting
-- Statistics are calculated from transactions tagged with each category
-- Empty categories appear on the list but contribute zero to statistics
-- Historical data is never deleted (only marked as inactive for categories)
-
-## 7. Out of Scope — v1
-
-- Budget tracking and alerts
-- Investment portfolio tracking
-- Financial goal setting
-- Automated categorization suggestions
-- Bill splitting among family members
-- Financial reports and exports
-- Mobile app
+These features are deferred to future versions:
 - Multi-currency support
-- Tax reporting integration
-- Advanced analytics (ML predictions)
-
-## 8. Success Metrics
-
-- Family members can log in and view household financial overview within 2 minutes
-- All family members see consistent transaction data
-- Categories enable meaningful spending analysis
-- User retention: week 1 and month 1
-
-## 9. Dependencies & Assumptions
-
-- **Tech Stack**: To be confirmed by SA (no tech preference specified by user)
-- **Budget**: Not specified (assume startup/self-funded)
-- **Timeline**: Not specified
-- **Users**: Assume target users have joint bank accounts or significant shared financial management needs
-- **Email**: Assume reliable email delivery for invitations
-
-## 10. Open Business Questions
-
-1. Multi-currency support needed beyond v1?
-2. Bill splitting feature scope for v1 vs v2?
-3. Analytics depth: basic charts vs advanced ML predictions?
-4. Tax reporting integration needed?
-5. Data retention policy: how long to keep transaction history?
-6. Minimum family size enforcement: can solo users join?
+- Investment portfolio tracking (detailed)
+- Bill splitting beyond expense categorization
+- Recurring transaction automation
+- Mobile app (web-only for v1)
+- Real-time synchronization across devices

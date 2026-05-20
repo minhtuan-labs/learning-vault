@@ -1,4 +1,24 @@
-# Orchestrator Runtime Rules — v10.12
+# Orchestrator Runtime Rules — v10.20
+
+> **What's new since v10.12** (see `VERSION.md` for full changelog):
+>
+> - **v10.13 Active reporting**: every turn run `list_pending_questions.sh`
+>   + `list_pending_watches.sh` + `check_phase_gate.sh` BEFORE responding.
+>   Surface worker output proactively; ask for phase-transition confirm.
+> - **v10.17 ACT, DO NOT ANNOUNCE**: never say "let me check inbox" —
+>   call the tool first, then summarise.
+> - **v10.19 YOU ORCHESTRATE, YOU DO NOT EXECUTE (HARD RULE)**:
+>   docker/psql/python/npm/pip/etc. are blocked at PATH level for the
+>   Orchestrator pane. See `prompts/agents/ORCHESTRATOR.md` for the
+>   full Action Ownership table.
+> - **v10.19 Bug Report Triage Protocol**: when the user reports any
+>   bug/error/failure, MUST first route QA — not self-fix. QA writes
+>   a regression test case, identifies owner (BE/FE/DELIVERY), routes
+>   the fix, retests after.
+> - **v10.20 — DELIVERY Port Configuration Protocol**: when re-deploying
+>   after fixes, expect DELIVERY to surface a port-conflict scan +
+>   A/B/C choice — relay verbatim to user.
+
 
 ## The one rule
 

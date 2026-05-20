@@ -1,6 +1,412 @@
 # Template Version
 
-Version: 10.18
+Version: 10.21
+
+## Patch v10.21 (over v10.20) — PaneC team identity + display names
+
+The team of 9 agents now has a collective name and friendly display
+names for conversation. Display-only — no breaking change to scripts,
+paths, or env vars.
+
+### Team name: **PaneC** (the 9-pane crew)
+
+Pronounce "pa-nek" or "Pane-C". Pun on tmux panes (the framework's
+execution boundary). When the user addresses the team as a whole:
+
+> "PaneC cần thêm 3 chức năng …"
+> "PaneC kiểm tra giúp bug …"
+
+Orches treats it as a team-level request, decides which agent(s) own
+the task, and routes accordingly.
+
+### Display names (conversational use)
+
+| Internal ID  | Display name | Role                |
+|--------------|--------------|---------------------|
+| ORCHESTRATOR | **Orches**   | Coordinator         |
+| PM           | PM           | Product Manager     |
+| SA           | SA           | Solution Architect  |
+| BA           | BA           | Business Analyst    |
+| UX           | UX           | UX Designer         |
+| BE           | BE           | Backend Engineer    |
+| FE           | FE           | Frontend Engineer   |
+| QA           | QA           | Quality Assurance   |
+| DELIVERY     | **Deli**     | Deployment          |
+
+Internal identifiers (`AGENT_NAME` env, file paths like
+`memory/ORCHESTRATOR.md`, script args like `route_to_pane.sh DELIVERY`)
+**unchanged**. Display names are conversational aliases only — used
+in prompts, banner, status messages, README intro.
+
+### Implementation
+
+- `AGENTS.md` — new "Team identity" section near the top with the
+  display-name table and the "PaneC needs X" routing pattern.
+- `prompts/agents/ORCHESTRATOR.md` — opens with "You are Orches —
+  leader of PaneC" identity preamble.
+- `prompts/agents/DELIVERY.md` — opens with "You are Deli — the
+  deployment role in PaneC" preamble. Notifications signed "Deli: …".
+- `prompts/agents/{PM,SA,BA,UX,BE,FE,QA}.md` — brief "You are <CODE>
+  in PaneC" identity line pointing at AGENTS.md table.
+- `scripts/agent_banner.sh` — extra `DISPLAY:` field next to `AGENT:`,
+  plus `TEAM: PaneC (9-pane crew)` line.
+- `README.md` — new "Meet PaneC" intro table.
+
+### Why display-only (not full rename)
+
+Renaming `ORCHESTRATOR` → `Orches` everywhere would require:
+
+- Renaming files (`memory/ORCHESTRATOR.md` → `memory/Orches.md`)
+- Updating every `case "$AGENT" in ORCHESTRATOR)` branch in scripts
+- Updating every `AGENT_NAME=ORCHESTRATOR` check in workers
+- Breaking sync into existing projects (which all have
+  `memory/ORCHESTRATOR.md` already)
+
+Display-only is zero-friction: sync into an existing project, restart
+session, banner now shows "Orches" — nothing else changes. The
+internal layer keeps its proven identifier set.
+
+### Files touched
+
+```
+~ AGENTS.md                          (Team identity section)
+~ prompts/agents/ORCHESTRATOR.md     ("You are Orches" preamble)
+~ prompts/agents/DELIVERY.md         ("You are Deli" preamble)
+~ prompts/agents/{PM,SA,BA,UX,BE,FE,QA}.md  (brief team intro lines)
+~ scripts/agent_banner.sh            (DISPLAY field + TEAM label)
+~ README.md                          (Meet PaneC intro table)
+~ VERSION.md                         (this entry)
+```
+
+### Migration
+
+```bash
+cd <project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+bash scripts/stop_agents_tmux.sh
+bash scripts/start_agents_tmux.sh <project> --engine claude --free
+```
+
+After start, banners show display names. Orches introduces itself on
+first user message. Try saying "PaneC cần tính năng X" — Orches will
+analyse and route.
+
+---
+
+## Patch v10.20 (over v10.19) — DELIVERY Port Configuration Protocol
+
+User feedback: DELIVERY silently picked host ports (3000/8000/5432)
+without asking, then `docker compose up` failed because the user had
+a different Postgres running on 5432. They had to debug. This is the
+exact failure mode the v10.7 "Stop and ask" rule was supposed to
+prevent for DELIVERY, but the old prompt step said "Suggested ports:
+… OK to use these?" which gave no information about whether the
+ports were actually free.
+
+### Fix
+
+**New script — `scripts/check_port_conflicts.sh`** (engine-agnostic):
+
+- `bash scripts/check_port_conflicts.sh 8000 8080 5432` — check
+  specific ports. Output is one line per port:
+  `PORT=X STATUS=FREE` or `PORT=X STATUS=TAKEN BY="<who>"`.
+  Uses `lsof` (primary), `netstat` (fallback), and `docker ps`
+  (third pass for container-bound ports). Exit 0 if all free, 1 if
+  any taken — handy for shell pipelines.
+- `bash scripts/check_port_conflicts.sh --suggest 3 --from 8000` —
+  return N free ports starting from a base, skipping taken ones.
+  Used when user picks "auto" mode.
+
+**Updated `prompts/agents/DELIVERY.md` — step 2 rewritten as
+"Port Configuration Protocol (HARD RULE — v10.20)"** with 5 sub-steps:
+
+- **2a — Scan defaults**: run `check_port_conflicts.sh` on the
+  proposed FE/BE/DB ports. Capture output.
+- **2b — Suggest alternatives if any TAKEN**: run `--suggest 3`.
+- **2c — Ask user with both options A/B/C**:
+  - **A**: user picks preferred ports (`FE=X BE=Y DB=Z`)
+  - **B**: user says `auto` → DELIVERY auto-picks from --suggest
+  - **C**: user says `defaults` → only if all FREE in scan
+  - Also asks "DB public or internal?" for security exposure choice.
+- **2d — On resume, validate user's choice**: re-scan, re-ask if
+  conflicts in option A. Persist to `.env.example` +
+  `docker-compose.yml`.
+- **2e — Document in DELIVERY_PLAN.md**: append "Port assignments"
+  section listing final ports + mode chosen + DB exposure.
+
+**Updated `AGENTS.md`** — the DELIVERY entry in the
+"each role MUST ask one substantive question per phase" list now
+explicitly points to the Port Configuration Protocol and the helper
+script. Older soft phrasing was being skipped.
+
+### Why this matters
+
+Port conflicts at deploy time are mechanical failures that destroy
+trust in the framework. They're also trivially preventable by
+scanning before writing compose. The fix is small (one helper script,
+one prompt section) but the impact is removing a whole class of
+"docker compose up red" experiences.
+
+### Files added / touched
+
+```
++ scripts/check_port_conflicts.sh   (new — scanner + suggester)
+~ prompts/agents/DELIVERY.md         (step 2 = Port Configuration Protocol)
+~ AGENTS.md                          (DELIVERY entry points to protocol)
+~ scripts/agent_banner.sh            (template label v10.20)
+~ VERSION.md                         (this entry)
+```
+
+### Migration
+
+```bash
+cd <project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+# No restart needed — DELIVERY reads its prompt fresh on next routing.
+```
+
+The next time DELIVERY is routed (phase 6 or any re-deploy), it will
+follow the new protocol automatically.
+
+---
+
+## Release v10.19 (over v10.18.1) — Hard lane discipline for Orchestrator
+
+User reported a critical lane-violation pattern after a successful
+v10.18.1 round: when login failed post-delivery, the Orchestrator (on
+Claude) **self-fixed the bug** instead of routing QA:
+
+```text
+python -c "from passlib.context import CryptContext; ..."        # BE's work
+docker exec nestfi-db psql -U nestfi -c "UPDATE users …"          # BE/DBA work
+docker stop nestfi-fe && docker-compose up -d frontend           # DELIVERY work
+docker-compose down && docker-compose up -d                       # DELIVERY work
+# repeated for 2m40s while user watched
+```
+
+The framework's multi-model design **collapses** when Orchestrator
+self-executes engineering work:
+
+1. The regression test never gets written → same bug recurs next round.
+2. The fix runs on Orchestrator's (cheap) model → quality drops.
+3. `reports/BUG_REPORT.md` audit trail stays empty → release gate lies.
+
+v10.18 STAY-IN-LANE was file-centric (don't edit PRD.md, don't edit
+backend/). Claude bypassed it by reasoning "I'm not editing files, I'm
+running bash commands" — a loophole the user explicitly called out.
+
+### Fix — three layers of enforcement (defense in depth)
+
+**Layer 1 (prompt rewrite)**: `prompts/agents/ORCHESTRATOR.md` now
+opens with two new top-priority sections (v10.19 title):
+
+- **YOU ORCHESTRATE — YOU DO NOT EXECUTE**: action-ownership table
+  (docker→DELIVERY, psql→BE, python→BE/FE, etc.), explicit list of
+  allowed Orchestrator commands, hard prohibition on bypassing the
+  PATH guard via `command <cmd>` or absolute paths.
+- **Bug Report Triage Protocol**: mandatory `route_to_pane.sh QA …`
+  template for any user-reported bug/error/failure. Includes the
+  exact wrong/right examples from the v10.18 violation (passlib hash,
+  docker exec UPDATE, docker restart loop).
+
+**Layer 2 (PATH guard — hard block)**: new
+`scripts/guards/_block_orchestrator.sh` plus auto-generated wrappers
+for every forbidden command. `start_agents_tmux.sh`:
+
+1. At session start, generates `scripts/guards/<cmd>` wrappers for
+   ~30 engineering commands (docker, psql, python, pip, npm, kubectl,
+   alembic, prisma, …). Each wrapper just exec's the shared blocker.
+2. Pre-pends `scripts/guards/` to `PATH` **for the Orchestrator pane
+   only**. Worker panes (BE/FE/QA/DELIVERY) keep their normal PATH so
+   `docker`, `psql`, etc. resolve to real binaries when they need them.
+
+When Orchestrator tries `docker exec …`, the wrapper fires:
+
+```
+================================================================
+ BLOCKED — Orchestrator cannot execute engineering commands
+================================================================
+ Command:  docker
+ Category: container/k8s operations
+ Owner:    DELIVERY
+
+ This command is part of DELIVERY's lane. The Orchestrator role is
+ COORDINATOR ONLY — you delegate, you do not execute.
+ …
+ Route to DELIVERY instead. Example:
+   bash scripts/route_to_pane.sh DELIVERY "<task>"
+================================================================
+```
+
+Every block is logged to `$TMPDIR/orchestrator_guard.log` for audit.
+
+**Layer 3 (audit)**: `scripts/check_lane_violations.sh` extended with
+action-level checks:
+
+- Tail the PATH-guard log to show recent blocked attempts.
+- Inspect live descendants of Orchestrator pane PID; flag any
+  engineering process (docker, psql, node, etc.) running under it.
+
+Run after a phase to see if the Orchestrator's discipline was honest:
+
+```bash
+bash scripts/check_lane_violations.sh 30
+```
+
+### Bypass policy
+
+The PATH guard can be bypassed via `command <cmd>` or absolute paths
+(`/usr/local/bin/docker`). This is intentional — it ensures a genuine
+emergency override is possible, but requires explicit, auditable
+intent. Casual fall-through to engineering commands is blocked; a
+model that bypasses is making a documented choice we can see in
+`check_lane_violations.sh` output.
+
+### Files added / touched
+
+```
++ scripts/guards/_block_orchestrator.sh   (shared blocker logic)
+~ scripts/start_agents_tmux.sh             (generates wrappers + per-pane PATH)
+~ scripts/check_lane_violations.sh         (action-level audit added)
+~ prompts/agents/ORCHESTRATOR.md           (HARD RULE + Bug Triage Protocol, v10.19)
+~ scripts/agent_banner.sh                  (template label v10.19)
+~ VERSION.md                               (this entry)
+```
+
+The wrappers themselves (`scripts/guards/docker`, `scripts/guards/psql`,
+etc.) are **auto-generated** by `start_agents_tmux.sh` at session
+start, so they're not committed to the template repo. The shared
+blocker is committed.
+
+### Migration
+
+```bash
+cd <project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+bash scripts/stop_agents_tmux.sh
+bash scripts/start_agents_tmux.sh <project> --engine claude --free
+```
+
+After start, you'll see in the Orchestrator pane:
+
+```
+[v10.19] PATH guard active — engineering commands blocked for Orchestrator pane
+```
+
+### Verification
+
+```bash
+# In the Orchestrator pane (via tmux), try:
+docker ps
+# Expected: BLOCKED error with "Route to DELIVERY" hint.
+
+# In any worker pane (BE/DELIVERY/etc), try:
+docker ps
+# Expected: real docker output (workers keep normal PATH).
+
+# Audit:
+bash scripts/check_lane_violations.sh 30
+# Should show the PATH-guard log entries from your test above.
+```
+
+### Known limitations (deferred to future patches)
+
+- The guard intercepts shell commands via PATH only. Claude Code's
+  Write/Edit/Read tools bypass the shell entirely. So Orchestrator
+  can still technically `Edit(./backend/main.py)` — prompt rule
+  (Layer 1) is the only line of defense for tool-driven file writes.
+  A future patch could add per-role `.claude/settings.json` Write/Edit
+  path denies.
+- `command <cmd>` and absolute-path invocations bypass the guard by
+  design. Audit them via `check_lane_violations.sh`.
+
+---
+
+## Patch v10.18.1 (over v10.18) — Auto-wake pane detection
+
+Discovered via the nestfi `.pane_logs/_auto_wake.log` after v10.18 ship:
+
+```
+[2026-05-16 17:09:24] FIRE pane=%0 running=2.1.143 msglen=213
+[2026-05-16 17:09:24] SKIP — Orchestrator pane running '2.1.143', not a known engine/shell
+```
+
+**Root cause**: `tmux display-message #{pane_current_command}` returns
+Claude Code's **version string** (`"2.1.143"`) on the user's macOS,
+not the literal `"claude"`. The v10.18 case statement's allow-list
+(`claude|opencode|node|go|main`) didn't match this, so the entire
+multi-method delivery block was skipped. The three methods
+(paste-buffer / send-keys-l / typewriter) were never actually
+attempted — they couldn't fail because they didn't run.
+
+This explains the user's report: "Notif: 3 visible in status bar but
+Claude pane idle for 24+ seconds" — workers fired notifications
+correctly, helper was invoked, but the case statement bailed early
+with `SKIP`.
+
+### Fix
+
+`scripts/_ping_orchestrator_pane.sh` case statement rewritten:
+
+1. **Known shells** (`bash|sh|zsh|fish|tcsh|ksh|dash`) → handle as
+   auto-relaunch loop (same as before).
+2. **Known engines** (`claude|opencode|node|...`) → try delivery.
+3. **Empty / `unknown`** → genuinely no info, skip.
+4. **Anything else** (catch-all `*)`) → assume engine TUI and try
+   delivery. Logs `ASSUMING engine TUI (pane_current_command='$X')`.
+
+This replaces the brittle allow-list approach with a much more
+permissive "shell-or-engine" partition. If the delivery methods can't
+deliver to whatever's running, the visible-alert fallback fires —
+same as before. The change is purely about giving the methods a chance
+to run.
+
+### Files touched
+
+```
+~ scripts/_ping_orchestrator_pane.sh    (permissive case statement)
+~ scripts/agent_banner.sh               (template label v10.18.1)
+~ VERSION.md                            (this entry)
+```
+
+### Verification (please run after sync)
+
+```bash
+cd <project>
+bash scripts/sync_framework_from_template.sh \
+  ~/MyGitHub/learning-vault/frameworks/product-engineering-template
+bash scripts/stop_agents_tmux.sh
+bash scripts/start_agents_tmux.sh <project> --engine claude --free
+
+# Tab 1: live log
+tail -f .pane_logs/_auto_wake.log
+
+# Tab 2 (in tmux, from any worker pane):
+bash scripts/ask_orchestrator.sh PM "Test v10.18.1"
+```
+
+Expected log lines now:
+
+```
+[...] FIRE pane=%0 running=2.1.143 msglen=...
+[...] ASSUMING engine TUI (pane_current_command='2.1.143' — not on known-shell list)
+[...] SENT via paste-buffer to pane=%0    # or send-keys-literal / typewriter
+```
+
+If `SENT via X` appears AND Claude pane still doesn't react → it's a
+genuine Ink TUI delivery problem (Cause A in v10.17 analysis) and we
+escalate to Option A (non-interactive `claude --print` per turn) in
+v10.19.
+
+If `FAIL — all methods failed` → all three delivery methods executed
+but none of them got the ping text onto Claude's input box. That's
+useful data — share the post-FAIL `tmux capture-pane` output and we'll
+design the next iteration.
+
+---
 
 ## Release v10.18 (over v10.17) — Comprehensive Claude/framework reliability batch
 

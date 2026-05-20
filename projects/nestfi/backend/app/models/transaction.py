@@ -1,20 +1,37 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Date, Numeric
-from sqlalchemy.orm import relationship
-from .base import Base, TimestampMixin
+from sqlalchemy import Column, String, DateTime, func, ForeignKey, BigInteger, Boolean, Enum, JSON
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+import enum
+from app.database import Base
 
-class Transaction(Base, TimestampMixin):
+
+class DirectionEnum(str, enum.Enum):
+    in_ = "in"
+    out = "out"
+
+
+class Transaction(Base):
     __tablename__ = "transactions"
 
-    family_id = Column(Integer, ForeignKey("families.id"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False, index=True)
-    type = Column(String(50), nullable=False)  # income, expense, cash_withdrawal
-    amount = Column(Numeric(10, 2), nullable=False)
-    description = Column(String(1000), nullable=True)
-    transaction_date = Column(Date, nullable=False, index=True)
-    deleted_at = Column(DateTime, nullable=True, index=True)
-    deleted_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    account_id = Column(UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=False)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("categories.id"), nullable=False)
+    amount_cents = Column(BigInteger, nullable=False)
+    direction = Column(Enum(DirectionEnum), nullable=False)
+    date = Column(String, nullable=False)  # ISO 8601 date string
+    description = Column(String, nullable=True)
+    creator_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    is_enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    family = relationship("Family", back_populates="transactions")
-    user = relationship("User", back_populates="transactions", foreign_keys=[user_id])
-    category = relationship("Category", back_populates="transactions")
+
+class TransactionEdit(Base):
+    __tablename__ = "transaction_edits"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    transaction_id = Column(UUID(as_uuid=True), ForeignKey("transactions.id"), nullable=False)
+    editor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    before_snapshot = Column(JSON, nullable=False)
+    after_snapshot = Column(JSON, nullable=False)
+    edited_at = Column(DateTime, server_default=func.now(), nullable=False)

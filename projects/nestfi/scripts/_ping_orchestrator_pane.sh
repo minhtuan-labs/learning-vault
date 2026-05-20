@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# v10.18.1 — Auto-wake helper. Fix: permissive pane_current_command match.
-# Claude Code shows up as its version string ("2.1.143") not "claude" on
-# some macOS setups, so the v10.18 case statement silently skipped all
-# delivery methods. Now any non-shell, non-empty command is treated as
-# an engine TUI.
+# v10.18.1 — Auto-wake helper with multi-method delivery + verification.
+# Fix: permissive pane_current_command match. Claude Code shows up as
+# its version string (e.g. "2.1.143") not "claude" on some macOS setups,
+# so the v10.18 case statement silently skipped the entire delivery —
+# notifications dồn nhưng helper chưa từng try method nào. Now: anything
+# non-shell, non-empty is treated as a probable engine TUI.
 #
 # Why this is complex:
 #   Claude Code's Ink TUI (Node + readline raw mode) doesn't reliably
@@ -223,6 +224,7 @@ case "$PANE_CMD" in
         bash|sh|zsh|fish|tcsh|ksh|dash) continue ;;
         ""|unknown) continue ;;
         *)
+          # Anything non-shell, non-empty → treat as engine TUI up
           sleep 0.8
           if try_deliver_to_tui "$ORCH_PANE" "$PING_MSG"; then
             sent=true
@@ -243,8 +245,11 @@ case "$PANE_CMD" in
     ;;
   *)
     # v10.18.1 — Claude Code shows up as its version string (e.g. "2.1.143")
-    # in pane_current_command on some macOS setups. Treat ANY non-shell,
-    # non-empty command as a probable engine TUI and try delivery.
+    # in pane_current_command on some macOS setups. Same can happen with
+    # other Node-based TUIs. Rather than maintain an ever-growing allow-list,
+    # treat ANY non-shell, non-empty command as a probable engine TUI and
+    # try to deliver. Worst case the methods all fail and we fire the
+    # visible-alert fallback, same as the known-engine branch.
     log_ping "ASSUMING engine TUI (pane_current_command='$PANE_CMD' — not on known-shell list)"
     if try_deliver_to_tui "$ORCH_PANE" "$PING_MSG"; then
       :

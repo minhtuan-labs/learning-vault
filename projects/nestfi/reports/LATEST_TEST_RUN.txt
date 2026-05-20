@@ -1,0 +1,64 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.2, pytest-7.4.3, pluggy-1.6.0 -- /Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/tuan/MyGitHub/learning-vault/projects/nestfi/backend
+plugins: asyncio-0.21.1, langsmith-0.4.15, anyio-3.7.1, typeguard-4.4.4
+asyncio: mode=Mode.STRICT
+collecting ... collected 45 items
+
+tests/test_accounts.py::test_create_account FAILED                       [  2%]
+tests/test_accounts.py::test_account_with_negative_balance FAILED        [  4%]
+tests/test_accounts.py::test_account_visible_to_all_family_members FAILED [  6%]
+tests/test_accounts.py::test_account_balance_calculation FAILED          [  8%]
+tests/test_accounts.py::test_multiple_account_types FAILED               [ 11%]
+tests/test_accounts.py::test_account_currency_defaults_to_usd FAILED     [ 13%]
+tests/test_accounts.py::test_account_belongs_to_family FAILED            [ 15%]
+tests/test_accounts.py::test_edit_account_name FAILED                    [ 17%]
+tests/test_auth.py::test_login_success FAILED                            [ 20%]
+tests/test_auth.py::test_login_invalid_credentials FAILED                [ 22%]
+tests/test_categories.py::test_default_categories_pre_populated FAILED   [ 24%]
+tests/test_categories.py::test_all_members_can_view_categories FAILED    [ 26%]
+tests/test_categories.py::test_create_custom_category FAILED             [ 28%]
+tests/test_categories.py::test_default_categories_cannot_be_deleted FAILED [ 31%]
+tests/test_categories.py::test_custom_categories_can_be_deleted FAILED   [ 33%]
+tests/test_categories.py::test_categories_scoped_to_family FAILED        [ 35%]
+tests/test_categories.py::test_category_types FAILED                     [ 37%]
+tests/test_categories.py::test_cash_withdrawal_is_expense_category FAILED [ 40%]
+tests/test_dashboards.py::test_dashboard_shows_total_income FAILED       [ 42%]
+tests/test_dashboards.py::test_dashboard_shows_total_expenses FAILED     [ 44%]
+tests/test_dashboards.py::test_dashboard_shows_net_savings FAILED        [ 46%]
+tests/test_dashboards.py::test_dashboard_shows_account_balances FAILED   [ 48%]
+tests/test_dashboards.py::test_dashboard_shows_recent_transactions FAILED [ 51%]
+tests/test_dashboards.py::test_disabled_transactions_excluded_from_dashboard FAILED [ 53%]
+tests/test_dashboards.py::test_expense_breakdown_by_category FAILED      [ 55%]
+tests/test_families.py::test_list_families FAILED                        [ 57%]
+tests/test_families.py::test_get_family_details FAILED                   [ 60%]
+tests/test_families.py::test_family_requires_auth PASSED                 [ 62%]
+tests/test_families.py::test_member_cannot_access_other_family FAILED    [ 64%]
+tests/test_families.py::test_add_family_member FAILED                    [ 66%]
+tests/test_families.py::test_member_belongs_to_multiple_families FAILED  [ 68%]
+tests/test_families.py::test_disable_family_member FAILED                [ 71%]
+tests/test_families.py::test_disabled_member_cannot_access_family FAILED [ 73%]
+tests/test_health.py::test_health PASSED                                 [ 75%]
+tests/test_transactions.py::test_record_income_transaction FAILED        [ 77%]
+tests/test_transactions.py::test_record_expense_transaction FAILED       [ 80%]
+tests/test_transactions.py::test_transaction_amount_must_be_positive FAILED [ 82%]
+tests/test_transactions.py::test_future_dated_transaction_allowed FAILED [ 84%]
+tests/test_transactions.py::test_all_members_see_transaction FAILED      [ 86%]
+tests/test_transactions.py::test_overdraft_allowed FAILED                [ 88%]
+tests/test_transactions.py::test_edit_transaction FAILED                 [ 91%]
+tests/test_transactions.py::test_member_can_edit_another_member_transaction FAILED [ 93%]
+tests/test_transactions.py::test_transaction_edit_history FAILED         [ 95%]
+tests/test_transactions.py::test_disable_transaction FAILED              [ 97%]
+tests/test_transactions.py::test_re_enable_transaction FAILED            [100%]
+
+=================================== FAILURES ===================================
+FAILURES: 43 failed, 2 passed
+
+Root cause: Bcrypt password hashing compatibility issue
+Error: ValueError: password cannot be longer than 72 bytes
+This error occurs during password hash generation in app/utils/security.py:10 hash_password()
+The passlib bcrypt backend is rejecting the password encoding.
+
+Affected tests: All tests that require user creation (43 tests)
+Passing tests: test_family_requires_auth, test_health (2 tests)

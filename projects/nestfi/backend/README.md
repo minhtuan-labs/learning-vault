@@ -1,118 +1,93 @@
 # NestFi Backend
 
-FastAPI REST API for NestFi family finance management application.
+FastAPI-based backend for the NestFi family budgeting application.
 
 ## Setup
 
 ### Prerequisites
-- Python 3.12+
-- PostgreSQL 16
+- Python 3.11+
+- PostgreSQL 16+
+- Docker & Docker Compose (for containerized setup)
 
-### Installation
+### Local Development
+
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Set up database:**
+   ```bash
+   # Create PostgreSQL database
+   createdb nestfi
+   
+   # Run migrations (when ready)
+   alembic upgrade head
+   ```
+
+3. **Run development server:**
+   ```bash
+   uvicorn app.main:app --reload --port 8000
+   ```
+
+4. **Access API documentation:**
+   - Swagger UI: http://localhost:8000/api/v1/docs
+   - ReDoc: http://localhost:8000/api/v1/redoc
+
+## Docker Compose
 
 ```bash
-cd backend
-pip install -r requirements.txt
+docker-compose up -d
 ```
 
-### Configuration
+This starts:
+- PostgreSQL on `localhost:5432`
+- FastAPI server on `localhost:8000`
 
-Copy `.env.example` to `.env` and configure:
-- DATABASE_URL
-- JWT_SECRET
-- SMTP settings
+## Project Structure
 
-### Database
-
-```bash
-# Initialize database
-alembic upgrade head
+```
+backend/
+├── app/
+│   ├── main.py           # FastAPI app
+│   ├── config.py         # Settings
+│   ├── database.py       # SQLAlchemy setup
+│   ├── dependencies.py   # Auth dependencies
+│   ├── models/           # SQLAlchemy ORM models
+│   ├── schemas/          # Pydantic schemas
+│   ├── routes/           # API endpoints
+│   └── utils/            # Security, hashing, etc.
+├── tests/                # Pytest test suite
+├── requirements.txt      # Python dependencies
+└── .env                  # Environment variables
 ```
 
-### Running
+## Key Endpoints
 
-```bash
-# Development server with auto-reload
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Production server
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-API documentation available at:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## API Endpoints
-
-### Authentication
-- POST /auth/login
-- GET /auth/me
-
-### Users
-- POST /users/change-password
-
-### Families
-- GET /families
-- GET /families/{id}
-- POST /families (superadmin only)
-- PUT /families/{id}
-- GET /families/{id}/members
-- POST /families/{id}/members
-- DELETE /families/{id}/members/{member_id}
-
-### Invitations
-- POST /invitations/{token}/accept
-- POST /invitations/{token}/decline
-
-### Transactions
-- GET /families/{id}/transactions
-- POST /families/{id}/transactions
-- PUT /families/{id}/transactions/{txn_id}
-- DELETE /families/{id}/transactions/{txn_id}
-
-### Categories
-- GET /families/{id}/categories
-- POST /families/{id}/categories
-- PUT /families/{id}/categories/{cat_id}
-- DELETE /families/{id}/categories/{cat_id}
-
-### Analytics
-- GET /families/{id}/analytics/summary
-- GET /families/{id}/analytics/trends
-
-### Admin
-- POST /admin/families (superadmin only)
+- `GET /health` — Health check
+- `POST /api/v1/auth/login` — User authentication
+- `GET /api/v1/families` — List user's families
+- `GET /api/v1/families/{id}` — Get family details
+- `GET /api/v1/families/{id}/accounts/{account_id}/transactions` — List transactions
+- `POST /api/v1/families/{id}/accounts/{account_id}/transactions` — Create transaction
 
 ## Testing
 
 ```bash
-pytest tests/
+pytest
+pytest tests/ -v  # Verbose
+pytest tests/test_auth.py  # Specific file
 ```
 
-## Architecture
+## Status
 
-- **Models**: SQLAlchemy ORM models with TimestampMixin
-- **Schemas**: Pydantic validation schemas
-- **CRUD**: Database operations layer
-- **Services**: Business logic
-- **Routes**: FastAPI endpoint definitions
-- **Utils**: Security, exceptions, helpers
+**Phase 4_BUILD** - Initial FastAPI scaffold with working structure:
+- ✅ FastAPI app setup
+- ✅ SQLAlchemy models (User, Family, Account, Transaction, etc.)
+- ✅ Basic authentication (JWT)
+- ✅ Priority endpoints (health, login, families, transactions)
+- 🔄 Full business logic implementation
+- 🔄 Comprehensive test coverage
+- 🔄 Database migrations
 
-## Security
-
-- Passwords hashed with bcrypt
-- JWT tokens (HS256, 24h expiry)
-- Role-based access control (RBAC)
-- Soft deletes for transactions
-- Audit logging
-
-## Tech Stack
-
-- FastAPI 0.104.1
-- SQLAlchemy 2.0.23
-- Alembic 1.12.1
-- PostgreSQL 16
-- Pydantic 2.5.0
-- PyJWT 1.2.0
-- Passlib + bcrypt
+See `docs/architecture/API_CONTRACT.md` for full endpoint specifications.

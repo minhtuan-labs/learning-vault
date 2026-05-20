@@ -1,38 +1,48 @@
-from pydantic import BaseModel, Field
-from datetime import datetime, date
-from typing import Optional, List
+from pydantic import BaseModel
+from uuid import UUID
+from datetime import datetime
 
-class TransactionCreate(BaseModel):
-    category_id: int
-    type: str
-    amount: float = Field(gt=0)
-    description: Optional[str] = None
-    transaction_date: date
 
-class TransactionUpdate(BaseModel):
-    category_id: Optional[int] = None
-    amount: Optional[float] = Field(None, gt=0)
-    description: Optional[str] = None
-
-class TransactionResponse(BaseModel):
-    id: int
-    family_id: int
-    user_id: int
-    user_name: Optional[str] = None
-    category_id: int
-    category_name: Optional[str] = None
-    type: str
-    amount: float
-    description: Optional[str]
-    transaction_date: date
+class TransactionSchema(BaseModel):
+    id: UUID
+    account_id: UUID
+    category_id: UUID
+    category_name: str | None = None
+    account_name: str | None = None
+    amount_cents: int
+    direction: str
+    date: str
+    description: str | None
+    creator_id: UUID
+    is_enabled: bool
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
 
+
 class TransactionListResponse(BaseModel):
-    transactions: List[TransactionResponse]
-    total: int
-    skip: int
-    limit: int
+    transactions: list[TransactionSchema]
+    total_count: int
+    has_more: bool
+
+
+class TransactionCreateRequest(BaseModel):
+    category_id: UUID
+    amount_cents: int
+    direction: str
+    date: str
+    description: str | None = None
+
+
+class TransactionUpdateRequest(BaseModel):
+    amount_cents: int | None = None
+    direction: str | None = None
+    date: str | None = None
+    description: str | None = None
+    category_id: UUID | None = None
+
+
+class TransactionToggleRequest(BaseModel):
+    is_enabled: bool

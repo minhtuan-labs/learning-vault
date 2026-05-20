@@ -1,193 +1,159 @@
 # NestFi Frontend
 
-Python + Dash multi-page web application for family financial management.
+Next.js 15 frontend for NestFi family financial management platform.
 
 ## Stack
 
-- **Framework:** Dash (Python) with Plotly charts
-- **Components:** Dash Bootstrap Components (dbc)
-- **Styling:** Tailwind CSS (utility-first)
-- **State Management:** URL params + dcc.Store (JWT token)
-- **API Client:** Centralized requests.Session wrapper
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State Management**: TanStack Query v5 (server state) + Zustand (client state)
+- **API Client**: Axios
+- **Package Manager**: npm
 
-## Structure
+## Project Structure
 
 ```
 frontend/
-├── app/
-│   ├── pages/
-│   │   ├── 0_login.py              # Login page
-│   │   ├── 1_family_selector.py    # Family selection
-│   │   ├── 2_dashboard.py          # Main dashboard
-│   │   ├── 3_ledger.py             # Transaction history
-│   │   ├── 4_settings.py           # Family settings
-│   │   └── 5_invitation.py         # Invitation acceptance
-│   ├── components/
-│   │   ├── navbar.py               # Navigation bar
-│   │   ├── forms.py                # Reusable form inputs
-│   │   ├── alerts.py               # Alert/toast components
-│   │   ├── charts.py               # Plotly charts
-│   │   └── modals.py               # Modal dialogs
-│   ├── utils/
-│   │   └── api_client.py           # Centralized API client
-│   └── main.py                     # Dash app entry point
-├── requirements.txt                # Python dependencies
-├── Dockerfile                      # Docker image
-└── README.md
+├── app/                      # Next.js App Router pages
+│   ├── (auth)/              # Auth routes (login, register, password reset)
+│   ├── (app)/               # Protected routes (dashboard, transactions, etc.)
+│   └── layout.tsx           # Root layout
+├── components/              # React components
+│   ├── auth/                # Auth forms (LoginForm, RegisterForm)
+│   ├── common/              # Common components (Navbar, Sidebar)
+│   ├── dashboard/           # Dashboard components
+│   ├── transactions/        # Transaction components
+│   ├── analytics/           # Analytics components
+│   └── ui/                  # Reusable UI components
+├── lib/                     # Utilities and configuration
+│   ├── api-client.ts        # Axios API client
+│   ├── api-queries.ts       # TanStack Query hooks
+│   ├── stores.ts            # Zustand stores (auth, UI)
+│   ├── types.ts             # TypeScript types
+│   ├── utils.ts             # Helper functions
+│   └── constants.ts         # App constants
+├── middleware.ts            # Next.js middleware for auth
+├── tailwind.config.ts       # Tailwind configuration
+├── next.config.js           # Next.js configuration
+├── tsconfig.json            # TypeScript configuration
+└── package.json
 ```
 
-## Setup
+## Getting Started
 
-### Development
+### Install dependencies
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment
-export API_BASE_URL=http://localhost:8000
-export DEBUG=true
-
-# Run locally
-python app/main.py
+npm install
 ```
 
-App runs at `http://localhost:8080`
+### Set environment variables
 
-### Docker
+Copy `.env.example` to `.env.local` and update if needed:
 
 ```bash
-# Build image
-docker build -t nestfi-frontend .
-
-# Run container
-docker run -p 8080:8080 \
-  -e API_BASE_URL=http://backend:8000 \
-  nestfi-frontend
+cp .env.example .env.local
 ```
 
-## Features (v1.0)
+### Run development server
 
-### Pages
-- **Login:** Email/password authentication
-- **Family Selector:** Choose family context (multi-family support)
-- **Dashboard:** Summary cards, analytics charts, recent transactions
-- **Ledger:** Filtered transaction history with pagination
-- **Settings:** Category and member management
-- **Invitation:** Accept family invitations (new users)
+```bash
+npm run dev
+```
 
-### Components
-- **Navbar:** Family switcher, user menu
-- **Forms:** Email, password, number, date, dropdown, textarea inputs
-- **Modals:** Transaction logging, member invite, category form
-- **Charts:** Pie chart (category breakdown), bar chart (trends)
-- **Alerts:** Error, success, loading states
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### State Management
-- JWT token stored in `dcc.Store` (browser session)
-- URL params for family context (`?family_id=X`)
-- 10-second auto-refresh polling on dashboard/ledger
+## Key Features Implemented
+
+### Phase A: Auth Foundation (In Progress)
+- [x] API client setup with Axios
+- [x] TanStack Query configuration
+- [x] Zustand auth store
+- [x] Login page and form
+- [x] Registration page
+- [x] Password reset flow (UI)
+- [x] Family selection page
+- [x] Logout functionality
+- [x] Auth middleware for protected routes
+
+### Phase B: Core Layouts & Navigation (In Progress)
+- [x] Main app layout with sidebar
+- [x] Navbar with user menu
+- [x] Sidebar navigation
+- [x] Settings page stub
+
+### Phase C: Dashboard (In Progress)
+- [x] Dashboard page with summary cards
+- [ ] Real data integration from API
+
+### Phase D: Transactions (Planned)
+- [ ] Transaction list with filters
+- [ ] Create/edit transaction modals
+- [ ] Transaction detail view
+
+### Phase E: Analytics (Planned)
+- [ ] Chart components
+- [ ] Category breakdown
+
+### Phase F: Family Management (Planned)
+- [ ] Family members list
+- [ ] Member invitation/management
+
+## State Management
+
+### Server State (TanStack Query v5)
+- User authentication (`useAuth`)
+- Families, accounts, categories
+- Transactions (with mutations)
+
+### Client State (Zustand)
+- Selected family ID (persisted to localStorage)
+- Current user info
+- UI state (sidebar open/closed)
+
+### Auth Context
+- Session management via cookies
+- User info stored in Zustand
 
 ## API Integration
 
-All API calls via centralized `APIClient` in `utils/api_client.py`:
+All API calls go through `lib/api-client.ts` which handles:
+- Base URL configuration from env vars
+- Session cookie support (withCredentials)
+- Error handling (401 redirects to /login)
 
-```python
-from app.utils import APIClient
+Query hooks are defined in `lib/api-queries.ts` following TanStack Query conventions.
 
-client = APIClient(base_url="http://localhost:8000")
-client.set_token(jwt_token)
+## Development
 
-# Login
-result = client.login(email, password)
+### Add a new page
 
-# Families
-families = client.get_families()
-family = client.get_family(family_id)
+1. Create the page file in `app/` folder (e.g., `app/(app)/transactions/page.tsx`)
+2. Export a default component
+3. Next.js automatically creates the route
 
-# Analytics
-summary = client.get_analytics_summary(family_id, period="month")
-trends = client.get_analytics_trends(family_id, months=6)
+### Add a new query
 
-# Transactions
-txns = client.get_transactions(family_id, skip=0, limit=30)
-client.create_transaction(family_id, category_id, txn_type, amount)
+1. Define the query hook in `lib/api-queries.ts`
+2. Use it in your component with `const { data, isLoading } = useYourQuery()`
 
-# Categories
-cats = client.get_categories(family_id, category_type="expense")
-client.create_category(family_id, name, category_type)
+### Add a new store
 
-# Members
-members = client.get_members(family_id)
-client.invite_member(family_id, email, role="member")
-```
-
-### Error Handling
-
-All API errors raise `APIError` with `user_message()`:
-
-```python
-try:
-    result = client.get_family(family_id)
-except APIError as e:
-    if e.is_auth_error():
-        # Redirect to login
-    else:
-        # Show user-friendly error message
-        print(e.user_message())
-```
+1. Create the store in `lib/stores.ts` using `create()` from Zustand
+2. Use it with `const state = useYourStore((state) => state.prop)`
 
 ## Testing
 
-### Unit Tests (API Client)
-```bash
-pytest app/utils/test_api_client.py -v
-```
+Unit and integration tests are deferred to v1.1. Use:
+- Vitest for unit tests
+- Playwright for e2e tests
 
-### Integration Tests (Pages/Callbacks)
-```bash
-pytest tests/integration/ -v
-```
+## Next Steps
 
-## Known Limitations (v1.0)
-
-- ✅ No WebSocket; uses 10s polling (acceptable for household budget)
-- ✅ No real-time collaboration; transactions update on refresh
-- ✅ No offline mode; internet required
-- ✅ Mobile responsive for tablet (iPad 768px+); mobile redesign in v1.1
-- ✅ Icon picker uses fixed list; visual picker in v1.1
-- ✅ No transaction export (CSV); deferred to v1.1
-
-## Next Steps (v1.1+)
-
-- [ ] Real-time updates via Server-Sent Events (SSE)
-- [ ] Visual icon picker for categories
-- [ ] Dark mode support
-- [ ] Transaction export (CSV)
-- [ ] Mobile-optimized UI redesign
-- [ ] Infinite scroll for large transaction lists
-- [ ] Refresh token support (extend session beyond 24h)
-
-## Performance
-
-- **Page load:** ~1s (with 10 recent transactions)
-- **Dashboard refresh:** ~2-3s (10s polling interval)
-- **API latency SLA:** <200ms per endpoint (backend)
-- **Chart rendering:** <500ms (Plotly handles 1000+ points)
-
-## Troubleshooting
-
-### Token Expired (401)
-User is logged out after 24 hours. Redirect to login on 401 response.
-
-### Family ID Missing
-Redirect to `/family-selector` if `?family_id=` not in URL.
-
-### API Connection Error
-Check `API_BASE_URL` environment variable points to correct backend.
-
----
-
-**Last Updated:** 2026-05-16  
-**Owner:** FE  
-**Phase:** 4_BUILD
+1. **Connect to real backend**: Update API endpoints once BE is ready
+2. **Implement transaction pages**: Create/edit modals, detail views
+3. **Add analytics charts**: Integrate chart library (Recharts or shadcn/ui charts)
+4. **Family management UI**: Full CRUD for members and categories
+5. **E2E tests**: Playwright test suite for critical flows
+6. **Error handling**: Improve error messages and retry logic

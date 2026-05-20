@@ -1,538 +1,251 @@
 # Solution Architecture — NestFi
 
-**Version:** 1.0  
-**Last Updated:** 2026-05-16  
-**Owner:** SA  
+## Overview
 
----
-
-## High-Level System Architecture
+NestFi is a web-based family financial management system. The architecture is a **synchronous monolith** (v1) with clear separation between frontend (Next.js) and backend (FastAPI) via REST APIs. Both are containerized and orchestrated with Docker Compose for local development.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     User Browser                            │
-│              (Desktop / Tablet Responsive)                  │
-└────────────────────┬────────────────────────────────────────┘
-                     │ HTTP/HTTPS
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Frontend Layer                            │
-│            Dash (Plotly) + Tailwind CSS                     │
-│          (http://localhost:8050 — v1)                      │
-├─────────────────────────────────────────────────────────────┤
-│ • Authentication pages (login, password reset)              │
-│ • Family selector / dashboard switcher                      │
-│ • Financial dashboard (charts, analytics)                   │
-│ • Transaction ledger (add, edit, delete, filter)            │
-│ • Category management (CRUD)                                │
-│ • Family member management                                  │
-└────────────────────┬────────────────────────────────────────┘
-                     │ REST API (JSON)
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   API Gateway                               │
-│              FastAPI + CORS Middleware                      │
-│          (http://localhost:8000 — v1)                      │
-├─────────────────────────────────────────────────────────────┤
-│ • Request validation (Pydantic schemas)                      │
-│ • JWT authentication & authorization                        │
-│ • Rate limiting (deferred to v2)                            │
-│ • OpenAPI docs (/docs, /redoc)                              │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                ┌────┴─────┬───────────────┐
-                ▼          ▼               ▼
-        ┌────────────┐ ┌──────────┐ ┌────────────┐
-        │   Auth     │ │ Financial│ │  Family &  │
-        │  Routes    │ │  Routes  │ │   Config   │
-        │ (JWT/user) │ │(trans.)  │ │   Routes   │
-        └────┬───────┘ └────┬─────┘ └────┬───────┘
-             │              │            │
-             └──────┬───────┴────────────┘
-                    ▼
-         ┌──────────────────────┐
-         │  Service Layer       │
-         │  (Business Logic)    │
-         ├──────────────────────┤
-         │ • AuthService        │
-         │ • TransactionService │
-         │ • FamilyService      │
-         │ • CategoryService    │
-         │ • EmailService       │
-         └──────┬───────────────┘
-                │
-                ▼
-         ┌──────────────────────┐
-         │   Data Access        │
-         │ (SQLAlchemy ORM)     │
-         └──────┬───────────────┘
-                │
-                ▼
-         ┌──────────────────────┐
-         │  PostgreSQL 16       │
-         │   (Persistence)      │
-         │ • Users & Auth       │
-         │ • Families & Members │
-         │ • Transactions       │
-         │ • Categories         │
-         │ • Audit logs         │
-         └──────────────────────┘
+│                     Web Browser (HTTP/S)                    │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+          ┌──────────────┴──────────────┐
+          │                             │
+    ┌─────▼──────────┐          ┌──────▼──────────┐
+    │  Frontend      │          │  Backend       │
+    │  Next.js 15    │◄────────►│  FastAPI       │
+    │  Port 3000     │  REST    │  Port 8000     │
+    │                │  JSON    │                │
+    │ ├─ Pages       │          │ ├─ Auth routes │
+    │ ├─ Components  │          │ ├─ Family APIs │
+    │ ├─ Forms       │          │ ├─ Account APIs│
+    │ ├─ Charts      │          │ ├─ Category    │
+    │ └─ State mgmt  │          │ ├─ Transaction │
+    │    (TBD)       │          │ └─ Analytics   │
+    └────────────────┘          └──────┬─────────┘
+                                       │
+         ┌─────────────────────────────┼─────────────────────────────┐
+         │                             │                             │
+    ┌────▼──────────────┐     ┌────────▼──────────┐     ┌───────────▼────┐
+    │   PostgreSQL 16   │     │   Redis (opt)     │     │  File System   │
+    │   Port 5432       │     │   Port 6379       │     │  (images, etc) │
+    │                   │     │                   │     │                │
+    │ ├─ users          │     │ ├─ Sessions (opt) │     │ ├─ Uploads     │
+    │ ├─ families       │     │ ├─ Cache (TBD)    │     │ └─ Static      │
+    │ ├─ members        │     │ └─ Jobs (future)  │     └────────────────┘
+    │ ├─ accounts       │     │                   │
+    │ ├─ categories     │     │                   │
+    │ ├─ transactions   │     │                   │
+    │ ├─ transaction    │     │                   │
+    │ │ _edits          │     │                   │
+    │ └─ invitations    │     │                   │
+    └───────────────────┘     └───────────────────┘
 ```
+
+## Key Design Decisions
+
+### 1. Synchronous Request-Response (Not Event-Driven)
+
+For v1, all operations are **synchronous**:
+- User action (e.g., record transaction) → API request → DB update → UI updates
+- No message queue, no eventual consistency
+- Simpler debugging, consistent state, acceptable for household-scale usage
+
+**Future:** Event-driven queues for multi-family notifications, background analytics jobs (v2+).
+
+### 2. Database-Centric Auth + Sessions
+
+- **Web:** Session cookie (httpOnly, Secure flags) + server-side session store in Postgres/Redis
+- **API:** JWT Bearer tokens for programmatic access (mobile, integrations)
+- Superadmin account seeded at deploy; password-reset flow via email tokens
+
+### 3. Family-Scoped Data Isolation
+
+All data (accounts, transactions, members) is scoped to a family. No global queries; all queries filtered by `family_id` at API boundary.
+
+**Authorization:** Middleware checks `family_id` in request context against user's `family_memberships`.
+
+### 4. Immutable Transactions with Edit Tracking
+
+- Transactions are recorded and can be edited by any family member
+- Edit history is tracked in `transaction_edits` table (who, when, before/after snapshot)
+- Soft-delete (disable) via `is_enabled` flag; only owner can hard-delete
+- Balance rollup is computed from non-disabled transactions
+
+### 5. No Person-Level Tracking
+
+- All transactions are account-centric (not person-centric)
+- No bill-splitting or person-level ledgers in v1
+- All family members have equal visibility and edit rights
+
+## System Boundaries
+
+### Frontend Responsibilities
+
+- **Authentication:** Login/password reset forms, session state
+- **Presentation:** Dashboard, account views, transaction forms, charts
+- **Validation:** Client-side form validation for UX
+- **State Management:** TBD (React Context, Zustand, Redux Lite, or none)
+- **Offline:** None in v1 (online-only assumption)
+
+### Backend Responsibilities
+
+- **Authorization:** Enforce family_id context, role-based access (owner vs. member)
+- **Data Validation:** Enforce business rules (amounts > 0, dates, category membership)
+- **Persistence:** PostgreSQL schema, migrations, data integrity
+- **API Contract:** REST endpoints with OpenAPI spec
+- **Email:** Invitation and password-reset tokens (mock in v1)
+
+## Database Schema Outline
+
+### Core Tables
+
+1. **users** — App-wide users
+   - `id, email, password_hash, created_at, updated_at`
+
+2. **families** — Household groupings
+   - `id, name, owner_id (fk users), created_at, updated_at`
+
+3. **family_memberships** — Users ↔ Families
+   - `id, user_id, family_id, role (owner|member), status (active|disabled), joined_at`
+
+4. **accounts** — Bank/investment accounts within a family
+   - `id, family_id, name, type (bank|savings|investment|cash), balance_cents, currency, created_at, updated_at`
+
+5. **categories** — Income/Expense/Investment categories per family
+   - `id, family_id, name, type (income|expense|investment), is_default, created_at`
+
+6. **transactions** — Financial records
+   - `id, account_id, category_id, amount_cents, direction (in|out), date, description, creator_id, is_enabled, created_at, updated_at`
+
+7. **transaction_edits** — Audit trail for changes
+   - `id, transaction_id, editor_id, change_summary, before_snapshot, after_snapshot, edited_at`
+
+8. **invitations** — Email invites for users and family members
+   - `id, email, family_id (nullable for user invites), token, expires_at, claimed_at`
+
+(Additional tables for sessions if using DB-backed sessions, auth tokens, etc.)
+
+## API Layer
+
+### Authentication Endpoints
+
+```
+POST   /api/v1/auth/register          — Create user account
+POST   /api/v1/auth/login             — Create session
+POST   /api/v1/auth/logout            — Destroy session
+POST   /api/v1/auth/password-reset    — Request reset token
+PUT    /api/v1/auth/password          — Set new password
+```
+
+### Family Management
+
+```
+GET    /api/v1/families               — List user's families
+POST   /api/v1/families               — Create new family (owner)
+GET    /api/v1/families/{id}          — Get family details
+PUT    /api/v1/families/{id}          — Update family (owner)
+
+GET    /api/v1/families/{id}/members  — List members + pending invites
+POST   /api/v1/families/{id}/members  — Invite member (owner)
+PATCH  /api/v1/families/{id}/members/{user_id} — Disable/enable (owner)
+```
+
+### Accounts
+
+```
+GET    /api/v1/families/{id}/accounts              — List accounts
+POST   /api/v1/families/{id}/accounts              — Create account
+GET    /api/v1/families/{id}/accounts/{account_id} — Get account details
+PUT    /api/v1/families/{id}/accounts/{account_id} — Update account
+```
+
+### Categories
+
+```
+GET    /api/v1/families/{id}/categories           — List categories
+POST   /api/v1/families/{id}/categories           — Create custom category (owner)
+```
+
+### Transactions
+
+```
+GET    /api/v1/families/{id}/accounts/{account_id}/transactions    — List
+POST   /api/v1/families/{id}/accounts/{account_id}/transactions    — Create
+GET    /api/v1/families/{id}/accounts/{account_id}/transactions/{tx_id} — Detail + edit history
+PUT    /api/v1/families/{id}/accounts/{account_id}/transactions/{tx_id} — Update
+PATCH  /api/v1/families/{id}/accounts/{account_id}/transactions/{tx_id} — Disable/enable
+
+DELETE /api/v1/families/{id}/accounts/{account_id}/transactions/{tx_id} — Hard delete (owner only)
+```
+
+### Analytics (TBD)
+
+```
+GET    /api/v1/families/{id}/dashboard            — Summary (totals, recent txns)
+GET    /api/v1/families/{id}/reports/expenses     — Expense breakdown by category
+GET    /api/v1/families/{id}/reports/income       — Income breakdown
+GET    /api/v1/families/{id}/reports/trends       — Income vs. expense over time
+```
+
+## Deployment Topology (v1)
+
+### Local Development
+
+```
+docker-compose up -d
+→ Frontend:  http://localhost:3000
+→ Backend:   http://localhost:8000
+→ Postgres:  localhost:5432 (internal)
+→ Redis:     localhost:6379 (optional, internal)
+```
+
+### Production v1 (TBD)
+
+- Single Docker Compose or managed container service (Render, Railway, Fly.io, AWS ECS)
+- RDS/managed Postgres for database
+- Optional managed Redis or Valkey for session store
+- Reverse proxy (nginx, Caddy) for SSL termination, CORS, static file serving
+
+## Security Model
+
+### Authentication
+
+- Superadmin account created at first deploy with default password
+- Invitations use secure tokens (email verification)
+- Password reset tokens expire after 1 hour
+- Sessions invalidate on logout or timeout (TBD: 30 min default)
+
+### Authorization
+
+- **API Boundary:** Every request checked for valid session/JWT + family_id
+- **Family Scope:** User can only access families they're a member of
+- **Role Checks:** Owner-only actions (delete transaction, manage members) enforced server-side
+
+### Data Protection
+
+- Passwords hashed with bcrypt (never logged)
+- Session tokens (JWT/cookies) marked httpOnly + Secure in production
+- Sensitive fields (password, tokens) excluded from logs
+- Audit trail (transaction_edits) for compliance
+
+## Scalability Considerations (v2+)
+
+1. **Database:** Indexes on `family_id`, `user_id`, `created_at`; connection pooling
+2. **Caching:** Redis for frequently-accessed families, dashboard metrics
+3. **Background Jobs:** Message queue (Celery, RQ) for bulk exports, email campaigns
+4. **Async API:** WebSocket support for real-time multi-user updates
+5. **Search:** Elasticsearch or Meilisearch for transaction search (v2+)
+
+## Known Constraints & TBDs
+
+1. **Image Storage:** No media handling in v1; images sourced by team
+2. **Reporting Export:** Deferred to v1.1 (marked as stretch goal)
+3. **Session Timeout:** Duration TBD (default assumption: 30 minutes)
+4. **Mobile:** Not in v1; API designed for future mobile client
+5. **Multi-Tenancy:** Not planned; single org instance per deployment
 
 ---
 
-## Component Breakdown
-
-### Frontend: Dash + Tailwind
-
-**Purpose:** Browser-based UI for family financial management  
-**Framework:** Dash (Python Plotly reactive web framework)  
-**Styling:** Tailwind CSS (utility-first)
-
-**Key Pages:**
-1. **Auth Pages**
-   - Login (email/password)
-   - Password reset flow
-   - Invitation acceptance (owner / member)
-   - Account setup
-
-2. **Dashboard**
-   - Family selector (dropdown / sidebar)
-   - Financial overview (income, expenses, savings)
-   - Category breakdown chart (pie/bar)
-   - Monthly trends (line chart)
-   - Member activity log
-
-3. **Ledger / Transactions**
-   - Transaction history (paginated, filterable)
-   - Add transaction form (income/expense/cash)
-   - Edit transaction (own or owner)
-   - Delete transaction (confirm)
-   - Filter by date range, category, member
-
-4. **Category Management**
-   - List all categories (income, expense, investment)
-   - Add new category
-   - Edit category (name, description, color)
-   - Archive / reactivate category
-
-5. **Family Settings**
-   - Family profile (name, description)
-   - Member list (name, email, role, status)
-   - Invite new members
-   - Remove members
-
-**API Integration:**
-- REST client built in utils; wraps `requests` library
-- JWT token stored in browser session / localStorage
-- Requests include `Authorization: Bearer <token>` header
-- Error handling: show toast/alert on 4xx/5xx
-
----
-
-### Backend: FastAPI
-
-**Purpose:** REST API for all business logic and data access  
-**Framework:** FastAPI (async Python web framework)  
-**Server:** Uvicorn (ASGI server)
-
-**Layer Structure:**
-
-```
-app/
-├── main.py                  # FastAPI() instance, middleware, startup hooks
-├── config.py                # Settings (DB URL, JWT secret, CORS, etc.)
-├── models/
-│   ├── user.py              # User, UserRole
-│   ├── family.py            # Family, FamilyMember
-│   ├── transaction.py       # Transaction, TransactionType
-│   ├── category.py          # Category, CategoryType
-│   └── audit.py             # AuditLog
-├── schemas/                 # Pydantic models for request/response
-│   ├── user.py
-│   ├── family.py
-│   ├── transaction.py
-│   ├── category.py
-│   └── common.py            # ErrorResponse, PaginationParams, etc.
-├── crud/                    # Create, Read, Update, Delete operations
-│   ├── user.py
-│   ├── family.py
-│   ├── transaction.py
-│   ├── category.py
-│   └── base.py              # Base CRUD class
-├── api/
-│   ├── dependencies.py      # get_current_user, get_db, etc.
-│   └── routes/
-│       ├── auth.py          # POST /auth/login, /auth/register, /auth/refresh
-│       ├── users.py         # GET /users/me, POST /users/change-password
-│       ├── families.py      # GET/POST families, CRUD family members
-│       ├── transactions.py  # GET/POST/PUT/DELETE transactions
-│       ├── categories.py    # GET/POST/PUT/DELETE categories
-│       ├── admin.py         # POST /admin/families (superadmin only)
-│       └── health.py        # GET / (health check)
-├── services/                # Business logic (not just CRUD)
-│   ├── auth_service.py      # Validate credentials, issue JWT
-│   ├── email_service.py     # Send invitations, password resets
-│   ├── family_service.py    # Family setup, member invitations
-│   ├── transaction_service.py # Income/expense/cash logic
-│   └── category_service.py  # Category defaults, archival
-├── utils/
-│   ├── security.py          # Hash password, verify JWT
-│   ├── email.py             # SMTP client wrapper
-│   └── exceptions.py        # Custom exception classes
-└── static/
-    └── uploads/             # User-uploaded images (CDN-ready structure)
-```
-
-**Key Routes:**
-
-| Endpoint | Method | Purpose | Auth |
-|---|---|---|---|
-| `/auth/login` | POST | Email + password → JWT token | None |
-| `/auth/register` (deferred v2) | POST | New user signup | None |
-| `/users/me` | GET | Current user profile | Required |
-| `/users/{id}/change-password` | POST | Update password | Required |
-| `/families` | GET | List user's families | Required |
-| `/families` | POST | Create family (owner only) | Required |
-| `/families/{id}` | GET | Family details + members | Required |
-| `/families/{id}/members` | GET | List family members | Required |
-| `/families/{id}/members` | POST | Invite member | Owner |
-| `/families/{id}/members/{member_id}` | DELETE | Remove member | Owner |
-| `/families/{id}/categories` | GET | List family categories | Required |
-| `/families/{id}/categories` | POST | Create category | Owner |
-| `/families/{id}/categories/{cat_id}` | PUT | Update category | Owner |
-| `/families/{id}/categories/{cat_id}` | DELETE | Archive category | Owner |
-| `/families/{id}/transactions` | GET | List transactions (paginated, filterable) | Required |
-| `/families/{id}/transactions` | POST | Add transaction | Required |
-| `/families/{id}/transactions/{txn_id}` | PUT | Edit transaction | Owner or author |
-| `/families/{id}/transactions/{txn_id}` | DELETE | Delete transaction | Owner or author |
-| `/admin/families` | POST | Create family + invite owner | Superadmin |
-| `/health` | GET | Health check | None |
-
----
-
-### Database: PostgreSQL 16
-
-**Purpose:** Persistent storage for all app data
-
-**Schema Overview:**
-
-```sql
--- Users & Auth
-users
-├─ id (PK)
-├─ email (UNIQUE)
-├─ password_hash
-├─ full_name
-├─ role (superadmin, owner, member)
-├─ created_at
-├─ updated_at
-└─ is_active
-
--- Families & Membership
-families
-├─ id (PK)
-├─ name
-├─ description
-├─ currency (v1: default 'USD', all transactions in family currency)
-├─ created_at
-└─ updated_at
-
-family_members
-├─ id (PK)
-├─ family_id (FK → families)
-├─ user_id (FK → users)
-├─ role (owner, member, view_only [v2])
-├─ joined_at
-└─ status (active, pending, declined)
-
-invitations
-├─ id (PK)
-├─ email
-├─ family_id (FK → families)
-├─ token (unique, for email link)
-├─ invited_by_user_id (FK → users)
-├─ status (pending, accepted, declined)
-├─ expires_at
-├─ created_at
-└─ updated_at
-
--- Transactions
-transactions
-├─ id (PK)
-├─ family_id (FK → families)
-├─ user_id (FK → users) [who logged it]
-├─ category_id (FK → categories)
-├─ type (income, expense, cash_withdrawal)
-├─ amount (decimal)
-├─ description (optional)
-├─ transaction_date
-├─ created_at
-├─ updated_at
-├─ deleted_at (soft delete)
-└─ deleted_by (FK → users, if soft deleted)
-
--- Categories
-categories
-├─ id (PK)
-├─ family_id (FK → families)
-├─ type (income, expense, investment)
-├─ name
-├─ description (optional)
-├─ color (hex, e.g., '#FF5733')
-├─ icon (optional, e.g., 'utensils')
-├─ is_default (system default)
-├─ is_active
-├─ created_at
-└─ updated_at
-
--- Audit Trail
-audit_logs
-├─ id (PK)
-├─ user_id (FK → users)
-├─ entity_type (user, family, transaction, category)
-├─ entity_id
-├─ action (create, update, delete)
-├─ old_values (JSON, for updates)
-├─ new_values (JSON)
-├─ timestamp
-└─ ip_address (optional)
-```
-
-**Key Constraints:**
-- Foreign keys cascade delete (except audit logs)
-- Soft deletes on transactions for audit trail
-- Unique (family_id, category_id, type) for default categories
-- Check constraint: `amount > 0`
-- Indexes on: user_id, family_id, transaction_date, category_id (for query performance)
-
----
-
-## Data Flow: Core Use Cases
-
-### UC1: User logs in and views family dashboard
-
-```
-1. Frontend: POST /auth/login { email, password }
-   ↓
-2. Backend: Hash password, compare to user.password_hash
-   ├─ Success → Generate JWT (sub=user_id, exp=24h)
-   ├─ Return { token, user { id, email, full_name } }
-   └─ Failure → Return 401 Unauthorized
-   ↓
-3. Frontend: Store JWT in session/localStorage
-   GET /families { Authorization: Bearer <token> }
-   ↓
-4. Backend: Verify JWT, extract user_id
-   Query: SELECT * FROM families f
-           JOIN family_members fm ON f.id = fm.family_id
-           WHERE fm.user_id = ? AND fm.status = 'active'
-   Return [{ id, name, ... }, ...]
-   ↓
-5. Frontend: User selects family
-   GET /families/{id} { Authorization: Bearer <token> }
-   ↓
-6. Backend: Verify user is member of family (check family_members)
-   Query dashboard data:
-   ├─ SELECT SUM(amount) FROM transactions WHERE family_id=? AND type='income'
-   ├─ SELECT SUM(amount) FROM transactions WHERE family_id=? AND type='expense'
-   ├─ SELECT category_id, SUM(amount) FROM transactions ... GROUP BY category_id
-   └─ Return dashboard_data
-   ↓
-7. Frontend: Render dashboard with charts
-```
-
-### UC2: Family member logs an expense
-
-```
-1. Frontend: POST /families/{family_id}/transactions
-   { type: 'expense', category_id: 5, amount: 25.50, description: 'groceries', transaction_date: '2026-05-16' }
-   Authorization: Bearer <token>
-   ↓
-2. Backend: Verify JWT, get user_id
-   ├─ Check: user is member of family
-   ├─ Validate: category_id belongs to family AND type matches
-   ├─ Validate: amount > 0
-   ├─ Create transaction record (INSERT)
-   ├─ Log audit entry: { user_id, entity_type: 'transaction', action: 'create', ... }
-   └─ Return transaction { id, category_id, amount, ... }
-   ↓
-3. Frontend: Show confirmation toast, refresh ledger
-   GET /families/{family_id}/transactions (with pagination, filters)
-   ↓
-4. Backend: Query all transactions for family (excluding soft-deleted)
-   Return [{ id, category, amount, user, date, ... }, ...]
-   ↓
-5. Frontend: Update transaction list on screen
-```
-
-### UC3: Owner invites a family member
-
-```
-1. Frontend: POST /families/{family_id}/members
-   { email: 'spouse@example.com' }
-   Authorization: Bearer <token>
-   ↓
-2. Backend: Verify JWT, check user is OWNER of family
-   ├─ Create invitation record { email, family_id, token=uuid4(), expires_at=now+30d, status='pending' }
-   ├─ Compose email: "Hi spouse@example.com, you've been invited to NestFi family 'Smith Household'. Click: <base_url>/invitations/<token>"
-   ├─ Send email via SMTP
-   ├─ Log audit
-   └─ Return { invitation_id, status, expires_at }
-   ↓
-3. Frontend: Show confirmation "Invitation sent to spouse@example.com"
-   ↓
-4. Recipient receives email (5-min SLA)
-   ↓
-5. Recipient clicks link → Frontend: GET /invitations/<token>
-   (if not logged in, show "Sign up or log in to accept")
-   ↓
-6. Recipient submits acceptance form → POST /invitations/<token>/accept
-   { password: '...', full_name: '...' } (if new user) OR { } (if existing user)
-   ↓
-7. Backend: Validate token (not expired, exists, status='pending')
-   ├─ If new user: CREATE user record
-   ├─ CREATE family_members { family_id, user_id, status='active' }
-   ├─ UPDATE invitation { status='accepted' }
-   ├─ Log audit
-   └─ Return { success: true, family_name: 'Smith Household' }
-   ↓
-8. Frontend: Redirect to login (new user) or to family dashboard (existing user)
-```
-
----
-
-## Security & Authorization Model
-
-### Authentication: JWT Tokens
-
-- **Issuer:** Backend `/auth/login`
-- **Algorithm:** HS256 (secret in `JWT_SECRET` env var)
-- **Payload:**
-  ```json
-  {
-    "sub": "user_id",
-    "email": "user@example.com",
-    "role": "owner|member|superadmin",
-    "iat": 1234567890,
-    "exp": 1234567890 + 86400
-  }
-  ```
-- **Verification:** Every protected endpoint checks signature + expiration
-
-### Authorization: Role-Based Access Control (RBAC)
-
-| Action | Superadmin | Owner | Member | ViewOnly (v2) |
-|---|---|---|---|---|
-| Create family | ✓ | — | — | — |
-| Invite owner | ✓ | — | — | — |
-| Edit family settings | ✓ (any) | ✓ (own) | — | — |
-| View members | ✓ | ✓ | ✓ | ✓ |
-| Invite members | ✓ | ✓ | — | — |
-| Remove members | ✓ | ✓ | — | — |
-| View transactions | ✓ | ✓ | ✓ | ✓ |
-| Log transaction | ✓ | ✓ | ✓ | — |
-| Edit own transaction | ✓ | ✓ | ✓ | — |
-| Edit any transaction | ✓ | ✓ | — | — |
-| Delete own transaction | ✓ | ✓ | ✓ | — |
-| Delete any transaction | ✓ | ✓ | — | — |
-| Create category | ✓ | ✓ | — | — |
-| Edit category | ✓ | ✓ | — | — |
-| Archive category | ✓ | ✓ | — | — |
-
-### Endpoint Protection Pattern
-
-```python
-@router.get("/families/{family_id}/transactions")
-async def get_transactions(
-    family_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # Check: user is member of family
-    membership = db.query(FamilyMember).filter(
-        FamilyMember.family_id == family_id,
-        FamilyMember.user_id == current_user.id,
-        FamilyMember.status == 'active'
-    ).first()
-    
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this family")
-    
-    # Query and return transactions
-    transactions = db.query(Transaction).filter(
-        Transaction.family_id == family_id,
-        Transaction.deleted_at.is_(None)
-    ).all()
-    
-    return transactions
-```
-
----
-
-## Deployment Architecture (v1)
-
-```
-┌────────────────────────────────────────────┐
-│     Host / VPS / Docker Machine             │
-├────────────────────────────────────────────┤
-│  docker-compose up -d                      │
-│                                             │
-│  ┌──────────────────────────────────┐      │
-│  │  PostgreSQL 16 Container         │      │
-│  │  (port 5432 internal)            │      │
-│  │  Volume: postgres_data (persist) │      │
-│  └──────────────────────────────────┘      │
-│                    ▲                        │
-│                    │ (DB conn)              │
-│                    │                        │
-│  ┌──────────────────────────────────┐      │
-│  │  FastAPI Backend Container       │      │
-│  │  (Uvicorn, port 8000)            │      │
-│  │  ENV: DATABASE_URL, JWT_SECRET   │      │
-│  └──────────────────────────────────┘      │
-│          ▲                                  │
-│          │ (REST API)                       │
-│          │                                  │
-│  ┌──────────────────────────────────┐      │
-│  │  Dash Frontend Container         │      │
-│  │  (port 8050)                     │      │
-│  │  ENV: API_BASE_URL=http://...    │      │
-│  └──────────────────────────────────┘      │
-│          ▲                                  │
-│          │ (HTTP port 8050)                 │
-│          │                                  │
-└────────────────────────────────────────────┘
-                    ▲
-                    │ (user browser)
-                    │
-         [Internet / user's machine]
-```
-
----
-
-## Migration Path: v1 → v2+ (Scalability)
-
-### What Changes
-1. **Database:** Managed PostgreSQL (Railway, AWS RDS, Supabase)
-   - ✓ No code change; just update `DATABASE_URL`
-
-2. **Frontend + Backend:** Containerized on Kubernetes or managed platform (Fly.io, Railway, etc.)
-   - ✓ Docker images already built; just push to registry
-
-3. **Image storage:** From filesystem → AWS S3 / Cloudflare R2
-   - ✓ Filesystem path structure is CDN-ready; update service to use S3 SDK
-
-4. **Email:** From local SMTP → SendGrid / AWS SES
-   - ✓ Abstraction layer (EmailService) already in place
-
-5. **Reverse proxy:** Add Nginx / AWS ALB for HTTPS + load balancing
-   - ✓ Stateless backend (JWT) allows multiple instances
-
----
-
-## Revision History
-
-| Date | Author | Change |
-|---|---|---|
-| 2026-05-16 | SA | Created SOLUTION_ARCHITECTURE.md with detailed system design, components, and data flow for Python stack |
+**Phase:** 1_SOLUTION_DESIGN  
+**Next:** BE and FE review this doc, confirm API contract specifics, write detailed implementation plans.

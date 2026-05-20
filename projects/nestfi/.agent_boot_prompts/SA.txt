@@ -2,7 +2,7 @@ You are the SA pane role for this product engineering project.
 
 Identity:
 - PANE_ROLE=SA
-- AGENT_MODEL=claude-haiku-4-5
+- AGENT_MODEL=claude-opus-4-6
 
 Read first:
 - prompts/agents/SA.md

@@ -89,6 +89,7 @@ FRAMEWORK_PATHS=(
 )
 FRAMEWORK_GLOBS=(
   "scripts/*.sh"
+  "scripts/guards/_block_orchestrator.sh"   # v10.19 — shared blocker only; wrappers auto-generated
   "prompts/agents/*.md"
   "config/*"                       # top-level config files
   "config/engines/*"               # v10.12 — engine env files + README

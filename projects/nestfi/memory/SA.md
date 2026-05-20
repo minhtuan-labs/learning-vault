@@ -20,10 +20,12 @@
 
 ## Open items I'm tracking
 
-(none yet)
+- 2026-05-16 21:44:16 — Awaiting tech stack confirmation (SA_20260516_214416). Proposed: Next.js+TS, FastAPI+Python, PostgreSQL+SQLAlchemy, session auth, Docker Compose, monorepo. Waiting for user answer to proceed with TECH_STACK.md, ADR.md, SOLUTION_ARCHITECTURE.md, API_CONTRACT.md.
 
-### 2026-05-16 17:25 — Tech Stack Confirmation Pending
-Filed question SA_20260516_172526 asking user to confirm/override proposed stack: Next.js 15 + TypeScript + Tailwind + shadcn/ui (FE), NestJS + TypeScript (BE), PostgreSQL 16 + Prisma, sessions auth, pnpm, monorepo layout, Docker Compose for v1. Awaiting user answer in .pane_answers/ before proceeding to write TECH_STACK.md and SOLUTION_ARCHITECTURE.md.
-
-### 2026-05-16 17:35 — Stack Confirmed & Architecture Docs Complete
-User confirmed Python-based stack via .pane_answers/SA_20260516_172526.md: Dash (Plotly) + Tailwind (FE), FastAPI (BE), PostgreSQL 16 + SQLAlchemy + Alembic (data), JWT auth, local filesystem for images, monorepo (backend/ + frontend/), pip + poetry, Docker Compose for v1. Created: TECH_STACK.md (confirmed tech choices + rationale), SOLUTION_ARCHITECTURE.md (system design, components, data flow, security model), ADR.md (12 key decisions: monorepo, JWT stateless auth, single DB, single currency per family, local filesystem images, Docker Compose, soft deletes, REST API, SMTP email, same-DB audit logging, default categories), API_CONTRACT.md (detailed endpoint specs with examples). Ready for BE/FE/QA to begin planning phase 3.
+### 2026-05-16 21:56 — Phase 1 SOLUTION_DESIGN complete
+User confirmed tech stack with JWT + Session auth dual support. Wrote four architecture documents:
+- TECH_STACK.md: Full tech stack table with rationales (Next.js, FastAPI, PostgreSQL, SQLAlchemy, session + JWT auth, Docker Compose, monorepo)
+- SOLUTION_ARCHITECTURE.md: System topology, boundary definitions, DB schema outline, API layer routing
+- ADR.md: 10 architecture decisions (synchronous monolith, family-scoped isolation, session+JWT, account-centric, edit audit trail, soft/hard-delete, monorepo, mock email, Docker Compose v1, SQLAlchemy+Alembic)
+- API_CONTRACT.md: Full REST endpoint specs, request/response examples, error handling, auth flows
+Ready for BE/FE review and implementation planning.

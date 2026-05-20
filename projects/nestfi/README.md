@@ -1,13 +1,30 @@
-# Product Engineering Agent Template — v10.18
+# Product Engineering Agent Template — v10.21
 
 > A tmux-based, multi-model agent framework for running an entire
 > product-engineering team — Orchestrator, PM, SA, BA, UX, BE, FE, QA,
 > Delivery — each in its own pane, each on its own LLM, talking to each
 > other (and to you) through real shell commands.
 
+**Meet PaneC — the 9-pane crew** (v10.21). The team has 9 members
+with conversational nicknames:
+
+| Pane | Display | Internal ID  | Role                |
+|------|---------|--------------|---------------------|
+| 0    | Orches  | ORCHESTRATOR | Coordinator (the only one you talk to) |
+| 1    | PM      | PM           | Product Manager     |
+| 2    | SA      | SA           | Solution Architect  |
+| 3    | BA      | BA           | Business Analyst    |
+| 4    | UX      | UX           | UX Designer         |
+| 5    | BE      | BE           | Backend Engineer    |
+| 6    | FE      | FE           | Frontend Engineer   |
+| 7    | QA      | QA           | Quality Assurance   |
+| 8    | Deli    | DELIVERY     | Deployment / Delivery |
+
+Say **"PaneC cần tính năng X"** and Orches decides which agent owns it.
+
 **Một template để bạn dựng "đội ngũ kỹ sư sản phẩm AI" trên tmux:** 9 vai
-trò, 9 pane, 9 model khác nhau. Bạn chỉ nói chuyện với Orchestrator;
-Orchestrator gửi việc qua các pane còn lại bằng `bash`. Không subagent,
+trò, 9 pane, 9 model khác nhau. Bạn chỉ nói chuyện với Orches;
+Orches gửi việc qua các pane còn lại bằng `bash`. Không subagent,
 không simulate — mỗi pane là một process thật, mỗi role được chạy bởi
 một model phù hợp với chi phí và năng lực.
 
@@ -433,7 +450,9 @@ the Orchestrator pane, the framework is broken — file an issue.
 ├── config/
 │   ├── engines/                    pluggable engine layer (v10.12)
 │   │   ├── opencode.env            OpenCode binary + 9 model IDs
+│   │   ├── opencode-free.env       free-tier overlay (v10.16+, opencode/big-pickle)
 │   │   ├── claude.env              Claude Code binary + 9 model IDs
+│   │   ├── claude-free.env         free-tier overlay (v10.16, all claude-haiku-4-5)
 │   │   └── README.md               how to add an engine
 │   ├── agent_models.env            (legacy, replaced by engines/opencode.env)
 │   ├── opencode.env                runtime flags
@@ -462,7 +481,10 @@ the Orchestrator pane, the framework is broken — file an issue.
 │
 └── scripts/
     ├── start_agents_tmux.sh        bring up the 9-pane session
-    ├── route_to_pane.sh            Orchestrator -> worker pane
+    ├── stop_agents_tmux.sh         clean shutdown (kills watcher + tmux) — v10.14
+    ├── route_to_pane.sh            Orchestrator -> worker pane (v10.18 wraps
+    │                               WORKER_CMD with heartbeat + silent-exit
+    │                               safety-net auto-notify)
     ├── delegate_phase.sh           fan out a whole phase ('release' included)
     ├── rescan_project.sh           "where did we leave off?" snapshot
     ├── check_prerequisites.sh      per-role upstream-input gate
@@ -471,16 +493,41 @@ the Orchestrator pane, the framework is broken — file an issue.
     ├── ask_orchestrator.sh         worker -> user (clarification question)
     ├── notify_orchestrator.sh      worker -> user (one-way status event)
     ├── list_pending_questions.sh   Orchestrator inbox (Qs + notifications)
+    ├── list_pending_watches.sh     parked-worker status (v10.14)
     ├── answer_role.sh              user answer -> worker (auto-resume)
     ├── verify_routing.sh           audit that routing really fired
     ├── inject_boot_prompt.sh       paste a role prompt manually
     ├── run_agent_task.sh           run a task file in the foreground
-    ├── check_models.sh             engine-aware model validator
+    ├── check_models.sh             engine-aware model validator (accepts
+    │                               `<engine>-free` shorthand, v10.16.2)
     ├── check_opencode_models.sh    legacy alias → check_models.sh opencode
-    ├── bootstrap_docs.sh           create the docs/ skeleton
+    ├── list_free_models.sh         discover :free models in your engine — v10.16.1
+    ├── bootstrap_docs.sh           create the docs/ skeleton + pre-create
+    │                               PRODUCT_IDEA.md placeholder (v10.18)
+    ├── set_product_idea.sh         write PRODUCT_IDEA.md via stdin/heredoc — v10.18
+    ├── check_lane_violations.sh    audit Stay-in-lane (files + actions) — v10.18/19
+    ├── check_port_conflicts.sh     scan port conflicts + suggest free — v10.20
+    ├── file_watch.sh               register a dependency watch — v10.14
+    ├── watcher_daemon.sh           background daemon: auto-reroute on
+    │                               dependency unlock + detect stalls — v10.14/18
+    ├── wake_orchestrator.sh        manual wake nudge (Prefix+W) — v10.18
+    ├── _ping_orchestrator_pane.sh  auto-wake helper (paste-buffer +
+    │                               send-keys-l + typewriter + verify) — v10.18.1
+    ├── guards/
+    │   └── _block_orchestrator.sh  PATH-guard logic (hard block for
+    │                               Orchestrator engineering cmds) — v10.19
+    │                               (per-cmd wrappers auto-generated at
+    │                                session start; gitignored)
     ├── agent_banner.sh             pretty banner per pane
     ├── agent_boot_prompt.sh        generates role boot prompts
+    ├── sync_framework_from_template.sh    safely sync framework files
+    │                                       into a running project — v10.11+
     └── send_agent.sh               compat alias -> route_to_pane.sh
+
+Runtime artifacts (gitignored — written by the session, not source):
+.pane_panes      .pane_questions  .pane_answers   .pane_notifications
+.pane_tasks      .pane_logs       .pane_watches    .pane_heartbeats
+.watcher.pid     .agent_session   .agent_panes     .agent_session_mode
 ```
 
 ---
@@ -585,6 +632,42 @@ fix `config/agent_models.env` with IDs from `opencode models`.
 See [`VERSION.md`](VERSION.md) for the full changelog. Most recent
 fixes:
 
+- **v10.21** — **PaneC team identity** + friendly display names.
+  Team of 9 agents is now collectively called **PaneC** ("the 9-pane
+  crew"). Internal `AGENT_NAME` identifiers stay uppercase
+  (ORCHESTRATOR, DELIVERY, PM, …) for scripts/paths/env vars — zero
+  breaking change. In conversation, the Orchestrator goes by
+  **"Orches"** and Delivery goes by **"Deli"**; PM/SA/BA/UX/BE/FE/QA
+  keep their 2-letter codes. When the user says "PaneC cần X",
+  Orches treats it as a team-level request and routes the right
+  agent. Banner shows display name + team label.
+- **v10.20** — **DELIVERY Port Configuration Protocol.** New
+  `scripts/check_port_conflicts.sh` scans listener ports (lsof →
+  netstat → docker ps fallback). DELIVERY now mandatorily runs the
+  scan before writing `docker-compose.yml`, then asks the user to
+  pick from option **(A)** preferred ports, **(B)** auto-pick from
+  free range, or **(C)** accept defaults if scan showed all FREE.
+  Plus DB-port public-vs-internal choice. Final assignments logged
+  in `docs/delivery/DELIVERY_PLAN.md`. Eliminates the "compose up
+  red because port 5432 was taken by my other Postgres" class of
+  failure.
+- **v10.19** — **HARD lane discipline for Orchestrator** (three
+  layers of defense). Prompt: new "YOU ORCHESTRATE — YOU DO NOT
+  EXECUTE" section with action-ownership table + Bug Report Triage
+  Protocol (user reports bug → MUST route QA first, never self-fix).
+  PATH guards: `scripts/guards/_block_orchestrator.sh` + auto-generated
+  wrappers for ~25 engineering commands; pre-pended to PATH only for
+  the Orchestrator pane (workers keep their real binaries). Audit:
+  `check_lane_violations.sh` extended with action-level checks
+  (PATH-guard log tail + live descendant process inspection). Closes
+  the v10.18 loophole where Orchestrator self-fixed bugs via bash
+  commands instead of routing QA.
+- **v10.18.1** — **Auto-wake pane detection** fix. `tmux
+  display-message #{pane_current_command}` returns Claude Code's
+  version string (e.g. `"2.1.143"`) on macOS, not `"claude"`. The
+  v10.18 case statement's allow-list silently skipped delivery for
+  unknown command names. Now permissive: known shells handled as
+  shell-loop, known engines + anything-else handled as engine TUI.
 - **v10.18** — **Claude auto-wake reliability + framework safety nets.**
   `scripts/_ping_orchestrator_pane.sh` now tries 3 delivery methods
   (paste-buffer / send-keys-l / char-by-char typewriter) and verifies
@@ -596,6 +679,12 @@ fixes:
   `set_product_idea.sh` + pre-created `PRODUCT_IDEA.md` placeholder
   side-step Claude Write-tool issues on fresh projects. Orchestrator
   prompt gains explicit Stay-in-lane table.
+- **v10.17** — **ACT, DO NOT ANNOUNCE** rule. New top section in
+  `prompts/agents/ORCHESTRATOR.md` banning lead-in phrases ("let me
+  check", "I'll route", "tôi sẽ gửi") before tool calls. Targets
+  Claude Sonnet's verbose announcement habit that adds latency to
+  every auto-wake response. Stronger models follow literal-style
+  rules better than soft guidance.
 - **v10.16** — **`--free` model overlay** for both engines. Pass
   `--free` to `start_agents_tmux.sh` to source
   `config/engines/<engine>-free.env`, which overrides every role's

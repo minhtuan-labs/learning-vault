@@ -1,610 +1,566 @@
-# Wireframes — NestFi Family Financial Management
+# NestFi — Wireframes & Screen Layout
 
-**Version:** 1.0  
-**Last Updated:** 2026-05-16  
-**Owner:** UX  
+## Overview
 
----
-
-## Wireframe Index
-
-This document describes the key screens and layouts for NestFi. Each section describes layout, components, interactions, and notes for the frontend team.
+This document describes the layout and component structure for key screens. Each wireframe follows a consistent responsive grid system (max-width: 1200px) and uses standard UI components (buttons, forms, tables, charts).
 
 ---
 
-## WF-1: Login Screen
+## W1: Login Screen
 
-**Purpose:** Authenticate user  
-**Accessed by:** All users  
-**Triggers:** Session expired or user navigates to /login  
-
-### Layout (Desktop, 1920×1080)
-
+### Layout
 ```
 ┌─────────────────────────────────────────┐
 │                                         │
-│   ┌─────────────────────────────────┐   │
-│   │                                 │   │
-│   │     🏠 NestFi                   │   │
-│   │                                 │   │
-│   │   [Email input field]           │   │
-│   │                                 │   │
-│   │   [Password input field]        │   │
-│   │                                 │   │
-│   │   ☐ Remember me                │   │
-│   │                                 │   │
-│   │   [Sign In Button - Primary]    │   │
-│   │                                 │   │
-│   │   Forgot password? [Link]       │   │
-│   │                                 │   │
-│   └─────────────────────────────────┘   │
+│           NestFi Logo                   │
+│     (centered, hero section)            │
 │                                         │
-│   Background: light gradient            │
-│   (or family photo area)                │
+│     [Email Input]                       │
+│     [Password Input]                    │
+│     [Forgot Password?] (link)           │
+│     [Login Button] (CTA, full width)    │
+│                                         │
+│     Contact support (footer link)       │
+│                                         │
 └─────────────────────────────────────────┘
 ```
 
-### Components
-- **Logo/Brand:** NestFi with icon
-- **Email field:** Standard text input, auto-focus
-- **Password field:** Masked input, show/hide toggle
-- **Remember me checkbox:** Optional
-- **Sign In button:** Full width, primary color
-- **Forgot password link:** Navigate to password reset flow
-- **Error messages:** Inline, below form (red text, icon)
-
-### Interactions
-- Enter key submits form
-- Real-time email validation (optional)
-- Loading state on button during submission
-- Error display: "Invalid email or password"
+**Responsive**: Centered card on desktop; full-width on mobile.  
+**Components**:
+- Email input with validation
+- Password input with show/hide toggle
+- Submit button (disabled until both fields filled)
+- Error messages displayed above form
+- "Forgot Password?" link routes to W1b (Password Reset Request)
 
 ---
 
-## WF-2: Family Selector (Multi-Family)
-
-**Purpose:** Choose which family to access  
-**Accessed by:** Users with multiple families  
-**Triggers:** Login success with 2+ families  
+## W1b: Password Reset - Email Request
 
 ### Layout
-
 ```
 ┌─────────────────────────────────────────┐
-│   NestFi                    [Settings] │
+│                                         │
+│   Reset Your Password                   │
+│                                         │
+│   Enter your email and we'll send      │
+│   a reset link (valid for 1 hour)      │
+│                                         │
+│   [Email Input]                         │
+│                                         │
+│   [Send Reset Link] (CTA)               │
+│   [Back to Login] (link)                │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Components**:
+- Email input with validation
+- Send button
+- Back to login link
+
+---
+
+## W1c: Password Reset - Set New Password
+
+### Layout
+```
+┌─────────────────────────────────────────┐
+│                                         │
+│   Set New Password                      │
+│                                         │
+│   [New Password Input]                  │
+│   [Confirm Password Input]              │
+│   Password requirements (optional text) │
+│                                         │
+│   [Set Password] (CTA)                  │
+│                                         │
+│   Success confirmation shows:           │
+│   "Password reset successfully."         │
+│   [Return to Login]                     │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Components**:
+- Password input with show/hide
+- Confirm password input
+- Validation feedback (passwords match, strength)
+- Submit button
+
+---
+
+## W2: Family Selection Screen
+
+### Layout (multi-family)
+```
+┌─────────────────────────────────────────┐
+│ ← Back  |  Select Your Family            │
 ├─────────────────────────────────────────┤
 │                                         │
-│   Select a Family                       │
+│  [ Family Card 1 ]  [ Family Card 2 ]   │
+│  ┌──────────┐       ┌──────────┐        │
+│  │  Pham    │       │  Smith   │        │
+│  │ Family   │       │ Family   │        │
+│  │          │       │          │        │
+│  │ (3 mem.) │       │ (2 mem.) │        │
+│  │          │       │          │        │
+│  │ [Select] │       │ [Select] │        │
+│  └──────────┘       └──────────┘        │
 │                                         │
-│   ┌─────────────────────────────────┐   │
-│   │ [Emoji] The Smiths              │   │
-│   │ 4 members • Last active 2h ago  │   │
-│   └─────────────────────────────────┘   │
+│  ☑ Remember selection                   │
 │                                         │
-│   ┌─────────────────────────────────┐   │
-│   │ [Emoji] Johnson Household       │   │
-│   │ 2 members • Last active 5d ago  │   │
-│   └─────────────────────────────────┘   │
-│                                         │
-│   ┌─────────────────────────────────┐   │
-│   │ [Emoji] Multi-Gen Family        │   │
-│   │ 6 members • Last active 1mo ago │   │
-│   └─────────────────────────────────┘   │
 │                                         │
 └─────────────────────────────────────────┘
 ```
 
-### Components
-- **Family card:** Shows family name, member count, last active
-- **Card emoji/avatar:** Visual identifier for family
-- **Click to select:** Card becomes selected/highlighted, navigates to dashboard
-
-### Interactions
-- Cards are clickable, navigate directly to family dashboard
-- Hover state: subtle shadow/scale
-- Profile dropdown: Switch without re-selecting each time (future v1.1)
+**Components**:
+- Family cards showing: family name, member count, selection button
+- Checkbox to remember selection (optional)
+- Clear visual indication of selected family
 
 ---
 
-## WF-3: Family Dashboard
-
-**Purpose:** Overview of household finances  
-**Accessed by:** All family members  
-**Primary action:** Log Transaction  
-
-### Layout (Desktop)
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  🏠 The Smiths        [Family Selector ▼] [Settings] [Logout]  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ [+ Log Transaction]  [Filters ▼]  [Reports]            │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌────────────────────────┬────────────────────────┐           │
-│  │ Income (This Month)    │ Expenses (This Month)  │           │
-│  │ $5,000                 │ $1,800                 │           │
-│  └────────────────────────┴────────────────────────┘           │
-│                                                                 │
-│  ┌────────────────────────┬────────────────────────┐           │
-│  │ Savings This Month     │ Savings Rate           │           │
-│  │ $3,200                 │ 64%                    │           │
-│  └────────────────────────┴────────────────────────┘           │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Expenses by Category (This Month)                       │   │
-│  │                                                         │   │
-│  │  [Pie Chart or Bar Chart]                              │   │
-│  │  • Groceries: $600 (33%)                               │   │
-│  │  • Utilities: $400 (22%)                               │   │
-│  │  • Entertainment: $300 (17%)                           │   │
-│  │  • Transport: $250 (14%)                               │   │
-│  │  • Other: $250 (14%)                                  │   │
-│  │                                                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Monthly Trend (Last 6 Months)                           │   │
-│  │                                                         │   │
-│  │  [Line Chart: Income vs Expenses]                      │   │
-│  │  May: $5000 income, $1800 expense                      │   │
-│  │  Apr: $5000 income, $1600 expense                      │   │
-│  │  ...                                                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Recent Transactions                                     │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │ Today, 2:30 PM  | John      | Groceries    | -$45.67  │   │
-│  │ Today, 1:15 PM  | Sarah     | Salary       | +$2500   │   │
-│  │ Yesterday       | John      | Gas          | -$35.00  │   │
-│  │ May 14          | Sarah     | Electricity  | -$120    │   │
-│  │                 [View All Transactions]                │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Key Components
-
-**Header:**
-- Family name with logo
-- Family selector dropdown
-- Settings and logout
-
-**Summary Cards (KPIs):**
-- Income this month
-- Expenses this month
-- Net savings
-- Savings rate (%)
-- Toggle: Month / Year / Custom date range
-
-**Charts:**
-- **Expense breakdown:** Pie or bar chart by category
-- **Monthly trend:** Line chart showing income vs expenses over 6-12 months
-- Legend, hover tooltips showing exact values
-
-**Recent Transactions:**
-- Date, member name, category, amount, notes (truncated)
-- Click to expand details or edit
-- "View All" link to full ledger
-
-**Primary CTA:**
-- Large "+ Log Transaction" button at top (fixed or sticky on mobile)
-
-### Interactions
-- Click summary cards to drill down by category
-- Hover on charts for tooltips
-- Click transaction to view/edit details (if authorized)
-- Date range filter updates all charts in real-time
-- Refresh icon or auto-refresh every 10s
-
----
-
-## WF-4: Log Transaction Modal
-
-**Purpose:** Quick transaction entry  
-**Accessed by:** Click "+ Log Transaction" button  
-**Success state:** Transaction saved, modal closes, dashboard updates  
+## W3: Dashboard - Overview
 
 ### Layout
-
 ```
-┌──────────────────────────────────┐
-│  Log Transaction           [×]   │
-├──────────────────────────────────┤
-│                                  │
-│  Type:                           │
-│  ○ Income   ○ Expense  ○ Other   │
-│                                  │
-│  Category:                       │
-│  [Dropdown: Groceries ▼]        │
-│                                  │
-│  Amount:                         │
-│  [$ _________ ]  (num only)     │
-│                                  │
-│  Date:                           │
-│  [May 16, 2026 ▼]  (date picker)│
-│                                  │
-│  Notes: (optional)               │
-│  [_________________________]     │
-│                                  │
-│  Member:                         │
-│  John Smith (read-only)          │
-│                                  │
-│  ┌──────────────────────────────┐│
-│  │ [Save]     [Cancel]          ││
-│  └──────────────────────────────┘│
-│                                  │
-└──────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ NestFi  |  ☰ Menu  |  📊 Dashboard  |  👤 Profile  | ⋮   │
+│                                                           │
+│ Family: Pham Family ▼                                     │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  ┌─ This Month ──────────────┬──────────┬──────────┐     │
+│  │                           │          │          │     │
+│  │ Total Income: $5,000      │ Total    │ Net      │     │
+│  │ Total Expenses: $3,200    │ Savings: │ Balance: │     │
+│  │ Net Balance: $1,800       │ $1,200   │ $3,000   │     │
+│  │                           │          │          │     │
+│  └───────────────────────────┴──────────┴──────────┘     │
+│                                                           │
+│  ┌─ Quick Stats ──────────────────────────────────────┐   │
+│  │                                                     │   │
+│  │ 📊 Top Expense: Groceries ($800)                   │   │
+│  │ 💰 Top Income: Salary ($4,500)                     │   │
+│  │ 📈 Saving Rate: 36%                                │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+│  ┌─ Recent Transactions ──────────────────────────────┐   │
+│  │                                                     │   │
+│  │ May 16  |  Salary            | Income   | $4,500   │   │
+│  │ May 15  |  Groceries         | Expense  | -$120    │   │
+│  │ May 14  |  Netflix Subscribe | Expense  | -$15     │   │
+│  │ May 13  |  Apple Stock       | Invest   | -$500    │   │
+│  │ May 12  |  Utilities         | Expense  | -$200    │   │
+│  │                                                     │   │
+│  │ [View All Transactions →]                          │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Components
-- **Type toggle:** Income / Expense / Cash Withdrawal (radio buttons or pills)
-- **Category dropdown:** Populated from family categories (income/expense/investment based on type)
-- **Amount field:** Numeric input, can accept decimals, currency symbol optional
-- **Date picker:** Calendar widget, defaults to today
-- **Notes field:** Optional text, max 200 chars
-- **Member field:** Read-only, shows current user
-- **Action buttons:** Save (primary), Cancel (secondary)
-
-### Interactions
-- Type selection filters category dropdown dynamically
-- Amount auto-formats with currency symbol
-- Tab key navigates between fields
-- Escape key closes modal (with unsaved changes warning if content entered)
-- Save button disabled until amount and category filled
-- Loading state on Save button during submission
-- Success toast: "Transaction saved!" with undo option
-
-### Validation
-- Amount: required, positive number
-- Category: required
-- Date: cannot be in future
-- Error messages inline under field
+**Components**:
+- Header with family selector dropdown
+- Summary cards (Income, Expenses, Net, Savings) with clear typography
+- Quick stats row (badges or mini cards)
+- Recent transactions table (scrollable on mobile)
+- CTA to view full transaction list
 
 ---
 
-## WF-5: Transaction Ledger (Full View)
-
-**Purpose:** Searchable, filterable transaction history  
-**Accessed by:** "View All Transactions" link from dashboard or nav  
+## W4: Transactions List
 
 ### Layout
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  🏠 The Smiths              [Family Selector ▼]  [Settings]    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Transaction History                                            │
-│                                                                 │
-│  Filters:                                                       │
-│  [Date Range: Last 30 days ▼] [Category: All ▼] [Member: All ▼]│
-│  [Search: _________________]  [Apply Filters]                   │
-│                                                                 │
-│  Results: 24 transactions  [CSV Export]                         │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Date       Member      Category      Amount     Notes   │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │ May 16     John        Groceries     -$45.67    --      │   │
-│  │ May 16     Sarah       Salary        +$2500     --      │   │
-│  │ May 15     John        Gas           -$35.00    --      │   │
-│  │ May 14     Sarah       Electricity   -$120.00   --      │   │
-│  │ May 13     John        Dining Out    -$62.45    --      │   │
-│  │                                                         │   │
-│  │ [Previous Page] 1 2 3 [Next Page]                       │   │
-│  │                                                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ NestFi  |  ☰ Menu  |  💳 Transactions  |  👤 Profile      │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  [+ Add Transaction]                    [Filter ▼] [Sort ▼]│
+│                                                           │
+│  ┌─ Filters ─────────────────────────────────────────┐   │
+│  │ Date Range: [Start] to [End]                      │   │
+│  │ Type: [All ▼]  Category: [All ▼]                  │   │
+│  │ [Apply Filters]  [Reset]                          │   │
+│  └───────────────────────────────────────────────────┘   │
+│                                                           │
+│  ┌─ Transactions ────────────────────────────────────┐   │
+│  │ Date      | Description    | Type     | Category | $ │   │
+│  ├───────────┼────────────────┼──────────┼──────────┼───┤   │
+│  │ May 16    | Salary         | Income   | Salary   | +  │   │
+│  │           |                |          |          | 4.5K│   │
+│  │ May 15    | Groceries      | Expense  | Food     | -  │   │
+│  │           |                |          |          | 120 │   │
+│  │ May 14    | Netflix        | Expense  | Entert.  | -15 │   │
+│  │ [⋮ More] [Edit] [Delete]                         │   │
+│  │ [⋮ More] [Edit] [Delete]                         │   │
+│  │                                                     │   │
+│  │ Page 1 of 15  [< Prev] [1] [2] [3] ... [Next >]   │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Components
-- **Filters row:**
-  - Date range dropdown (Last 7 / 30 / 90 days, custom, year-to-date)
-  - Category dropdown (all active categories + "All")
-  - Member dropdown (all family members + "All")
-  - Search field (free-text search on notes)
-  - Apply Filters button
-
-- **Results table:**
-  - Columns: Date, Member, Category, Amount (color-coded: green for income, red for expense), Notes
-  - Sortable by clicking column headers
-  - Rows are clickable to expand details
-  - Row actions on hover: Edit (if authorized), Delete (if authorized)
-
-- **Pagination:** Show N per page (20/50), prev/next buttons, page indicator
-
-- **Export:** CSV button in top right
-
-### Interactions
-- Clicking transaction row expands inline details or opens detail modal
-- Filter state persists during session (stored in URL or sessionStorage)
-- Clearing filters resets to default view (all transactions, last 30 days)
-- Click member name to filter by that member
-- Click category name to filter by that category
+**Components**:
+- Filter panel (collapsible on mobile)
+- Table with columns: Date, Description, Type, Category, Amount
+- Row actions: Edit, Delete
+- Pagination controls
+- Responsive: Collapsible columns on mobile
 
 ---
 
-## WF-6: Family Settings - Members Tab
-
-**Purpose:** Manage family members, invitations, roles  
-**Accessed by:** [Settings] → Members  
-**Permission:** Owner and above only  
+## W5: Add/Edit Transaction Modal
 
 ### Layout
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  🏠 The Smiths              [Family Selector ▼]  [Settings]    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Settings > Members                                             │
-│                                                                 │
-│  ┌────┬────┬────────┬─────────────┬─────────────┬──────┐       │
-│  │Tabs│ Gen│Members│ Categories  │ Bank Accts  │Other │       │
-│  └────┴────┴────────┴─────────────┴─────────────┴──────┘       │
-│                                                                 │
-│  [+ Invite Member]                                              │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │ Member          Email             Role        Status   │   │
-│  ├─────────────────────────────────────────────────────────┤   │
-│  │ John Smith      john@...          Owner       Active   │   │
-│  │ Sarah Smith     sarah@...         Editor      Active   │   │
-│  │ Emily Johnson   emily@...         Viewer      Pending  │   │
-│  │ Marcus Brown    marcus@...        Editor      Active   │   │
-│  │                                                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  Actions on member row (hover):                                 │
-│  - Edit role / Change permissions                              │
-│  - Remove member (with confirmation)                           │
-│  - Resend invitation (if pending)                               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌─ Add Transaction ──────────────────────────┐
+│                                             │
+│  ✕ (close)                                  │
+│                                             │
+│  Transaction Type: ◉ Income ○ Expense      │
+│                    ○ Investment ○ Withdraw  │
+│                                             │
+│  Date: [May 16, 2024]                      │
+│                                             │
+│  Category: [Salary ▼]                      │
+│  (auto-filtered by type)                   │
+│                                             │
+│  Amount: [$] [input] (required)            │
+│                                             │
+│  Bank Account: [Primary Checking ▼]        │
+│                                             │
+│  Description: [text input, optional]       │
+│               (e.g., "May salary payment")  │
+│                                             │
+│  [Cancel]  [Save Transaction] (CTA)        │
+│                                             │
+└─────────────────────────────────────────────┘
 ```
 
-### Components
-- **Settings navigation tabs:** General, Members, Categories, Bank Accounts, etc.
-- **Invite Member button:** Opens invite modal
-- **Members table:**
-  - Member name
-  - Email
-  - Role: Owner, Editor, Viewer (can edit own transactions), Viewer-only
-  - Status: Active, Pending (invitation not accepted)
-  - Row actions: Edit, Remove, Resend invite
-
-### Interactions
-- Click "Invite Member" → modal form (email, role, optional message)
-- Hover row → action buttons appear
-- Click "Remove member" → confirmation modal ("Are you sure? They'll lose access.")
-- Click "Edit role" → dropdown to change role
-- "Resend invitation" → confirms re-send and shows timestamp
-
-### Validation
-- Email format validation
-- Prevent inviting same email twice
-- Owner role cannot be removed (needs transfer first)
+**Components**:
+- Radio buttons for transaction type
+- Date picker with calendar
+- Select dropdown for category (dynamic based on type)
+- Currency input with validation
+- Optional description field
+- Action buttons: Cancel, Save
 
 ---
 
-## WF-7: Family Settings - Categories Tab
-
-**Purpose:** Configure income, expense, investment categories  
-**Accessed by:** [Settings] → Categories  
-**Permission:** Owner and above  
+## W5b: Transaction Detail & Edit History
 
 ### Layout
-
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  🏠 The Smiths              [Family Selector ▼]  [Settings]    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Settings > Categories                                          │
-│                                                                 │
-│  ┌────┬────────┬──────────┬─────────────┬──────┐               │
-│  │Tabs│Expense │ Income   │ Investment  │Other │               │
-│  └────┴────────┴──────────┴─────────────┴──────┘               │
-│                                                                 │
-│  Expense Categories                                             │
-│                                                                 │
-│  [+ Add Category]                                               │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────┐          │
-│  │ Category         Icon/Color  Status    Actions   │          │
-│  ├──────────────────────────────────────────────────┤          │
-│  │ 🛒 Groceries    [■] Green    Active    [Edit][×]│          │
-│  │ 💡 Utilities    [■] Blue     Active    [Edit][×]│          │
-│  │ 🎬 Entertainment[■] Purple   Active    [Edit][×]│          │
-│  │ 🚗 Transport    [■] Orange   Active    [Edit][×]│          │
-│  │ 💰 Cash Withdraw[■] Gray     System    ----     │          │
-│  │ ❓ Other        [■] Gray     Active    [Edit][×]│          │
-│  │ 🍽 Dining Out  [■] Red      Inactive  [Edit][✓]│          │
-│  │                                                  │          │
-│  └──────────────────────────────────────────────────┘          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ ← Back to Transactions                                    │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│ Transaction Details                                       │
+│ ┌─────────────────────────────────────────────────────┐   │
+│ │ Description: Weekly groceries at Whole Foods        │   │
+│ │ Amount: $120 | Category: Groceries                  │   │
+│ │ Date: May 16, 2026 | Account: Checking              │   │
+│ │ Created by: Alice Smith | May 16, 2:00 PM          │   │
+│ │                                                     │   │
+│ │ [Edit] [Disable Transaction] [⋮ More]              │   │
+│ │ (For Owner: [Delete Permanently] button visible)    │   │
+│ └─────────────────────────────────────────────────────┘   │
+│                                                           │
+│ Edit History ⏷                                            │
+│ ┌─────────────────────────────────────────────────────┐   │
+│ │ Edit by Bob Smith - May 16, 2:30 PM                │   │
+│ │ Changed amount from $100 to $120                    │   │
+│ │ [Show Before/After]                                │   │
+│ │                                                     │   │
+│ │ Created by Alice Smith - May 16, 2:00 PM           │   │
+│ └─────────────────────────────────────────────────────┘   │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Components
-- **Category tabs:** Expense / Income / Investment
-- **Add Category button:** Opens add/edit modal
-- **Category table:**
-  - Category name (with emoji/icon)
-  - Color swatch (clickable to change)
-  - Status toggle: Active / Inactive (archive)
-  - Edit button
-  - Delete button (disabled for "Cash Withdrawal" and used categories)
+**Components**:
+- Transaction details (read-only display)
+- Edit button (opens edit modal)
+- Disable button (soft-delete; text: "Disable" or "Enable" if already disabled)
+- Delete button (hard-delete; owner only; red, destructive styling)
+- Collapsible Edit History section
+- Each edit shows editor, timestamp, and change summary
 
-- **Add/Edit Category Modal:**
-  - Name field
-  - Emoji picker or icon selector
-  - Color picker (pre-set palette)
-  - Set as default (for auto-categorization)
-  - Save / Cancel
-
-### Interactions
-- Clicking "Add Category" opens form modal
-- Clicking "Edit" on a row opens that category's form
-- Toggling status to Inactive doesn't delete history; transactions stay tagged
-- Color and icon changes apply immediately across family
-- Deleting a category that has transactions shows warning: "X transactions use this category. Archive instead?"
-
-### Validation
-- Category name: required, unique per family + type
-- Emoji/color: optional but recommended for UX
+**Button Styling**:
+- [Edit]: Primary button (blue)
+- [Disable]: Secondary button (gray)
+- [Delete Permanently]: Destructive button (red) - owner only, hidden from non-owners
 
 ---
 
-## WF-8: Owner Invitation & Onboarding (Email Flow)
+## W6: Analytics - Expense Breakdown
 
-**Purpose:** Superadmin creates family and invites owner  
-
-### Email Template
-
+### Layout
 ```
-Subject: Join [Family Name] on NestFi
-
-Dear [Owner Email],
-
-You've been invited to manage [Family Name] finances on NestFi.
-
-[Button: Accept Invitation]
-
-Or copy this link: https://nestfi.app/invite/[TOKEN]
-This link expires in 7 days.
-
-Questions? Contact support@nestfi.app
-
-—
-NestFi Team
+┌──────────────────────────────────────────────────────────┐
+│ NestFi  |  ☰ Menu  |  📈 Analytics  |  👤 Profile         │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  Time Period: [This Month ▼]  [Custom Range]            │
+│                                                           │
+│  ┌─ Expense Breakdown ──────────────────────────────┐   │
+│  │                                                     │   │
+│  │     ┌──────────────────────┐                       │   │
+│  │     │         PIE CHART    │                       │   │
+│  │     │    Groceries: 35%    │  📊 Table:            │   │
+│  │     │    Utilities: 20%    │                       │   │
+│  │     │    Entert.: 15%      │  Groceries    $1,120  │   │
+│  │     │    Other: 30%        │  Utilities      $640  │   │
+│  │     │                      │  Entert.        $480  │   │
+│  │     └──────────────────────┘  Other         $960   │   │
+│  │                                                     │   │
+│  │                                 Total: $3,200      │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+│  [Expense] [Income] [Savings Trend] [Investments]        │
+│  (tab navigation)                                         │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Acceptance Flow (Browser)
-
-```
-1. User clicks "Accept Invitation" link
-2. Page shows: "Setting up your account..."
-3. Email verification: "Is this your email? [email@domain]"
-   - Options: Yes / No (change email)
-4. If Yes:
-   - Form: First name, Last name, Password, Phone
-5. Confirm & Create Account
-6. Success page: "Welcome to [Family Name]! 
-   You can now invite other family members."
-7. Redirect to dashboard or "Invite Members" setup wizard
-```
+**Components**:
+- Time period selector
+- Pie/Doughnut chart visualization
+- Accompanying data table
+- Tab navigation to switch between views
+- Color coding for categories
 
 ---
 
-## WF-9: Mobile Layout Considerations (Responsive)
+## W7: Family Management (Owner Only)
 
-For v1, desktop-first design. Mobile responsiveness (v1 or v1.1):
-
-### Dashboard (Mobile)
-- Stack summary cards vertically
-- Charts become interactive/swipeable
-- Transaction list as compact cards
-- Sticky "+ Log Transaction" button at bottom
-- Tab navigation or drawer menu for settings
-
-### Modal Forms (Mobile)
-- Full-screen modals (not overlay)
-- Bottom-aligned action buttons
-- Larger touch targets (48px minimum)
-- Keyboard-aware layout (account for mobile keyboard)
-
-### Table Views (Mobile)
-- Convert to card-based layout
-- Hide less important columns (notes become expandable)
-- Actions in dropdown menu per row
-
----
-
-## Component Specifications
-
-### Color Scheme
-- **Primary:** Teal / Green (#2E7D6E or similar) — trust, finance, household
-- **Secondary:** Neutral gray (#F5F5F5 background, #333 text)
-- **Accent:** Warm orange/gold (#FF9500) for CTAs
-- **Status colors:**
-  - Income: Green (#22C55E)
-  - Expense: Red (#EF4444)
-  - Neutral: Gray (#6B7280)
-
-### Typography
-- **Headlines (H1):** 32px, bold, dark gray
-- **Section titles (H2):** 20px, bold, dark gray
-- **Body text:** 14px or 16px, regular, dark gray, 1.5 line-height
-- **Form labels:** 14px, semi-bold, dark gray
-- **Numbers/amounts:** Monospace font (18px, bold) for clarity
-
-### Buttons
-- **Primary button:** Teal background, white text, 12px padding, rounded corners (4px)
-- **Secondary button:** Gray background, dark text, 12px padding, rounded corners
-- **Danger button:** Red background, white text (for delete/remove actions)
-- **Disabled state:** 50% opacity, cursor: not-allowed
-- **Hover state:** Darkened background, subtle shadow
-
-### Input Fields
-- **Border:** 1px gray, rounded 4px
-- **Padding:** 10px 12px
-- **Focus state:** Blue border, box-shadow: 0 0 0 3px rgba(63, 121, 230, 0.1)
-- **Error state:** Red border, error text below field
-
----
-
-## Navigation Structure
-
+### Layout
 ```
-NestFi App (Authenticated)
-├── Header
-│   ├── Logo / Home
-│   ├── Family Selector (dropdown)
-│   ├── Family Name
-│   ├── Profile Menu
-│   │   ├── Settings
-│   │   ├── Help
-│   │   └── Logout
-│   └── Search (future)
-│
-├── Left Sidebar / Nav
-│   ├── Dashboard (home)
-│   ├── Transactions
-│   ├── Analytics (or part of dashboard)
-│   ├── Settings
-│   │   ├── General (family info)
-│   │   ├── Members
-│   │   ├── Categories
-│   │   ├── Bank Accounts
-│   │   └── Permissions
-│   └── Help / Feedback
-│
-└── Main Content Area
-    ├── Dashboard (default)
-    ├── Transaction Ledger
-    ├── Settings Screens
-    └── Modals (Log Tx, Invite, etc.)
+┌──────────────────────────────────────────────────────────┐
+│ NestFi  |  ☰ Menu  |  ⚙️ Settings  |  👤 Profile          │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  [Settings] [Family] [Categories] [Bank Accounts]        │
+│                      ← Tab Navigation                     │
+│                                                           │
+│  ┌─ Family Members ──────────────────────────────────┐   │
+│  │                                                     │   │
+│  │ [+ Add Member]                                      │   │
+│  │                                                     │   │
+│  │ ACTIVE MEMBERS                                      │   │
+│  │ Name           | Email           | Role    | Action │   │
+│  ├────────────────┼──────────────────┼─────────┼────────┤   │
+│  │ You            | owner@mail.com   | Owner   | (-)    │   │
+│  │ Spouse         | spouse@mail.com  | Member  | [Edit] │   │
+│  │ Son            | son@mail.com     | Viewer  | [Edit] │   │
+│  │                                                     │   │
+│  │ DISABLED MEMBERS                                    │   │
+│  │ Aunt           | aunt@mail.com    | Member  | [Edit] │   │
+│  │ (access revoked)                                   │   │
+│  │                                                     │   │
+│  │ PENDING INVITATIONS                                 │   │
+│  │ Email          | Role   | Expires | Actions        │   │
+│  ├────────────────┼────────┼─────────┼────────────────┤   │
+│  │ daughter@mail..| Member | May 23  | [Resnd][Revke] │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
+**Components**:
+- Tab navigation (Settings, Family, Categories, Bank Accounts)
+- Family members grouped by status (Active, Disabled, Pending)
+- Add member button (modal form)
+- [Edit] for active/disabled members (opens W9b modal)
+- [Resend] / [Revoke] for pending invitations
+- Status badges showing disabled status
+
+**Color Coding**:
+- Active members: Normal styling
+- Disabled members: Grayed out or with "disabled" badge
+- Pending invitations: With expiration date and countdown
+
 ---
 
-## Notes for Frontend Team
+## W8: Settings - Categories
 
-1. **Charts:** Use a charting library (e.g., Chart.js, Recharts, or D3) for interactive tooltips and responsiveness.
-2. **Real-time updates:** Consider WebSocket or polling for live transaction updates across family members.
-3. **Date handling:** All dates in local family timezone (store in UTC, display in user/family timezone).
-4. **Responsive breakpoints:**
-   - Desktop: 1200px+
-   - Tablet: 768px–1199px
-   - Mobile: <768px
-5. **Accessibility:** Test with screen readers; ensure keyboard navigation works for all flows.
-6. **Performance:** Lazy-load transaction history (pagination); debounce filter search.
+### Layout
+```
+┌──────────────────────────────────────────────────────────┐
+│ NestFi  |  ☰ Menu  |  ⚙️ Settings  |  👤 Profile          │
+├──────────────────────────────────────────────────────────┤
+│                                                           │
+│  [Settings] [Family] [Categories] [Bank Accounts]        │
+│                                                           │
+│  ┌─ Income Categories ───────────────────────────────┐   │
+│  │                                                     │   │
+│  │ Salary (3 trans.)      [✎ Edit]  [✕ Delete]       │   │
+│  │ Bonus (1 trans.)       [✎ Edit]  [✕ Delete]       │   │
+│  │ Other Income (0)       [✎ Edit]  [✕ Delete]       │   │
+│  │ [+ Add Income Category]                            │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+│  ┌─ Expense Categories ──────────────────────────────┐   │
+│  │                                                     │   │
+│  │ Groceries (12 trans.)  [✎ Edit]  [✕ Delete]       │   │
+│  │ Utilities (4 trans.)   [✎ Edit]  [✕ Delete]       │   │
+│  │ Entertainment (8)      [✎ Edit]  [✕ Delete]       │   │
+│  │ [+ Add Expense Category]                           │   │
+│  │                                                     │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                                                           │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Components**:
+- Category list grouped by type (Income/Expense/Investment)
+- Each category shows usage count
+- Inline edit/delete actions
+- Add new category button
+- Confirmation before deletion
 
 ---
+
+## W9: Add Member Modal
+
+### Layout
+```
+┌─ Invite Family Member ─────────────────────────────┐
+│                                                     │
+│  ✕ (close)                                          │
+│                                                     │
+│  Email: [text input, required]                     │
+│  (Must be valid email format)                      │
+│                                                     │
+│  Name (optional): [text input]                     │
+│                                                     │
+│  Role: ◉ Member  ○ Viewer                          │
+│  (Members can add/edit transactions;               │
+│   Viewers can only view)                           │
+│                                                     │
+│                                                     │
+│  [Cancel]  [Send Invitation] (CTA, blue)           │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Components**:
+- Email input with validation
+- Name field (optional)
+- Role radio buttons with explanatory text
+- Cancel/Submit buttons
+
+---
+
+## W9b: Edit Member Modal
+
+### Layout
+```
+┌─ Edit Family Member ───────────────────────────────┐
+│                                                     │
+│  ✕ (close)                                          │
+│                                                     │
+│  Member: Alice Smith (alice@example.com)           │
+│  Status: Active  (or "Disabled" if disabled)       │
+│                                                     │
+│  Change Role: ◉ Member  ○ Viewer                   │
+│                                                     │
+│  [Save Changes] (blue button)                      │
+│                                                     │
+│  ─────────────────────────────────────────         │
+│                                                     │
+│  Member Access:                                     │
+│  [Disable Member] (gray button)                    │
+│  (They will lose access immediately)               │
+│                                                     │
+│  OR (if already disabled):                          │
+│  [Re-enable Member] (blue button)                  │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Components**:
+- Member name and email (read-only)
+- Current status (Active/Disabled)
+- Role selector (radio buttons)
+- Save changes button
+- Disable/Re-enable button (separate section, red for disable)
+- Confirmation dialogs for enable/disable actions
+
+**Conditional Display**:
+- If member is active: Show [Disable Member] button
+- If member is disabled: Show [Re-enable Member] button
+- Owner cannot disable themselves
+
+---
+
+## Layout & Grid System
+
+### Desktop (1200px+)
+- Main content: max-width 1200px, centered
+- Sidebar navigation: ~250px fixed left OR top navbar
+- Tables: full-width columns visible
+- Charts: side-by-side layout
+
+### Tablet (768px - 1199px)
+- Sidebar collapses to top navbar with hamburger menu
+- Tables: horizontal scrolling for dense data
+- Charts: responsive layout, single column on small tablets
+
+### Mobile (< 768px)
+- Full-width layout
+- Hamburger menu navigation
+- Table columns collapse or switch to card view
+- Modals: full-screen
+- Charts: stacked vertically
+
+---
+
+## Color & Typography Guidelines
+
+See DESIGN_NOTES.md for detailed color palette, typography scale, and component styling.
+
+---
+
+## Interaction Patterns
+
+### Confirmation Dialogs
+- Red CTA for destructive actions (delete)
+- Two options clearly presented
+- Escape key closes without action
+
+### Forms
+- Inline validation as user types
+- Error messages in red below field
+- Submit button disabled until valid
+- Success toast after submission
+
+### Tables/Lists
+- Hover: subtle background color change
+- Selection: checkbox on left
+- Pagination: numbered buttons + prev/next
+- Sorting: click column header; arrow indicator
+
+### Dropdowns
+- Click to open; click away or Esc to close
+- Keyboard navigation (arrow keys, Enter)
+- Search/filter if list > 10 items
+
+---
+
+## Accessibility Notes
+
+- All interactive elements keyboard-accessible (Tab, Enter, Esc)
+- Color not sole indicator of state (+ text, icons, patterns)
+- Form labels associated with inputs
+- ARIA attributes for modals, dropdowns, alerts
+- Focus visible on interactive elements
+- Sufficient color contrast (WCAG AA minimum)
+
+See DESIGN_NOTES.md for full accessibility checklist.

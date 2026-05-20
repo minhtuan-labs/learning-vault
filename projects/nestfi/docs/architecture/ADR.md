@@ -1,506 +1,356 @@
-# Architecture Decision Records
+# Architecture Decision Records (ADR) — NestFi
 
-**Version:** 1.0  
-**Last Updated:** 2026-05-16  
-**Owner:** SA
+## ADR-001: Synchronous Request-Response Architecture (v1)
 
-This document captures key architectural decisions made during solution design. Each ADR follows the format: **Status**, **Context**, **Decision**, **Consequences**.
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
+
+NestFi is a family financial management system where users (family members) record and review transactions together. For v1, we need a simple, debuggable architecture that ensures strong consistency and avoids operational complexity.
+
+**Decision:**
+
+Implement a **synchronous monolith** (Next.js ↔ FastAPI ↔ Postgres) with no message queues, no event streaming, and no eventual consistency requirements.
+
+- User action → API request → single DB transaction → response → UI update
+- All state changes are immediately visible to all connected clients
+
+**Rationale:**
+
+- **Simplicity:** Easier to test, debug, and reason about state
+- **Consistency:** Family members see real-time accurate balances and transaction history
+- **Acceptable latency:** Single household's transaction volume (tens per day) doesn't require async
+- **Foundation:** Easy to migrate to event-driven (Celery queue, webhooks) in v2+ if scaling demands it
+
+**Consequences:**
+
+- Long-running operations (bulk export, analytics recalculation) will block; defer to v2
+- No offline mode or optimistic updates; users must be online to record transactions
+- Database must be fast and reliable; indexing and connection pooling are critical
 
 ---
 
-## ADR-0001: Python Monorepo (Dash + FastAPI) vs Multi-Language Microservices
+## ADR-002: Family-Scoped Data Isolation
 
-**Status:** Accepted (confirmed by user, 2026-05-16)
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
 
-**Context:**  
-NestFi MVP requires rapid iteration with minimal infrastructure overhead. Team is Python-first. Options:
-1. Python monorepo (Dash frontend + FastAPI backend)
-2. Separate Node.js/Next.js FE + Python BE (language split)
-3. Microservices with multiple languages (Go, Rust, etc.)
-4. Serverless (AWS Lambda, etc.)
+NestFi supports multiple families per instance (e.g., "Smith household" and "Jones household"). Data (accounts, transactions, members) must be isolated per family. A compromised user's token should not expose other families' data.
 
-**Decision:**  
-**Python monorepo with Dash (Plotly) + FastAPI** in single codebase (`backend/` + `frontend/` folders).
+**Decision:**
 
-**Rationale:**
-- **Velocity:** No language context-switching; shared models, types, utilities
-- **Simplicity:** One runtime (Python), one package manager (poetry/pip), one deployment unit (Docker)
-- **Dash strength:** Interactive charts out-of-box (financial dashboards benefit)
-- **Team fit:** Python expertise available; Dash has a lower learning curve than React+Next.js
-- **Scalability path:** Stateless FastAPI + JWT auth allows horizontal scaling; Dash can be containerized independently later
+All data queries are filtered by `family_id` at the API boundary:
 
-**Consequences:**
-- ✓ Faster development (no FE/BE language gap)
-- ✓ Simpler deployment (single monorepo, one Docker Compose file)
-- ✗ JavaScript ecosystem features (npm packages) unavailable; Tailwind is CSS-only solution
-- ✗ Dash is less mature than React; fewer third-party component libraries
-- **Future mitigation:** v2+ can migrate FE to React/Next.js if needed; REST API is clean boundary
-
-**Links:**
-- Dash documentation: https://dash.plotly.com/
-- FastAPI: https://fastapi.tiangolo.com/
-
----
-
-## ADR-0002: JWT Stateless Authentication vs Session-Based Auth
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-NestFi needs to authenticate users and manage families/permissions. Options:
-1. JWT tokens (stateless)
-2. Server-side sessions (session store + cookies)
-3. OAuth / Third-party (Auth0, Supabase, etc.)
-
-**Decision:**  
-**JWT (JSON Web Tokens) with HS256** issued by `/auth/login` endpoint. Tokens expire in 24 hours.
-
-**Rationale:**
-- **Scalability:** Stateless tokens allow load-balanced backends without session affinity
-- **Simplicity:** No session store needed (PostgreSQL-backed sessions would require additional infra)
-- **REST-friendly:** JWT is standard for REST APIs; Dash frontend can store in localStorage
-- **v1 constraint:** No cache layer (Redis) in v1; JWT avoids needing one for session lookup
-
-**Consequences:**
-- ✓ Horizontal scaling without session affinity
-- ✓ No session store overhead
-- ✓ Easy for mobile apps later (tokens in HTTP header)
-- ✗ Token revocation is hard (requires blacklist or new expiration field)
-- ✗ Token size increases with claims; may need careful payload design
-- **Future mitigation:** Token refresh endpoint (v2) to shorten expiration; opt-in blacklist if needed
-
-**Decision:** Single JWT implementation (no refresh tokens in v1 for simplicity).
-
----
-
-## ADR-0003: Single Datastore (PostgreSQL) vs Polyglot Persistence
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-NestFi stores users, families, transactions, categories, audit logs. Options:
-1. PostgreSQL only (relational, ACID, normalization)
-2. PostgreSQL + NoSQL (Mongo, DynamoDB) for logs / cache
-3. SQLite (for simplicity)
-
-**Decision:**  
-**PostgreSQL 16 as single source of truth** with SQLAlchemy ORM. No secondary datastore (cache, queue) in v1.
-
-**Rationale:**
-- **ACID guarantees:** Transaction consistency (money can't be lost / duplicated)
-- **Relationships:** Families ↔ Members ↔ Transactions ↔ Categories = relational graph
-- **Audit trail:** Append-only audit logs in same DB; no sync issues
-- **Simplicity:** One database to manage, backup, scale
-- **Cost:** PostgreSQL managed services (Railway, Fly.io) are free-tier eligible
-
-**Consequences:**
-- ✓ Strong consistency (transactions never corrupt)
-- ✓ No data synchronization bugs between stores
-- ✓ Familiar for team; broad ecosystem
-- ✗ Must design schema carefully (no schema-less collections)
-- ✗ Vertical scaling limits (billions of txns would need sharding)
-- **Future mitigation:** v2 can add Redis cache if dashboard queries slow down; no code change needed (abstraction layer already in place)
-
----
-
-## ADR-0004: Single Currency (per Family) vs Multi-Currency
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-NestFi is global; some families span multiple countries. Options:
-1. Single global currency (e.g., USD)
-2. Single currency per family (configurable)
-3. Multi-currency support with conversion rates
-
-**Decision:**  
-**Single currency per family, default USD**. Family owner can select currency at creation time. All transactions in family are in that currency.
-
-**Rationale:**
-- **v1 simplicity:** No exchange rate APIs, no conversion logic
-- **Accuracy:** Avoids rounding errors in multi-currency calculations
-- **Schema:** currency column on families table; transactions inherit it
-- **User experience:** Families that span countries can use USD (common) or pick their reference currency
-
-**Consequences:**
-- ✓ Schema simplicity (no per-transaction exchange rates)
-- ✓ Calculations are straightforward (sum without conversion)
-- ✗ Families with mixed-currency accounts can't track per-account splits
-- **Workaround (v1):** Create separate families per currency; use "exchange" transaction type (v2)
-- **Future:** v2 can add multi-currency if needed (add column: currency_pairs, exchange_rate_map, etc.)
-
----
-
-## ADR-0005: Image Upload / Storage: Local Filesystem (CDN-Ready) vs Cloud (S3/CDN)
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-NestFi needs to store user avatars, family logos, and receipts (future). Options:
-1. Local filesystem (simplicity, full control, portable)
-2. AWS S3 (cloud-native, expensive, vendor lock-in)
-3. Azure Blob / GCP Cloud Storage (similar)
-4. Cloudinary / Imgix (managed, costly, third-party)
-
-**Decision:**  
-**Local filesystem in v1** with CDN-ready directory structure. Path pattern:
-```
-backend/app/static/uploads/
-├── users/
-│   └── {user_id}/
-│       └── avatar.{ext}
-├── families/
-│   └── {family_id}/
-│       └── logo.{ext}
-└── receipts/  (future)
-    └── {family_id}/
-        └── {receipt_id}.{ext}
-```
-
-**Rationale:**
-- **v1 simplicity:** No cloud credentials, no API calls, no storage costs
-- **Portability:** Filesystem directory can be mounted as volume in Docker or Kubernetes
-- **CDN-ready:** If we later add Cloudflare/S3, we just change the service layer; paths stay same
-- **Control:** Full control over image lifecycle, no vendor API limits
-- **Development:** Works on local laptop for testing
-
-**Consequences:**
-- ✓ Zero additional cost
-- ✓ Works offline / in Docker containers
-- ✓ Easy to test (just filesystem operations)
-- ✗ Not highly available (single server failure = loss)
-- ✗ Not globally distributed (users far from server see slow downloads)
-- **Future mitigation:** v2 swap to S3/CDN via new ImageStorageService; code structure already supports it
-
-**Abstraction layer (Python):**
 ```python
-class ImageStorageService:
-    def save(self, user_id, file): pass
-    def delete(self, user_id, file_key): pass
-    def get_url(self, user_id, file_key): pass
+# FastAPI dependency
+async def get_family_context(request):
+    family_id = request.path_params.get('family_id')
+    user = get_current_user(request)
+    assert_user_in_family(user, family_id)  # 403 if not a member
+    return family_id
 ```
 
-Implementation v1: FilesystemImageStorage  
-Implementation v2+: S3ImageStorage
+Every request to `/api/v1/families/{family_id}/...` validates that the authenticated user is a member of that family. Database schema uses `family_id` FK on all tables (accounts, transactions, categories, memberships).
+
+**Rationale:**
+
+- **Security:** Prevents horizontal privilege escalation (user accessing other families' data)
+- **Compliance:** Clear audit trail per family; easier to implement data retention/deletion per family
+- **Multi-Tenancy Ready:** Same codebase can serve multiple independent organizations in future
+
+**Consequences:**
+
+- All queries must include `family_id` filter; no global "admin view" of all transactions (by design)
+- Bulk operations (export, analytics) must iterate per family
+- Schema design requires foreign keys; database growth is linear with number of families
 
 ---
 
-## ADR-0006: Docker Compose for v1 Deployment vs Kubernetes / Cloud-Native
+## ADR-003: Database-Backed Sessions + JWT for API
 
-**Status:** Accepted (confirmed by user, 2026-05-16)
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
 
-**Context:**  
-v1 needs simple, repeatable deployment. Options:
-1. Docker Compose (local dev + single-server prod)
-2. Kubernetes (complex, over-engineered for v1)
-3. Managed platforms (Railway, Fly.io, Render)
+NestFi needs two authentication flows:
 
-**Decision:**  
-**Docker Compose for v1**. Images pushed to local registry or Docker Hub. Deployment = `docker compose -f docker-compose.prod.yml up -d`.
+1. **Web UI:** Users log in via browser; sessions persist across page reloads
+2. **API/Mobile:** Programmatic clients (Postman, future mobile app) need stateless auth
+
+**Decision:**
+
+- **Web Sessions:** httpOnly + Secure cookies backed by Postgres session store (or Redis for scaling)
+  - Session token is opaque; server-side lookup required
+  - Automatic invalidation on logout or timeout
+  - Secure by default (httpOnly prevents XSS token theft)
+
+- **API Bearer Tokens:** JWT (self-contained, stateless)
+  - Token issued on login; client includes in `Authorization: Bearer <token>` header
+  - Server validates signature without database lookup
+  - User can request multiple tokens (mobile + web client simultaneously)
 
 **Rationale:**
-- **v1 scale:** 10–100 families, <1000 users; single instance sufficient
-- **Developer experience:** `docker-compose up` runs entire stack locally
-- **Portability:** Works on any host with Docker (laptop, VPS, small cloud)
-- **Cost:** No managed service fees; just host compute
-- **Path to v2:** Can containerize separately (Dockerfile already written); transition to Railway/Fly.io is straightforward
+
+- **Sessions:** Stateful, short-lived (30 min default), high security for web
+- **JWT:** Stateless, long-lived (TBD hours), flexible for distributed systems / mobile
+- **Flexibility:** Supports both browser cookies and bearer tokens without architectural debt
+- **Standards:** Both patterns are industry standard; easy for future developers to maintain
 
 **Consequences:**
-- ✓ Simple deployment story
-- ✓ Works on any host; no cloud vendor lock-in
-- ✓ Cheap (single instance + managed PostgreSQL)
-- ✗ No horizontal scaling (one app instance, one DB)
-- ✗ No automatic failover (single point of failure)
-- ✗ Manual deployment (no CI/CD in v1; deferred to v2)
-- **Future (v2):** Containerize FE + BE separately; push to Railway / Fly.io / own Kubernetes cluster
 
-**v2 migration path:**
-```
-v1:  docker-compose.yml (all-in-one)
-v2:  backend/Dockerfile → Railway / Fly.io
-     frontend/Dockerfile → Vercel / Netlify / Railway
-     PostgreSQL → Managed (Railway, Supabase, AWS RDS)
-```
+- Session table grows with number of logged-in users; cleanup job required (cascade delete on user logout)
+- JWT tokens can't be revoked instantly (token remains valid until expiry); logout instructions include "wait for token expiration" as fallback
+- Clients must handle token refresh (out of v1 scope)
 
 ---
 
-## ADR-0007: Soft Delete (is_deleted flag) vs Hard Delete for Audit Trail
+## ADR-004: No Person-Level Transaction Tracking (Account-Centric Design)
 
-**Status:** Accepted (confirmed by user, 2026-05-16)
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
 
-**Context:**  
-Transactions are critical for financial audits. Users may accidentally delete transactions. Options:
-1. Hard delete (impossible to recover)
-2. Soft delete (mark deleted, keep in DB)
-3. Immutable append-only log
+NestFi tracks family finances via accounts (checking, savings, investment). The question: Do we track *who* spent the money (person-centric), or just which *account* (account-centric)?
 
-**Decision:**  
-**Soft delete on transactions** using `deleted_at` and `deleted_by` columns. Queries exclude soft-deleted records by default.
+**Decision:**
+
+**Account-centric only.** All transactions belong to an account, not a person. The family's checking account shows "expenses: $500" without breaking down "Alice paid $300, Bob paid $200."
+
+- Transactions include `creator_id` for audit (who recorded it), but no bill-splitting or person-level ledgers
+- All family members can record and edit any account's transactions
+- No "my spending" vs. "household spending" distinction
 
 **Rationale:**
-- **Audit compliance:** Deleted records are recoverable; audit trail intact
-- **Accidental recovery:** User deletes transaction by mistake; admin can undelete
-- **Performance:** No separate archive table; soft delete is lightweight
-- **Audit log:** AuditLog table also captures all changes (create, update, delete)
+
+- **Simplicity:** Easier UI, simpler schema, less permission logic
+- **User Story Fit:** PRODUCT_IDEA.md doesn't mention bill-splitting or per-person budgets
+- **Scope:** Bill-splitting (v2+) can be added later without breaking v1 schema (new `splits` table)
+- **Fairness:** All members see all accounts equally; no privacy assumptions
 
 **Consequences:**
-- ✓ Transaction history preserved
-- ✓ Recovery possible
-- ✓ Audit trail complete
-- ✗ Requires `deleted_at IS NULL` in all queries (ORM can abstract this)
-- ✗ Disk space includes deleted records (not a problem for MVP)
-- **Mitigation:** Base CRUD class auto-excludes soft-deleted; developers don't have to remember
 
-**Pattern (SQLAlchemy):**
-```python
-class Transaction(Base):
-    __tablename__ = "transactions"
-    id: int
-    deleted_at: datetime | None = None
-    deleted_by: int | None = None
-
-class TransactionCRUD:
-    @staticmethod
-    def get_all(family_id, db):
-        return db.query(Transaction).filter(
-            Transaction.family_id == family_id,
-            Transaction.deleted_at.is_(None)
-        )
-    
-    @staticmethod
-    def soft_delete(txn_id, user_id, db):
-        txn = db.query(Transaction).filter(Transaction.id == txn_id).first()
-        txn.deleted_at = datetime.now()
-        txn.deleted_by = user_id
-        db.commit()
-```
+- No "my expenses" dashboard (feature deferred to v2)
+- Household members must trust each other or use separate accounts if they want privacy
+- Analytics are family-wide only; no per-member spending reports
 
 ---
 
-## ADR-0008: Monorepo Code Layout (backend/ + frontend/) vs Separate Repos
+## ADR-005: Immutable Transactions with Edit Audit Trail
 
-**Status:** Accepted (confirmed by user, 2026-05-16)
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
 
-**Context:**  
-Where to store BE and FE code? Options:
-1. Single monorepo (backend/, frontend/, both under version control)
-2. Separate repos (independently versioned, deployed)
+Users will make mistakes recording transactions (wrong amount, wrong date, typo in description). The decision: Allow edits? If so, how to prevent fraud or enable auditing?
 
-**Decision:**  
-**Single monorepo** with `backend/` and `frontend/` folders, single git history, single Docker Compose.
+**Decision:**
+
+- **Editable Transactions:** Any family member can edit any transaction (amount, date, category, description)
+- **Audit Trail:** Every edit recorded in `transaction_edits` table with editor ID, timestamp, before/after snapshots
+- **No Direct Overwriting:** `transactions` table is never updated in-place; only `transaction_edits` records are appended
+- **Full History:** Family members can view complete edit history for any transaction via transaction detail view
 
 **Rationale:**
-- **Coupling:** FE calls BE APIs; tightly coupled by design
-- **Atomic commits:** Bug fix that touches both FE + BE = single commit + PR
-- **CI/CD simplicity:** One pipeline, one build artifact
-- **v1 scope:** Small codebase (<10K lines total); monorepo overhead is minimal
+
+- **Ease of Use:** Users can fix mistakes without losing the record
+- **Compliance:** Audit trail prevents "invisible" fraud (edit without trace)
+- **Transparency:** All family members see who changed what and when
+- **Balance Rollup:** Account balance recomputed from non-disabled transactions; edits instantly update balances
 
 **Consequences:**
-- ✓ Easier refactoring across FE/BE boundary
-- ✓ Single CI/CD pipeline
-- ✓ Cleaner history for related changes
-- ✗ Monorepo tools overhead (if codebase grows)
-- ✗ Deployments are all-or-nothing (FE + BE together)
-- **Future:** v2+ can split if teams grow; tools exist (yarn workspaces, pnpm, etc.)
 
-**Structure:**
+- Edit history grows with transaction volume; archival strategy needed long-term
+- `transaction_edits` table may be larger than `transactions` table over time
+- UI must surface edit history clearly (not hidden in logs)
+
+---
+
+## ADR-006: Soft-Delete for Transactions + Hard-Delete for Owner Only
+
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
+
+Mistakes happen. Users may want to hide a transaction from reports without losing history. Example: "I recorded the transaction twice by mistake; hide one but keep the record."
+
+**Decision:**
+
+- **Soft-Delete (Disable):** Any family member can disable/hide a transaction (sets `is_enabled = false`)
+- **Excluded from Reports:** Disabled transactions excluded from P&L, dashboards, balance rollup
+- **Recoverable:** Disabled transactions remain in DB; any member can re-enable them
+- **Hard-Delete:** Only family owner can permanently delete (hard-delete) transactions
+- **No Recovery:** Hard-deleted transactions cannot be recovered
+
+**Rationale:**
+
+- **Mistake Recovery:** Soft-delete is a safety net for accidental duplicates
+- **Fraud Prevention:** Hard-delete requires owner approval (prevents members from erasing evidence)
+- **Audit Trail:** Hard-deleted transactions retained in `transaction_edits` table (immutable)
+
+**Consequences:**
+
+- Dashboard and reports must filter `is_enabled = true` in all queries
+- Database size includes disabled transactions indefinitely (storage cheap, deletion risky)
+- Owner needs clear warning before hard-delete ("This cannot be undone")
+
+---
+
+## ADR-007: Monorepo (backend/ + frontend/) Structure
+
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
+
+Where to organize code? Single repository or separate repos for backend and frontend?
+
+**Decision:**
+
+**Monorepo:** Single Git repository with `backend/` and `frontend/` directories.
+
 ```
 nestfi/
-├── backend/        (Python, FastAPI)
-├── frontend/       (Python, Dash)
+├── backend/             (FastAPI, migrations, models, routes)
+├── frontend/            (Next.js, components, pages)
+├── docs/                (shared architecture, business docs)
 ├── docker-compose.yml
-├── pyproject.toml  (optional, monorepo-level)
-└── poetry.lock     (shared lock)
+├── .gitignore
+└── README.md
 ```
+
+**Rationale:**
+
+- **Shared Context:** Architecture docs, business rules in one place visible to all team members
+- **Atomic Commits:** Schema changes + API changes + UI changes in single commit; easier to review
+- **CI/CD:** Single pipeline; easier to test backend + frontend integration
+- **Onboarding:** New developer clones one repo; everything in one place
+
+**Consequences:**
+
+- Backend and frontend releases are tied together (not independent deployments)
+- Both services deployed from same commit SHA; schema version = API version = UI version
+- Harder to scale teams independently (but fine for v1)
 
 ---
 
-## ADR-0009: API Design: REST vs GraphQL
+## ADR-008: Email Delivery via Mock/Print (v1) → Real Provider (v2+)
 
-**Status:** Accepted (confirmed by user, 2026-05-16)
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
 
-**Context:**  
-FE needs to fetch families, transactions, categories, analytics data. Options:
-1. REST (multiple endpoints, simple, standard)
-2. GraphQL (flexible queries, larger learning curve)
+Invitations and password resets require email delivery. Should we integrate Sendgrid/Mailgun in v1, or stub it out?
 
-**Decision:**  
-**REST with JSON** and OpenAPI (Swagger) auto-documentation.
+**Decision:**
 
-**Rationale:**
-- **Simplicity:** Standard HTTP methods (GET, POST, PUT, DELETE)
-- **Caching:** REST is cache-friendly (GET is idempotent)
-- **Authentication:** Bearer tokens in headers work seamlessly
-- **Dash support:** Dash makes HTTP calls easily; no GraphQL client needed
-- **API documentation:** FastAPI auto-generates OpenAPI docs (/docs, /redoc)
-- **Debugging:** Browser can call REST endpoints; GraphQL requires tools
+**v1 (Development):** Mock email delivery — print tokens to console logs
 
-**Endpoints (defined in SOLUTION_ARCHITECTURE.md):**
-```
-GET  /families
-POST /families/{id}/transactions
-GET  /families/{id}/transactions?category_id=5&date_from=2026-01-01&date_to=2026-12-31
-PUT  /families/{id}/transactions/{txn_id}
-```
-
-**Consequences:**
-- ✓ Widely understood (every developer knows REST)
-- ✓ Cacheable
-- ✓ Easy to debug
-- ✗ Over-fetching / under-fetching (FE must make multiple requests for related data)
-- **Mitigation:** Pagination + filtering on endpoints; can batch if needed (v2)
-
----
-
-## ADR-0010: Email Delivery: SMTP vs Third-Party Service
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-NestFi needs to send invitations, password resets, notifications. Options:
-1. Local SMTP (simple, requires mail server)
-2. SendGrid / Mailgun / AWS SES (managed, scalable, costs)
-3. Third-party like Twilio (managed, more features)
-
-**Decision:**  
-**SMTP in v1** (simple self-hosted mail or free tier like MailTrap for dev). **Abstraction layer** to swap to SendGrid/SES in v2.
-
-**Rationale:**
-- **v1 simplicity:** No third-party API keys, credentials, costs
-- **Abstraction:** EmailService class allows swapping implementation
-- **Development:** MailTrap (free) or local Docker mail container works locally
-- **v1 scale:** <100 invitations/day; self-hosted SMTP sufficient
-
-**Consequences:**
-- ✓ Zero cost
-- ✓ Full control over emails
-- ✗ Deliverability depends on mail server setup (can end up in spam)
-- ✗ No built-in tracking / analytics
-- **Future:** v2 integrates SendGrid (higher deliverability, replay, etc.)
-
-**Pattern (EmailService):**
 ```python
-class EmailService:
-    def send_invitation(self, email: str, family_name: str, token: str): pass
-    def send_password_reset(self, email: str, token: str): pass
-
-class SMTPEmailService(EmailService):  # v1
-    def send_invitation(self, ...):
-        smtplib.send(...)
-
-class SendGridEmailService(EmailService):  # v2+
-    def send_invitation(self, ...):
-        sendgrid_client.send(...)
+# dev mode: print to logs
+if settings.SMTP_ENABLED:
+    send_real_email(user.email, invitation_link)
+else:
+    logger.info(f"[MOCK EMAIL] Send to {user.email}: {invitation_link}")
 ```
 
----
-
-## ADR-0011: Transaction Audit Log: Same DB vs Separate Archive
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-Transactions are critical for finance; must log all changes for compliance. Options:
-1. Audit logs in same PostgreSQL DB
-2. Separate audit database (archive)
-3. Event log (Kafka, RabbitMQ)
-
-**Decision:**  
-**Single PostgreSQL DB with `audit_logs` table**. All changes (create, update, delete) logged with user, timestamp, old/new values.
+**v2 (Production):** Integrate SendGrid or Mailgun via `settings.SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`.
 
 **Rationale:**
-- **Simplicity:** No distributed system; single DB transaction consistency
-- **ACID guarantees:** Transaction + audit log are atomic
-- **Compliance:** Audit trail is queryable via SQL
-- **v1 scale:** Audit logs grow linearly; acceptable for MVP (<1000 users)
+
+- **v1 Scope:** No external dependencies; easier local testing without email account
+- **v2 Ready:** Settings structure supports real provider without code change
+- **Cost:** No monthly email service bill in dev/test
+- **Testing:** QA can see all invitation links in logs
 
 **Consequences:**
-- ✓ Simple to implement
-- ✓ Audit trail is transactionally consistent
-- ✗ Audit logs consume disk space (no archival in v1)
-- **Future:** v2 can archive old logs to S3 (cold storage) if needed
 
-**Audit Log Schema:**
-```sql
-audit_logs (
-  id PK,
-  user_id FK,
-  entity_type (user, family, transaction, category),
-  entity_id,
-  action (create, update, delete),
-  old_values JSON,
-  new_values JSON,
-  timestamp,
-  ip_address
-)
+- Invitations don't actually email in v1; manual testing requires checking logs
+- Real environment (v2) requires Sendgrid/Mailgun API keys in `.env`
+- Users in v1 can't test email reset flow end-to-end (but can verify DB state)
+
+---
+
+## ADR-009: Docker Compose for v1, Cloud TBD for v2+
+
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
+
+Where to deploy v1? Heroku? AWS? Docker container service? Keep it local?
+
+**Decision:**
+
+**v1:** Docker Compose only. No cloud deployment in v1.
+
+```bash
+docker-compose up -d
+# Services running on localhost
 ```
 
----
-
-## ADR-0012: Default Categories System vs User-Defined Only
-
-**Status:** Accepted (confirmed by user, 2026-05-16)
-
-**Context:**  
-Families need categories (income, expense, investment). Options:
-1. System provides defaults (e.g., "Salary", "Groceries"); user can add/modify
-2. User creates all categories from scratch
-3. Hybrid (defaults + customization)
-
-**Decision:**  
-**System provides default categories** at family creation time. User can modify, delete, or add new categories.
+**v2:** Choose from Render, Railway, Fly.io, AWS ECS, etc. (user decision via clarification protocol).
 
 **Rationale:**
-- **UX:** Users can start logging transactions immediately without category setup
-- **Consistency:** Default categories are familiar ("Salary", "Groceries", etc.)
-- **Flexibility:** Users can rename or delete defaults if needed
-- **Data analysis:** Default categories enable comparison across families
 
-**Default Categories (created at family setup):**
-
-*Income:*
-- Salary
-- Bonus
-- Freelance
-- Interest
-- Other Income
-
-*Expense:*
-- Groceries
-- Utilities
-- Entertainment
-- Transport
-- Cash Withdrawal
-- Other Expense
-
-*Investment:*
-- Stock Portfolio
-- Retirement
-- Crypto
-- Other Investment
+- **v1 Scope:** Local development + testing only; no need for cloud infrastructure
+- **Foundation:** Docker Compose is portable; easy to migrate to any cloud provider later
+- **Cost:** Zero infrastructure cost for development
+- **Decision Delay:** Cloud choice depends on scaling, cost tolerance, and compliance needs (TBD at v2)
 
 **Consequences:**
-- ✓ Users can transact immediately
-- ✓ Familiar category names
-- ✓ Enables cross-family analytics
-- ✗ Categories may not match every family's needs
-- **Mitigation:** Users can edit/archive categories; new ones can be created anytime
+
+- No public URL in v1; app only accessible on `localhost:3000`
+- Team testing requires Docker and `docker-compose` CLI installed locally
+- v2 requires infrastructure setup (cloud account, managed DB, reverse proxy config)
 
 ---
 
-## Future ADRs (TBD in v2+)
+## ADR-010: SQLAlchemy ORM + Alembic Migrations
 
-- **ADR-0013:** Refresh tokens (if needed for mobile apps)
-- **ADR-0014:** Notification system (in-app vs email vs push)
-- **ADR-0015:** Batch operations (reporting, exports)
-- **ADR-0016:** Rate limiting and DDoS protection
-- **ADR-0017:** Caching strategy (Redis) for high-traffic reads
-- **ADR-0018:** API versioning (v1, v2) and backwards compatibility
+**Date:** 2026-05-16  
+**Status:** DECIDED  
+**Context:**
+
+NestFi backend uses FastAPI + PostgreSQL. How to manage database schema and migrations?
+
+**Decision:**
+
+- **ORM:** SQLAlchemy 2 with async support (`async_engine`, `AsyncSession`)
+- **Migrations:** Alembic for schema versioning and migrations
+- **Async:** All database queries use `await` for non-blocking I/O
+
+**Rationale:**
+
+- **Async Support:** Matches FastAPI's async nature; full async stack for performance
+- **Type Hints:** SQLAlchemy 2 supports Python type hints (matches backend language choice)
+- **Mature:** Both projects are battle-tested; excellent documentation
+- **Flexibility:** ORM for simple queries, raw SQL for complex analytics
+
+**Consequences:**
+
+- Setup complexity: async session management, dependency injection for DB connections
+- Limited NoSQL capabilities (if needed in future, can add MongoDB alongside)
+- Requires knowledge of relational patterns; not ideal for unstructured data
 
 ---
 
-## Revision History
+## Summary of Major Decisions
 
-| Date | Author | Change |
-|---|---|---|
-| 2026-05-16 | SA | Created ADR.md with 12 key architectural decisions for Python stack (Dash + FastAPI + PostgreSQL) |
+| ADR | Title | Status | Implication |
+|-----|-------|--------|-------------|
+| 001 | Synchronous Monolith | ✅ DECIDED | No queues, no async jobs in v1 |
+| 002 | Family-Scoped Isolation | ✅ DECIDED | All queries filtered by family_id |
+| 003 | Sessions + JWT | ✅ DECIDED | Browser cookies + bearer tokens |
+| 004 | Account-Centric (no bill-split) | ✅ DECIDED | No person-level transaction tracking |
+| 005 | Edit Audit Trail | ✅ DECIDED | transaction_edits table for compliance |
+| 006 | Soft-Delete + Owner Hard-Delete | ✅ DECIDED | is_enabled flag, owner-only permanent deletion |
+| 007 | Monorepo | ✅ DECIDED | Single backend/ + frontend/ repo |
+| 008 | Mock Email (v1) | ✅ DECIDED | Print to logs; real provider in v2+ |
+| 009 | Docker Compose (v1) | ✅ DECIDED | Local only; cloud TBD for v2+ |
+| 010 | SQLAlchemy + Alembic | ✅ DECIDED | Async ORM + migrations |
+
+---
+
+**Next Steps:**
+- Backend team implements schema based on ADRs 002, 005, 006, 010
+- Frontend team designs dashboard/form components per ADR 004
+- Both teams verify API_CONTRACT.md captures all decision implications

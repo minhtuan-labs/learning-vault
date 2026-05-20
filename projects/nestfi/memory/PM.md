@@ -22,18 +22,14 @@
 
 (none yet)
 
-## Session log
+### 2026-05-16 21:25 — Phase 0 Discovery: PRD, Roadmap, Open Questions
+**Summary**: Converted PRODUCT_IDEA.md into product scope documents. Created detailed PRD (9 sections + acceptance criteria), 3-phase roadmap (v1.0 MVP → v1.1 Polish → v1.2 UX), and identified 10 open questions (3 blocking user decisions). MVP scope locked to core features (auth, family mgmt, transaction CRUD, dashboard, analytics). Bill splitting, recurring transactions, and mobile app deferred to post-MVP phases. Key conventions: MoSCoW prioritization, role-based access control architecture, household-focused (not business accounting). Next: route open questions to user for decisions before proceeding to Phase 1 (Solution Design).
 
-### 2026-05-16 17:09 — blocked on missing product idea
-PRODUCT_IDEA.md is skeleton-only (headers with no content). Asked Orchestrator for product details via question PM_20260516_170938. Cannot write PRD/ROADMAP without knowing what product is. Awaiting user input.
+### 2026-05-16 21:37 — User clarification: Account-centric model, bill-splitting deferred
+**Summary**: User clarified Q1 vision: NestFi is account-centric (tracks which account money comes from, not person-to-person bill-splitting). Cash withdrawal = single transaction, not detailed sub-tracking. Updated PRD to emphasize account-based model and clarify scope. Resolved Q1 (bill-splitting → v2.0) and Q6 (cash withdrawal → one-time entry only) in OPEN_QUESTIONS.md. 5 questions remain blocking/high-priority. MVP scope remains lean and focused on household account tracking.
 
-### 2026-05-16 17:22 — completed PRD, ROADMAP, BACKLOG, OPEN_QUESTIONS
-User provided complete product idea. Created:
-- docs/product/PRD.md (exec summary, personas, features, constraints, success metrics)
-- docs/product/ROADMAP.md (8-week timeline: MVP → Scaling → Release, then feature expansion)
-- planning/BACKLOG.md (22 MVP user stories, 119 story points, organized by epic)
-- planning/OPEN_QUESTIONS.md (5 user clarifications + 5 technical/design items for future phases)
+### 2026-05-16 21:42 — User clarification: All blocking questions resolved, MVP finalized
+**Summary**: User answered remaining clarification questions: Q2 (force password change on first login for all users), Q3 (family selector at login + in-dashboard switcher), Q6 (session timeout = NEVER, manual logout only), Q8 (include export reports in v1.0). Updated PRD and ROADMAP to reflect these decisions. Added password change flow, family selector UI, export reports feature, and session management model to v1.0 MVP deliverables. Expanded acceptance criteria from 9 to 16 items. OPEN_QUESTIONS.md updated with all user decisions. **Phase 0_DISCOVERY COMPLETE** — all blocking decisions resolved. Ready to advance to Phase 1_SOLUTION_DESIGN.
 
-Key decisions: Single currency per family (MVP), bill splitting deferred to v1.3+, simple investment tracking in v1, manual categorization (no ML in v1), member can edit own + owner can edit all.
-
-MVP scope locked: Authentication, Transactions, Categories, Dashboard, Family Management. Ready for Phase 1_SOLUTION_DESIGN (SA to design architecture + confirm tech stack).
+### 2026-05-16 21:59 — Phase 2 BACKLOG_AND_SPEC: MVP scope refined, backlog and roadmap finalized
+**Summary**: Converted PRD and user stories into prioritized backlog using MoSCoW framework. 14 MUST stories (v1.0 MVP) grouped into 4 milestones: Auth & Family Foundation (week 1), Finance & Transactions (week 2), Dashboard & Reports (week 3), Polish & Security (v1.1+). BACKLOG.md now includes detailed story tables, acceptance criteria, dependencies, and implementation sequencing. ROADMAP.md updated with specific deliverables per phase, resource allocation, and gate criteria. Key conventions established: account-centric model (not person-to-person bill-splitting), full family transparency, edit audit trail for compliance, soft-delete + hard-delete pattern. Identified blockers for Phase 4_BUILD: Email service provider must be configured before development starts. Ready to advance to Phase 3_IMPLEMENTATION_PLANNING.

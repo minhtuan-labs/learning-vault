@@ -1,377 +1,218 @@
-# Test Plan — NestFi MVP (v1)
+# Test Plan — NestFi v1.0
 
-**Version:** 1.0  
-**Phase:** 3_IMPLEMENTATION_PLANNING  
-**Owner:** QA  
-**Last Updated:** 2026-05-16  
-**Timeline:** 2-3 days (Phase 5: Test & Fix, following 6-7 day Phase 4 build)
+**Status**: DRAFT (Phase 3 — Implementation Planning)  
+**Prepared by**: QA  
+**Last Updated**: 2026-05-16
 
 ---
 
-## 1. Overview & Test Strategy
+## Executive Summary
 
-### 1.1 Scope
-
-NestFi MVP is a household financial management application.
-
-**In Scope for v1:**
-- All 37 user stories (US-001 to US-037)
-- 21 backend API endpoints
-- 6 frontend pages
-- PostgreSQL 16 database
-- Email service integration (SMTP)
-
-**Out of Scope for v1:**
-- Rate limiting, advanced security (v2)
-- Password reset flow (v2)
-- Token refresh endpoint (v2)
-- Mobile-responsive design (v1.1)
-- CSV/PDF export (v1.1)
-- WebSocket real-time updates (v2)
-
-### 1.2 Test Strategy
-
-**Testing Pyramid:**
-- Unit Tests (60%): CRUD operations, auth logic, business logic, validation
-- Integration Tests (35%): API endpoint flows, database interactions, permission checks
-- E2E Tests (5%): Critical user journeys (login → family creation → transaction logging → dashboard)
-
-**Testing Focus:**
-1. Happy Path: Standard workflows per user stories
-2. Edge Cases: Boundary conditions, empty data, pagination limits
-3. Authorization: RBAC enforcement (superadmin, owner, member, view_only)
-4. Error Handling: Invalid inputs, missing resources, permission denials
-5. Data Integrity: Soft deletes, audit logs, transaction consistency
+This document defines the test strategy, scope, and exit criteria for NestFi v1.0 MVP. Testing will cover core user flows (authentication, family management, transactions, and dashboards) across unit, integration, and end-to-end levels. The release gate requires **VERDICT: PASS** with no `OPEN_CRITICAL` or `OPEN_MAJOR` bugs.
 
 ---
 
-## 2. Test Types & Breakdown
+## 1. Scope
 
-### 2.1 Unit Tests
+### 1.1 In Scope for MVP (Phase 5 Release Gate)
 
-**Coverage Target:** 70% of backend code
+**MUST user stories** (all acceptance criteria must pass):
+- US-1.1: Superadmin login
+- US-1.2: User registration via email invitation
+- US-1.3: User login & family selector
+- US-2.1: Create family
+- US-2.2: Add family members
+- US-3.1: Create account
+- US-3.2: View all accounts
+- US-4.1: View default categories
+- US-5.1: Record income transaction
+- US-5.2: Record expense transaction
+- US-5.4: Edit transaction
+- US-6.1: View dashboard summary
+- US-6.2: View expense breakdown by category
+- US-7.1: Logout
 
-**Test Categories:**
-- Models & Schemas: 20 tests
-- CRUD Operations: 30 tests
-- Auth & Security: 15 tests
-- Business Logic: 20 tests
-- Validation: 15 tests
-- Utilities: 10 tests
-- **Total Unit Tests:** ~110
+**SHOULD user stories** (best effort; optional for v1):
+- US-1.4: Password reset
+- US-2.3: View family members
+- US-2.4: Disable/enable members
+- US-3.3: Edit account
+- US-4.2: Create custom category
+- US-5.3: Record investment transaction
+- US-5.5: Disable/restore transaction
+- US-6.3: Income vs. expense trends
+- US-6.4: Export financial report
 
-**Tools:** pytest, pytest-cov, unittest.mock, faker
-
-**Fixtures (conftest.py):**
-- `db_session`: In-memory SQLite for fast tests
-- `user_factory`: Create users with roles (superadmin, owner, member)
-- `family_factory`: Create families with members
-- `transaction_factory`: Create transactions with categories
-- `category_factory`: Create categories (income, expense, investment)
-
-### 2.2 Integration Tests
-
-**Coverage Target:** 100% of API endpoints (21 endpoints)
-
-**Test Categories:**
-- Auth (2 endpoints): 6 tests
-- Families (4 endpoints): 12 tests
-- Family Members (3 endpoints): 12 tests
-- Invitations (2 endpoints): 8 tests
-- Transactions (4 endpoints): 16 tests
-- Categories (4 endpoints): 12 tests
-- Analytics (2 endpoints): 6 tests
-- Health (1 endpoint): 2 tests
-- **Total Integration Tests:** ~78
-
-**Tools:** pytest, httpx, TestClient (FastAPI), pytest-asyncio
-
-**Test Data:**
-- Pre-populated test families, users, transactions
-- Clean state per test (rollback after each)
-
-### 2.3 End-to-End Tests
-
-**Coverage Target:** 5% (critical user journeys only)
-
-**Scenarios:**
-1. Superadmin → Create Family → Invite Owner → Owner Accepts → Family Ready
-2. Owner → Log Transactions → View Dashboard
-3. Member → Edit Own Transaction → Verify Audit Trail
-
-**Tools:** Docker Compose, Playwright (v1.1), Manual testing
+**Out of Scope**:
+- US-7.2: Session timeout (deferred to v1.1)
+- Rate limiting, advanced security
+- Mobile optimization
+- Email delivery (mocked; tokens in logs)
 
 ---
 
-## 3. Test Environment & Tools
+## 2. Test Types
 
-### 3.1 Test Database
+### 2.1 Layered Approach
 
-**Database:** PostgreSQL 16 (same as production)
-
-**Setup:**
-```bash
-DATABASE_URL=postgresql://testuser:testpass@localhost:5432/nestfi_test
-pytest runs alembic upgrade head before first test
-```
-
-**Isolation:** Each test transaction rolled back after completion; clean state guaranteed
-
-### 3.2 Test Tools & Stack
-
-| Tool | Purpose | Version |
-|---|---|---|
-| pytest | Test runner | 7.4+ |
-| pytest-cov | Coverage reporting | 4.1+ |
-| pytest-asyncio | Async/await support | 0.21+ |
-| httpx | Async HTTP client | 0.24+ |
-| TestClient (FastAPI) | Simulated API requests | FastAPI 0.100+ |
-| faker | Random test data | 19.0+ |
-| freezegun | Mock time/datetime | 1.2+ |
-| Alembic | Database migrations | 1.11+ |
-| Docker Compose | E2E environment | 2.0+ |
-
----
-
-## 4. Manual vs. Automated Testing Split
-
-### 4.1 Automated (70% of effort)
-
-- ✅ All CRUD operations (create, read, update, delete)
-- ✅ Auth logic (password hashing, JWT signing)
-- ✅ Validation (schemas, business rules)
-- ✅ All 21 API endpoints (happy path + error cases)
-- ✅ Permission checks (RBAC enforcement)
-- ✅ Soft-delete behavior
-- ✅ Pagination, filtering, sorting
-- ✅ Database constraints, foreign keys
-
-### 4.2 Manual (30% of effort)
-
-| Area | Effort | Timeline |
-|---|---|---|
-| UI/UX flows | 6h | Day 1 afternoon |
-| Email delivery | 3h | Day 1 evening |
-| Multi-browser testing | 2h | Day 2 morning |
-| Edge cases | 4h | Day 2 afternoon |
-| Data scenarios | 2h | Day 2 evening |
-| Performance spot-checks | 2h | Day 3 morning |
-
----
-
-## 5. Bug Severity & Release Blockers
-
-### 5.1 Bug Status Convention
-
-```
-OPEN_CRITICAL → (fix) → RETESTING → RETEST_PASS / RETEST_FAIL
-OPEN_MAJOR → FIXED / WONT_FIX
-OPEN_MINOR → (soft warning allowed to ship)
-```
-
-### 5.2 Severity Definitions
-
-| Severity | Definition | Blocks Release? | Examples |
+| Level | Owner | Scope | Tools |
 |---|---|---|---|
-| **CRITICAL** | Blocks all use of app; core feature broken | YES | Login 500, migration fails, data deleted |
-| **MAJOR** | Affects primary user story; partially broken | YES | Txns don't save, can't invite, permissions broken |
-| **MINOR** | Cosmetic or non-critical; workaround exists | NO | Typo, icon missing, chart misaligned |
-| **WONT_FIX** | Deferred to v2 (by design) | NO | Password reset not implemented, WebSocket not available |
+| **Unit** | BE/FE | Model validation, business logic | pytest, vitest |
+| **Integration** | BE/FE | API endpoints with test DB, component + API mocks | pytest, vitest |
+| **End-to-End** | QA | Real BE + FE via Docker Compose; full workflows | curl, manual browser |
+| **Manual** | QA | UX, edge cases, cross-browser | Browser, checklist |
 
-### 5.3 Release Gate
+### 2.2 Test Matrix by Story Group
 
-**Release BLOCKED if:**
-- Any `OPEN_CRITICAL` exists
-- Any `OPEN_MAJOR` exists
-- Any `RETEST_FAIL` exists
-
-**Release ALLOWED if:**
-- All CRITICAL and MAJOR resolved
-- `TEST_REPORT.md` starts with `VERDICT: PASS`
-- Manual testing checklist completed
+| Story Group | Unit | Integration | E2E | Manual |
+|---|---|---|---|---|
+| **Auth** (US-1.x) | ✓ | ✓ Endpoints | ✓ Login flow | ✓ UX |
+| **Family** (US-2.x) | ✓ | ✓ CRUD | ✓ Create + invite | ✓ Selector UX |
+| **Accounts** (US-3.x) | ✓ Balance calc | ✓ CRUD | ✓ Create, view | ✓ Sorting |
+| **Categories** (US-4.x) | ✓ Seed logic | ✓ CRUD | ✓ Seed on family | ✓ Dropdown |
+| **Transactions** (US-5.x) | ✓ Validation | ✓ CRUD, disable | ✓ Record, edit, disable | ✓ Real-time balance |
+| **Dashboard** (US-6.x) | ✓ Aggregation | ✓ API | ✓ Load, data correct | ✓ Charts, perf |
+| **Security** (US-7.x) | ✓ Logout | ✓ Session clear | ✓ Full logout flow | ✓ Back-button |
 
 ---
 
-## 6. Test Coverage & Acceptance Criteria
+## 3. Test Environment
 
-### 6.1 Coverage Targets
+### 3.1 Setup (Phase 5)
 
-| Category | Target | Method |
-|---|---|---|
-| Unit Test Coverage | 70% lines | pytest-cov report |
-| Integration Test Coverage | 100% endpoints (21/21) | Test list vs API_CONTRACT.md |
-| Manual Test Coverage | 100% user stories | Checklist completion |
-| Critical Path Coverage | 100% | E2E test per flow |
+```bash
+# Backend: FastAPI + PostgreSQL
+cd backend && pytest -v --cov=app --tb=short 2>&1 | tee ../reports/_be_test_stdout.log
 
-### 6.2 Test Case Inventory (49+ cases)
+# Frontend: React + Vite
+cd frontend && npm test -- --run 2>&1 | tee ../reports/_fe_test_stdout.log
 
-- Authentication: 4 cases
-- Family Management: 8 cases
-- Member Management: 8 cases
-- Transactions: 12 cases
-- Categories: 9 cases
-- Analytics: 5 cases
-- Authorization (Cross-cutting): 7 cases
+# Integration: Docker Compose
+docker compose up --build -d
+# Run E2E tests, verify endpoints
+docker compose down
+```
 
-### 6.3 Acceptance Criteria
+### 3.2 Test Data Seed
 
-Test Suite is COMPLETE when:
-- [ ] Unit tests: 110+ passing, ≥70% code coverage
-- [ ] Integration tests: 78+ passing, all 21 endpoints covered
-- [ ] Manual tests: Checklist 100% complete
-- [ ] Test data: Isolated per test, consistent
-- [ ] Bug report: All CRITICAL and MAJOR resolved
-- [ ] Performance: Dashboard <3s, pagination <1s
-- [ ] Soft-delete: Deleted transactions hidden
-- [ ] RBAC: All permission tests passing
-- [ ] Audit: Edits/deletes logged
-- [ ] Errors: User-friendly, no stack traces
-- [ ] Frontend: Zero console errors
+- **Superadmin**: `superadmin` / `admin123`
+- **Test family**: "Test Family Smith"
+- **Test users**: owner@example.com, member1@example.com
+- **Accounts**: Checking, Savings (with initial balances)
+- **Categories**: Pre-seeded per US-4.1 (Income, Expense, Investment)
+- **Sample transactions**: 10–15 varied transactions for dashboards
+
+---
+
+## 4. Coverage Targets
+
+### 4.1 Code Coverage (Backend)
+
+- **Target**: ≥ 80% line coverage for core modules
+  - `app/auth/` — login, registration, password reset
+  - `app/families/` — CRUD, member management
+  - `app/accounts/` — CRUD, balance calculation
+  - `app/transactions/` — CRUD, edit history, disable/enable
+  - `app/dashboards/` — aggregation logic
+
+### 4.2 User Story Acceptance Criteria
+
+- **Target**: 100% of MUST story ACs tested (automated or manual)
+- **Approach**: ≥1 E2E test per acceptance criterion
+
+---
+
+## 5. Entry Criteria
+
+✓ All upstream inputs present (checked via `check_prerequisites.sh QA`)
+✓ BE/FE code complete and unit-tested (Phase 4 — BUILD)
+✓ Docker Compose successfully runs with test data seed
+✓ API endpoints respond (health check: `GET /api/v1/docs`)
+
+---
+
+## 6. Exit Criteria (Release Gate)
+
+**Mandatory for PASS**:
+1. ✓ `reports/TEST_REPORT.md` marked `VERDICT: PASS`
+2. ✓ All MUST user stories: 100% AC pass
+3. ✓ `reports/BUG_REPORT.md`: No `OPEN_CRITICAL`, `OPEN_MAJOR`, or `RETEST_FAIL`
+4. ✓ Backend: ≥ 80% line coverage (reported)
+5. ✓ E2E happy path: Zero errors
+6. ✓ Dashboard: Loads < 2 seconds
+
+**Release-blocking statuses**:
+- `OPEN_CRITICAL`: App unusable
+- `OPEN_MAJOR`: Feature broken
+- `RETEST_FAIL`: Fix did not work
+
+**Allowed to ship**:
+- `OPEN_MINOR`: Cosmetic issues
+- `FIXED`, `RETEST_PASS`, `WONT_FIX`: Closed issues
 
 ---
 
 ## 7. Test Execution Timeline
 
-### Phase 4: Build (Days 1–7)
-
-**BE Track (Days 1–5, parallel with FE):**
-- Day 1: Unit tests (models, schemas, auth) — 30 tests
-- Day 2: Integration tests (auth, families, members) — 20 tests
-- Day 3: Integration tests (transactions, categories) — 30 tests
-- Day 4: Integration tests (analytics, health) — 10 tests
-- Day 5: Full suite, 70% coverage, all passing
-
-**Dependencies:**
-- Models defined
-- API endpoints implemented
-- Database migrations finalized
-- SMTP service available (or mocked)
-
-### Phase 5: Test & Fix (Days 1–3)
-
-**Day 1 Morning (4h):** Test Execution
-- Run full automated suite (pytest)
-- Document failures, capture logs
-- Begin bug triage
-
-**Day 1 Afternoon (4h):** Manual Testing
-- Browser-based UI flow testing
-- Email delivery validation
-- Create initial BUG_REPORT.md
-
-**Day 1 Evening (2h):** Bug Analysis
-- Prioritize bugs (CRITICAL, MAJOR, MINOR)
-- Assign to BE/FE for fixing
-- Update TEST_REPORT.md initial verdict
-
-**Day 2 (8h):** Fix & Retest
-- BE fixes CRITICAL/MAJOR bugs
-- QA retests (RETESTING → RETEST_PASS)
-- Update BUG_REPORT.md status
-- Final coverage analysis
-
-**Day 3 (4h):** Final Validation
-- Run full test suite one more time
-- Manual smoke tests on critical flows
-- Finalize TEST_REPORT.md with VERDICT
+| Phase | Days | Activity | Owner |
+|---|---|---|---|
+| **Prep** | 1–2 | Unit/integration tests by BE/FE; E2E env setup | BE, FE, QA |
+| **Execute** | 3–4 | QA runs E2E tests, files bugs | QA |
+| **Fix** | 5–6 | BE/FE fix bugs, QA retests | BE, FE, QA |
+| **Sign-off** | 7 | QA writes TEST_REPORT with VERDICT | QA |
 
 ---
 
-## 8. Test Environment Setup
+## 8. Bug Severity Rules
 
-### 8.1 Prerequisites
+| Severity | Impact | Release Blocks? | Example |
+|---|---|---|---|
+| **CRITICAL** | App unusable, data lost | YES | Superadmin can't log in |
+| **MAJOR** | Core feature broken | YES | Can't record transactions |
+| **MINOR** | Workaround exists, cosmetic | NO | Typo in label |
 
-Before QA Phase 5:
-- [ ] `backend/` source code complete
-- [ ] `frontend/` source code complete
-- [ ] `docker-compose.yml` available
-- [ ] PostgreSQL 16 accessible
-- [ ] Test data seeds prepared
-- [ ] `.env.test` configured (DB URL, JWT secret, email service)
-- [ ] `alembic upgrade head` runs
+---
 
-### 8.2 Quick Start
+## 9. Automated Test Helpers
+
+### Backend (pytest)
 
 ```bash
-cd backend/
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt -r requirements-test.txt
+cd backend
+pytest -v --cov=app --cov-report=term-missing --tb=short \
+  tests/test_auth.py \
+  tests/test_families.py \
+  tests/test_accounts.py \
+  tests/test_transactions.py \
+  tests/test_dashboards.py \
+  2>&1 | tee ../reports/_be_test_stdout.log
+```
 
-cp .env.example .env.test
-# Edit .env.test with test DB URL, JWT secret
+### Frontend (vitest)
 
-alembic upgrade head
-pytest tests/ -v --cov=app --cov-report=html
-open htmlcov/index.html
+```bash
+cd frontend
+npm test -- --run 2>&1 | tee ../reports/_fe_test_stdout.log
 ```
 
 ---
 
-## 9. Test Deliverables
+## 10. Known Risks & Limitations
 
-| File | Owner | Deadline | Content |
-|---|---|---|---|
-| `TEST_CASES.md` | QA | Day 1 Phase 5 | List of 49+ test cases |
-| `TEST_REPORT.md` | QA | Day 3 Phase 5 | Verdict, metrics, evidence |
-| `BUG_REPORT.md` | QA | Day 3 Phase 5 | Bugs, status, assignments |
-| `coverage.html` | BE | Day 3 Phase 5 | Coverage report |
-| `test_*.py` | BE | Day 5 Phase 4 | Unit & integration tests |
-
-### 9.1 TEST_REPORT.md Format
-
-Starts with: `VERDICT: PASS`
-
-Then includes: Executive summary, per-suite results, failures, bugs found, risks
+| Risk | Mitigation |
+|---|---|
+| Email not sent (v1 mocked) | Tokens printed to logs; QA uses manually |
+| No mobile testing | Desktop-only; defer to v1.1 |
+| Test data reset | Docker cleanup; seed scripts ensure clean state |
+| Flaky tests | Avoid hardcoded delays; use wait-for conditions |
 
 ---
 
-## 10. Risk Assessment & Mitigation
+## Next Steps
 
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| Email service unavailable | Medium | Medium | Mock SMTP in tests |
-| Soft-delete filter leak | Low | Critical | Query tests verify deleted_at |
-| Permission bypass | Low | Critical | RBAC test matrix |
-| Token expiry | Low | Medium | Mock clock in tests |
-| Pagination off-by-one | Low | Low | Boundary tests |
+1. BE/FE write unit + integration tests (Phase 4)
+2. QA executes E2E tests + manual validation (Phase 5)
+3. File bugs, track retests, sign off on PASS/FAIL (Phase 5)
+4. Route DELIVERY on PASS; route BE/FE on FAIL (Phase 5→6)
 
----
-
-## 11. Acceptance Criteria (Phase 5 Exit Gate)
-
-Phase 5 is COMPLETE when:
-
-- [ ] TEST_REPORT.md with `VERDICT: PASS`
-- [ ] Coverage ≥ 70%
-- [ ] All 21 endpoints tested
-- [ ] BUG_REPORT.md: No OPEN_CRITICAL/MAJOR/RETEST_FAIL
-- [ ] Manual checklist 100% complete
-- [ ] Performance <3s dashboard, <1s pagination
-- [ ] Soft-delete verified
-- [ ] RBAC enforced
-- [ ] Audit logging works
-- [ ] User-friendly errors only
-- [ ] No frontend console errors
-
-**If PASS:** Route DELIVERY to deploy (Phase 6)  
-**If FAIL:** Route BE/FE to fix bugs; QA retests until PASS
-
----
-
-## 12. References
-
-- USER_STORIES.md: docs/business/USER_STORIES.md
-- API_CONTRACT.md: docs/architecture/API_CONTRACT.md
-- BE_PLAN.md: planning/BE_PLAN.md
-- FE_PLAN.md: planning/FE_PLAN.md
-- TECH_STACK.md: docs/architecture/TECH_STACK.md
-- pytest: https://docs.pytest.org/
-- FastAPI Testing: https://fastapi.tiangolo.com/advanced/testing-databases/
-
----
-
-## Revision History
-
-| Date | Author | Change |
-|---|---|---|
-| 2026-05-16 | QA | Created TEST_PLAN.md with comprehensive strategy, timeline, criteria, risk assessment |
+For detailed test cases, see `docs/qa/TEST_CASES.md`.

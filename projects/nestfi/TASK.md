@@ -1,7 +1,7 @@
 # TASK.md — Product Engineering Control Board
 
 ## Current Phase
-- Phase: 4_BUILD
+- Phase: 5_TEST_AND_FIX
 - Status: IN_PROGRESS
 - Owner: ORCHESTRATOR
 

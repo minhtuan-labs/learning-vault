@@ -1,335 +1,606 @@
-# UX Flow — NestFi Family Financial Management
+# NestFi — User Experience Flow
 
-**Version:** 1.0  
-**Last Updated:** 2026-05-16  
-**Owner:** UX  
+## Overview
 
----
+NestFi is a family financial management platform supporting multi-user collaboration with role-based access (Superadmin, Family Owner, Family Member). Users authenticate, manage families, track transactions (income/expense/investment), and view analytics.
 
-## Flow Overview
-
-NestFi has four main user journeys:
-1. **Superadmin Journey** — manage families and invite initial owners
-2. **Owner Onboarding Journey** — accept invitation, set account, add family members
-3. **Family Member Journey** — log transactions, view dashboard, manage family
-4. **Multi-family Switching** — navigate between multiple families
-
----
-
-## Flow 1: Superadmin Journey
-
-### Goal
-Superadmin creates a new family and invites its initial owner via email.
-
-### Steps
-
-```
-START
-  ↓
-[Superadmin Login] → Verify credentials (superadmin/admin123)
-  ↓
-[Superadmin Dashboard] → List all families, invite owners, manage accounts
-  ↓
-[Create Family Form]
-  • Enter family name
-  • Enter owner email
-  • (Optional) family description/photo
-  ↓
-[System sends invitation email]
-  • Email contains unique acceptance link + token
-  • Link expires in 7 days (standard invitation lifecycle)
-  ↓
-[Superadmin sees confirmation] → "Invitation sent to [email]"
-  ↓
-END
-```
-
-### Key Interactions
-- Superadmin can see status of each family (active, pending owner, etc.)
-- Superadmin can resend or revoke invitations
-- Superadmin can view all family members and their roles
+**Primary flows:**
+1. Superadmin setup and family creation
+2. Family owner invitation & acceptance
+3. Family member management
+4. User authentication & family selection
+5. Transaction lifecycle (create, read, update, delete)
+6. Dashboard & analytics viewing
+7. Category management
 
 ---
 
-## Flow 2: Owner Onboarding Journey
+## Flow 1: Password Reset (Forgot Password)
 
-### Goal
-Owner accepts invitation email, creates account, verifies identity, and becomes family admin.
-
-### Steps
+**Actor**: User on login page who forgot password  
+**Precondition**: User has an active account but doesn't remember password
 
 ```
-START (Owner receives email)
+[Login Page]
   ↓
-[Email Invitation] → Click "Accept Invitation" link
+[Click "Forgot Password?"]
   ↓
-[Verify Email Page]
-  • Show email address from token
-  • Ask: "Is this your email?"
-  • Option: Enter different email (triggers new invite)
+[Password Reset - Email Entry Page]
+  ├─ Input: Email address
+  └─ Action: [Send Reset Link]
   ↓
-[Set Account Details]
-  • First name, last name
-  • Password (with strength indicator)
-  • Phone (optional)
+[Confirmation Page]
+  ├─ Show: "If an account with that email exists, a reset link has been sent."
+  └─ Show: "Link expires in 1 hour"
   ↓
-[Confirm & Create Account] → Account created, owner assigned to family
+[User receives email with reset link]
   ↓
-[Onboarding Setup Screen]
-  • Show family name
-  • Quick setup: "Invite family members" CTA
-  • Option: "Skip for now"
+[Click Reset Link]
   ↓
-[Owner Dashboard] → Ready to manage family
+[Set New Password Page]
+  ├─ Input: New password
+  ├─ Input: Confirm password
+  └─ Action: [Set Password]
   ↓
-END
+[Success Page]
+  ├─ Show: "Password reset successfully"
+  └─ Action: [Return to Login]
+  ↓
+[User logs in with new password]
 ```
 
-### Key Interactions
-- Email verification confirms identity before account creation
-- Password requirements enforced (8+ chars, mixed case, number)
-- Owner can immediately invite family members or defer setup
-- Clear success message on account creation
+**Success criteria**: User can reset password and regain access.  
+**Error cases**: Expired link, invalid email, token mismatch.
 
 ---
 
-## Flow 3: Family Member Onboarding & Invitation
+## Flow 2: Initial System Setup (Superadmin)
 
-### Goal
-Owner invites family members; members accept and join the family.
-
-### Steps
+**Actor**: System administrator on first login  
+**Precondition**: System newly deployed with default superadmin account
 
 ```
-START (Owner in Family Settings)
+[System Ready]
   ↓
-[Family Settings → Members Tab]
-  • View current family members
-  • "Invite Member" button
+[Superadmin Login] → username: superadmin, password: admin123
   ↓
-[Invite Member Form]
-  • Enter member email
-  • Select role (view-only member vs editor member)
-  • (Optional) personal message
-  ↓
-[System sends invitation email]
-  • Similar to owner invitation but for existing users
-  • If user exists: auto-login option
-  • If new user: ask to create account
-  ↓
-[Member receives email]
-  ↓
-[IF existing user:] 
-  → [Accept Invitation] → Add to family → [Family Dashboard]
-  ↓
-[IF new user:]
-  → [Set Account Details] → [Family Dashboard]
-  ↓
-END
+[Dashboard/Home] (Superadmin View)
+  ├─ Option: Create New Family
+  ├─ Option: View Families
+  └─ Option: Change Password
 ```
 
-### Key Interactions
-- Role selection at invitation (view-only restricts transaction editing)
-- Batch invitation for families >2 people
-- Cancel/revoke pending invitations from settings
+**Success criteria**: Superadmin logged in and can access family creation panel.
 
 ---
 
-## Flow 4: Core Family Usage — Transaction Logging & Dashboard
+## Flow 3: Create Family & Invite Owner
 
-### Goal
-Family members log transactions and view household financial overview.
-
-### Steps
+**Actor**: Superadmin  
+**Precondition**: Logged in as superadmin
 
 ```
-START (Member logs in)
+[Superadmin Dashboard]
   ↓
-[Family Selector] 
-  • If multiple families: choose which one to access
-  • If one family: skip to dashboard
+[Click "Create New Family"]
   ↓
-[Family Dashboard]
-  • View summary: Total Income, Total Expenses, Net Savings (month/year toggles)
-  • View category breakdown (pie chart or bar chart)
-  • View monthly trends (last 6-12 months)
-  • Recent transaction list
-  • "Log Transaction" prominent CTA button
+[Family Creation Form]
+  ├─ Input: Family Name (e.g., "Pham Family")
+  ├─ Input: Owner Email (e.g., owner@example.com)
+  └─ Action: [Submit]
   ↓
-[Log Transaction Form]
-  • Type: Income / Expense / Cash Withdrawal
-  • Category: Dropdown (pre-populated from family categories)
-  • Amount: Numeric input
-  • Date: Date picker (defaults to today)
-  • Notes: Optional text field
-  • Member: Auto-populated (current user), read-only
+[Email Sent Confirmation]
+  ├─ Show: "Invitation sent to owner@example.com"
+  └─ Family Status: "Pending Owner Acceptance"
   ↓
-[Submit] → Transaction saved, analytics update in real-time
-  ↓
-[Dashboard refreshes] → New transaction appears in ledger and charts
-  ↓
-END
+[Return to Dashboard]
 ```
 
-### Key Interactions
-- Transaction form is lightweight (~5 fields)
-- Categories are family-configured; default set provided on setup
-- Real-time updates: other family members see new transactions immediately
-- Undo/Edit: member can edit their own transactions within 24 hours (or any edit reverts to view-only after owner decision)
+**Success criteria**: Email invitation sent; family appears in list with status "Pending Acceptance".
 
 ---
 
-## Flow 5: Settings & Category Management
+## Flow 4: Owner Invitation Acceptance
 
-### Goal
-Owner configures family financial categories and settings.
-
-### Steps
+**Actor**: Family owner (email recipient)  
+**Precondition**: Superadmin has invited owner via email
 
 ```
-START (Owner in Family Settings)
+[Email Received]
+  ├─ Subject: "You've been invited to manage family finances on NestFi"
+  └─ Body: Invitation link (with token/code)
   ↓
-[Settings Navigation]
-  • General (family name, logo, members list)
-  • Categories (income, expense, investment)
-  • Bank Accounts (optional for v1)
-  • Permissions & Roles
+[Click Invitation Link]
   ↓
-[Manage Income Categories]
-  • View all active categories (pre-populated: Salary, Freelance, Bonus, Other)
-  • Add new category: name, color, icon
-  • Edit/deactivate existing (archive instead of delete)
-  • Set default for cash/transfers
+[Acceptance Page]
+  ├─ Display: Family name, invitation details
+  ├─ Action: [Accept]
+  └─ Action: [Decline]
   ↓
-[Manage Expense Categories]
-  • View all active categories (pre-populated: Groceries, Utilities, Entertainment, Transport, Other)
-  • Add new category: name, color, icon
-  • Edit/deactivate existing
-  • "Cash Withdrawal" is a special system category (always visible)
-  ↓
-[Manage Investment Categories]
-  • View: Stock Portfolio, Crypto, Retirement, Other
-  • Add/edit as needed
-  • Mark active/inactive
-  ↓
-[Save] → Categories synced across family, all members see them immediately
-  ↓
-END
+  IF Accept:
+    ↓
+    [Set Password] → Create unique password
+    ↓
+    [Email Confirmation] → "You are now family owner"
+    ↓
+    [Redirect to Owner Dashboard]
+  ELSE:
+    ↓
+    [Decline Confirmation] → Email sent to superadmin
 ```
 
-### Key Interactions
-- Categories have color + icon for quick visual identification
-- Default categories provided; full customization available
-- Archiving categories keeps historical transactions tagged correctly
-- Changes visible to all members instantly
+**Success criteria**: Owner password set; owner can log in; status changes to "Active".
 
 ---
 
-## Flow 6: Multi-Family Navigation
+## Flow 5: Add Family Members (by Owner)
 
-### Goal
-User with multiple family accounts switches between families without re-logging.
-
-### Steps
+**Actor**: Family owner  
+**Precondition**: Owner accepted invitation and logged in
 
 ```
-START (User logged into Family A)
+[Owner Dashboard]
   ↓
-[Top Navigation → Family Selector]
-  • Show current family name + avatar
-  • Dropdown: list all families user belongs to
+[Click "Manage Family Members"]
   ↓
-[Select Family B]
+[Family Members List]
+  ├─ Current Members: [Owner]
+  ├─ Action: [Add New Member]
+  └─ Action: [Edit/Remove Member]
   ↓
-[Dashboard switches to Family B]
-  • Transactions, categories, members, settings all change context
-  • No re-login required
+[Add Member Modal]
+  ├─ Input: Member Email
+  ├─ Input: Member Name (optional)
+  └─ Select: Role (Member / Viewer)
   ↓
-[User works in Family B]
+[Invite Confirmation]
+  ├─ Send: Invitation email to new member
+  └─ Show: "Invitation sent; awaiting acceptance"
   ↓
-[Can switch back to Family A] → Same instant switch
-  ↓
-END
+[New Member Receives Email]
+  ├─ Accept Invitation
+  ├─ Set Password
+  └─ Joins Family
 ```
 
-### Key Interactions
-- Family switcher is persistent in header/navigation
-- Clear visual indicator of current family (name + color)
-- No page reload required; smooth context switch
-- Permissions reset based on role in selected family
+**Success criteria**: New member invited and can accept; appears in family members list.
 
 ---
 
-## Flow 7: Transaction History & Search
+## Flow 6: User Login & Family Selection
 
-### Goal
-Member views transaction history, filters, and searches for specific transactions.
-
-### Steps
+**Actor**: Any authenticated user (owner or member)  
+**Precondition**: User has accepted invitation and set password
 
 ```
-START (Member clicks "Transaction History" or similar)
+[Login Page]
+  ├─ Input: Email
+  ├─ Input: Password
+  └─ Action: [Login]
   ↓
-[Transaction Ledger View]
-  • List of all transactions (newest first)
-  • Show: date, member, category, amount, notes
-  • Filters: date range, category, member, type (income/expense)
-  • Search: text search on notes
+[Verify Credentials]
   ↓
-[Apply Filters]
-  • Select date range (e.g., "Last 30 days")
-  • Select category from dropdown
-  • Select member from dropdown
-  ↓
-[Results refresh] → Ledger filtered, summary stats update
-  ↓
-[Click transaction]
-  ↓
-[Transaction Detail] → View full details
-  • If own transaction: Edit / Delete options
-  • If other member's transaction: View-only
-  ↓
-END
+  IF User belongs to 1 family:
+    ↓
+    [Redirect to Family Dashboard]
+  ELSE (Multiple families):
+    ↓
+    [Family Selection Screen]
+    ├─ Display: List of families user belongs to
+    ├─ Action: [Select Family]
+    └─ [Remember last selection? Toggle]
+    ↓
+    [Redirect to Selected Family Dashboard]
 ```
 
-### Key Interactions
-- Default view: current month
-- Filter state persists during session
-- Export to CSV available (nice-to-have v2)
-- Pagination: show 20-50 per page
+**Success criteria**: User authenticated and viewing correct family's data.
 
 ---
 
-## Key UX Principles Applied
+## Flow 7: Transaction Management
 
-1. **Simplicity:** Minimal steps to log transactions (5 fields max)
-2. **Transparency:** Real-time updates; all members see consistent data
-3. **Role clarity:** Superadmin, Owner, Member roles have distinct, enforced capabilities
-4. **Visual hierarchy:** Primary CTAs (Log Transaction, Invite Member) prominent
-5. **Context switching:** Multi-family navigation seamless and quick
-6. **Safety:** Confirmation for destructive actions (delete transaction, remove member)
+### 6.1 Create Transaction
+
+**Actor**: Family member  
+**Precondition**: User logged in and family selected
+
+```
+[Dashboard/Transactions Tab]
+  ↓
+[Click "Add Transaction" / "+ New"]
+  ↓
+[Transaction Form]
+  ├─ Select: Type (Income / Expense / Investment / Cash Withdrawal)
+  ├─ Input: Amount
+  ├─ Input: Date
+  ├─ Select: Category (from available list for type)
+  ├─ Input: Description (optional)
+  ├─ Select: Bank Account (if relevant)
+  └─ Action: [Save]
+  ↓
+[Transaction Created]
+  ├─ Show: Confirmation message + transaction summary
+  ├─ Dashboard updates in real-time
+  └─ Transaction appears in history
+```
+
+**Success criteria**: Transaction saved; visible in list and reflected in dashboard summaries.
+
+### 6.2 View/Filter Transactions
+
+```
+[Transactions List]
+  ├─ Display: All transactions (paginated)
+  ├─ Filter: Date range, Type, Category
+  ├─ Sort: Date (newest first by default)
+  ├─ Action: [Edit] transaction
+  ├─ Action: [Delete] transaction
+  └─ Action: [View Details]
+```
+
+### 6.3 Update Transaction
+
+```
+[Transaction Detail / Edit Modal]
+  ├─ Pre-fill: Current data
+  ├─ Editable Fields: Amount, Date, Category, Description
+  └─ Action: [Update]
+```
+
+### 7.4 Disable/Enable Transaction (Soft-Delete)
+
+**Actor**: Any family member  
+**Precondition**: User viewing transaction detail or transaction list
+
+```
+[Transaction Detail / Row]
+  ↓
+[Click "Disable" button]
+  ↓
+[Confirmation]
+  ├─ Show: "Hide this transaction from reports? (Can be restored later)"
+  └─ Action: [Confirm] / [Cancel]
+  ↓
+[Transaction Disabled]
+  ├─ Visually mark as hidden (strikethrough, grayed out)
+  ├─ Show: "Enable" button (for re-enabling)
+  └─ Dashboard updates: Transaction no longer counted in P&L
+  ↓
+[User can click "Enable" to restore]
+  ↓
+[Transaction Re-enabled]
+  ├─ Visible again in all reports
+  └─ Dashboard updates: Transaction counted again
+```
+
+**Success criteria**: Disabled transactions not shown in reports; can be re-enabled by any member.  
+**Note**: All family members can disable/enable. See Flow 7.5 for hard-delete (owner only).
+
+### 7.5 Delete Transaction (Hard-Delete)
+
+**Actor**: Family owner only  
+**Precondition**: Owner viewing transaction detail
+
+```
+[Transaction Detail - Owner View]
+  ↓
+[Click "Delete Permanently" button] (red, destructive)
+  ↓
+[Confirmation Dialog]
+  ├─ Show: "Permanently delete this transaction? This cannot be undone."
+  ├─ Show: Transaction details for confirmation
+  └─ Action: [Delete Permanently] / [Cancel]
+  ↓
+[Transaction Hard-Deleted]
+  ├─ Show: "Transaction permanently deleted"
+  ├─ Cannot be recovered
+  └─ Dashboard updates: Transaction removed from all history
+```
+
+**Success criteria**: Transaction completely removed; not recoverable.  
+**Warning**: Owner-only action; permanent action.
+
+### 7.6 View Transaction Edit History
+
+**Actor**: Any family member  
+**Precondition**: User viewing transaction detail
+
+```
+[Transaction Detail Page]
+  ├─ Show: Current transaction data
+  ├─ Show: "Edit History" section (collapsed by default)
+  └─ Click: [Show Edit History]
+  ↓
+[Edit History Expanded]
+  ├─ Show: List of all edits in reverse chronological order
+  ├─ For each edit:
+  │  ├─ Editor name (e.g., "Alice Smith")
+  │  ├─ Edit timestamp (e.g., "May 16, 2:30 PM")
+  │  ├─ Change summary (e.g., "Changed amount from $100 to $150")
+  │  └─ Before/after snapshots (expandable)
+  └─ Show: Original creation timestamp and creator
+```
+
+**Success criteria**: Full audit trail visible; users know who changed what and when.
 
 ---
 
-## Accessibility & Device Considerations
+## Flow 8: Manage Family Members (Enable/Disable/Edit)
 
-- **Keyboard navigation:** All forms and modals fully accessible via Tab/Enter
-- **Screen reader:** Labels, ARIA attributes for charts and interactive elements
-- **Mobile responsive:** Touch-friendly buttons (48px min tap target), readable on mobile (v2 refinement)
-- **Color contrast:** WCAG AA minimum for all text and interactive elements
-- **Error handling:** Clear, plain-language error messages (not red-only)
+**Actor**: Family owner  
+**Precondition**: Owner logged in and viewing family members list
+
+### 8.1 Disable Family Member
+
+```
+[Family Members List]
+  ├─ Active members with role badges
+  ├─ Pending invitations with [Resend] / [Revoke] buttons
+  └─ For each active member: [Edit] button
+  ↓
+[Click "Edit" on member row]
+  ↓
+[Member Edit Modal]
+  ├─ Show: Member name, email
+  ├─ Show: Current role (Member or Viewer)
+  ├─ Option 1: [Change Role] (Member ↔ Viewer)
+  └─ Option 2: [Disable Member] (destructive, red button)
+  ↓
+[Click "Disable Member"]
+  ↓
+[Confirmation Dialog]
+  ├─ Show: "Disable member? They will lose access immediately."
+  ├─ Show: "Their transactions and edits will remain in the record."
+  └─ Action: [Disable Member] / [Cancel]
+  ↓
+[Member Disabled]
+  ├─ Member immediately logged out (session invalidated)
+  ├─ Status changed to "disabled" in members list
+  ├─ Show: [Re-enable] option
+  └─ Member no longer sees family data
+```
+
+**Success criteria**: Member loses access; transactions preserved; can be re-enabled.
+
+### 8.2 Re-enable Family Member
+
+```
+[Family Members List - showing disabled member]
+  ↓
+[Click "Edit" on disabled member]
+  ↓
+[Member Edit Modal]
+  ├─ Show: "Status: Disabled"
+  ├─ Show: [Re-enable Member] button
+  └─ Show: [Resend Invitation] option
+  ↓
+[Click "Re-enable Member"]
+  ↓
+[Confirmation]
+  ├─ Show: "Re-enable member? They will regain full access."
+  └─ Action: [Re-enable] / [Cancel]
+  ↓
+[Member Re-enabled]
+  ├─ Status changed to "active"
+  ├─ Member regains access on next login
+  └─ All transactions/edits remain intact
+```
+
+**Success criteria**: Member can log in again; full access restored.
+
+### 8.3 Manage Pending Invitations
+
+```
+[Family Members List]
+  ├─ Show: Pending invitations with email and expiration
+  ├─ Actions: [Resend Invitation] [Revoke Invitation]
+  ↓
+[Click "Resend Invitation"]
+  ↓
+[Confirmation]
+  ├─ Show: "Resend invitation to (email)?"
+  └─ Action: [Resend] / [Cancel]
+  ↓
+[Invitation Resent]
+  ├─ Show: Confirmation message
+  └─ New invitation email sent; previous link invalidated
+  ↓
+OR [Click "Revoke Invitation"]
+  ↓
+[Confirmation]
+  ├─ Show: "Revoke invitation? They can no longer accept it."
+  └─ Action: [Revoke] / [Cancel]
+  ↓
+[Invitation Revoked]
+  ├─ Removed from pending list
+  └─ Invitee cannot accept old link
+```
+
+**Success criteria**: Invitations can be resent or revoked; user sees status updates.
 
 ---
 
-## Open Design Questions
+## Flow 10: Category Management
 
-1. **Chart type preference:** Pie chart (easy visual ratio) vs Bar chart (easier to read precise values) for category breakdown?
-   - Current: Recommend both — pie in dashboard, bar in reports
-   
-2. **Cash withdrawal UX:** Should cash withdrawal have a separate form or be a category in expense form?
-   - Current: Category in expense form, marked as system-level (can't delete)
-   
-3. **Real-time updates polling:** Should dashboard auto-refresh every N seconds, or only on action?
-   - Current: Recommend auto-refresh every 10s (can be configured per family)
+**Actor**: Family owner (admin permissions)  
+**Precondition**: Logged in as owner
+
+```
+[Settings / Categories Panel]
+  ↓
+[View Category Lists]
+  ├─ Income Categories: Salary, Bonus, Other Income, ...
+  ├─ Expense Categories: Groceries, Utilities, Entertainment, ...
+  └─ Investment Categories: Stocks, Crypto, Real Estate, ...
+  ↓
+[Manage Categories]
+  ├─ Action: [Add New Category]
+  │  └─ Input: Category Name, Type (Income/Expense/Investment)
+  ├─ Action: [Edit Category]
+  ├─ Action: [Delete Category]
+  └─ Show: Category usage (number of transactions)
+```
+
+**Success criteria**: Owner can add/edit/delete custom categories; categories available in transaction form.
 
 ---
+
+## Flow 11: Dashboard & Analytics
+
+**Actor**: Any family member  
+**Precondition**: User logged in
+
+```
+[Dashboard - Overview Tab]
+  ├─ Time Period: Current month (configurable to YTD, custom range)
+  ├─ Summary Cards:
+  │  ├─ Total Income (month)
+  │  ├─ Total Expenses (month)
+  │  ├─ Net Balance (month)
+  │  └─ Total Savings / Investment
+  ├─ Recent Transactions: Last 5 transactions
+  └─ Quick Stats: Most spent category, income sources
+  ↓
+[Analytics - Detailed View]
+  ├─ Tab 1: Expense Breakdown
+  │  └─ Pie/Bar chart: Expenses by category
+  ├─ Tab 2: Income Breakdown
+  │  └─ Pie/Bar chart: Income by source
+  ├─ Tab 3: Savings Trend
+  │  └─ Line chart: Monthly savings over time
+  ├─ Tab 4: Investment Summary
+  │  └─ Table: Investment accounts, values, growth
+  └─ Filter: Date range selector
+```
+
+**Success criteria**: Dashboard loads < 2 seconds; charts update when transactions change.
+
+---
+
+## Flow 12: User Settings & Logout
+
+**Actor**: Any authenticated user
+
+```
+[Settings Menu / User Profile]
+  ├─ Option: [Change Password]
+  ├─ Option: [Edit Profile]
+  │  └─ Name, Email (display only)
+  ├─ Option: [Notifications] (future)
+  ├─ Option: [Leave Family] (if member)
+  └─ Option: [Logout]
+  ↓
+[Logout Confirmation]
+  ├─ Clear session
+  └─ Redirect to login page
+```
+
+---
+
+---
+
+## Role-Based Access & Permissions
+
+### Superadmin (System Administrator)
+- Create new families
+- Invite family owners
+- Reset superadmin password
+- No access to family financial data
+
+### Family Owner
+- Full access to all family data and features
+- Invite/manage family members (assign roles: Member or Viewer)
+- Enable/disable family members
+- Create, edit, delete (hard-delete) transactions
+- Manage categories (create, edit, delete custom categories)
+- Manage family settings (name, members, accounts)
+- Export reports (stretch goal v1.1)
+- CANNOT: Remove themselves if they're the only owner
+
+### Family Member (Editor)
+- View all family financial data (accounts, transactions, analytics)
+- Create transactions (income, expense, investment)
+- Edit any transaction (all members have equal edit rights)
+- Disable/enable (soft-delete) transactions (cannot hard-delete)
+- View transaction edit history
+- CANNOT: Hard-delete transactions
+- CANNOT: Manage members or categories
+- CANNOT: Edit family settings
+
+### Family Viewer (Read-Only)
+- View all family financial data (accounts, transactions, analytics)
+- CANNOT: Create or edit transactions
+- CANNOT: Disable/enable transactions
+- CANNOT: Manage members or categories
+- CANNOT: Edit family settings
+
+---
+
+## Key UX Principles
+
+1. **Multi-family support**: Always visible which family is active; easy family switching
+2. **Role clarity**: Members see appropriate actions based on role (owner vs. member)
+3. **Data isolation**: No family data leaks; strict family-level filtering
+4. **Responsive layout**: Desktop-first; readable on tablet/mobile (not optimized for mobile)
+5. **Minimal friction**: Quick transaction entry; sensible defaults
+6. **Real-time feedback**: Transaction confirmations, summary updates without page reload
+7. **Accessibility**: Clear labels, logical tab order, color contrast (WCAG AA target)
+
+---
+
+## Navigation Structure
+
+```
+Main Navigation (Top bar or Sidebar):
+├─ Dashboard (home icon)
+├─ Transactions
+│  ├─ All Transactions
+│  ├─ Income
+│  ├─ Expenses
+│  └─ Investments
+├─ Analytics (if member) / Reports
+├─ Settings (owner only)
+│  ├─ Categories
+│  ├─ Bank Accounts
+│  └─ Family Members
+├─ [Family Selector Dropdown]
+└─ User Profile / Logout
+```
+
+---
+
+## Error Handling
+
+### Invalid Invitation Link
+```
+[Expired/Invalid Link Page]
+├─ Message: "This invitation has expired or is invalid"
+└─ Action: [Contact superadmin] or [Request new invitation]
+```
+
+### Duplicate Email
+```
+[User already exists for this email]
+├─ Message: "Email already registered. Please log in or reset password"
+└─ Action: [Login] / [Forgot Password]
+```
+
+### Insufficient Permissions
+```
+[Access Denied]
+├─ Message: "You don't have permission to perform this action"
+└─ Action: [Return to Dashboard]
+```
+
+---
+
+## Future Enhancements (Out of Scope - MVP)
+
+- Recurring transaction templates
+- Receipt attachment / photo scanning
+- Budget planning & alerts
+- Advanced forecasting
+- Mobile-native app
+- Auto-categorization with ML
+- Bill splitting workflow
+- Notifications (email/SMS)

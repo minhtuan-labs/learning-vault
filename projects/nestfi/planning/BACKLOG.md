@@ -1,580 +1,320 @@
-# Product Backlog — NestFi
+# NestFi — Product Backlog
 
-**Product:** NestFi - Family Financial Management Platform  
-**Last Updated:** 2026-05-16  
-**Owner:** PM  
+Prioritized list of user stories for implementation, organized by MVP scope and dependencies.
 
----
+**Phase**: 2_BACKLOG_AND_SPEC (current) → Phase 4_BUILD  
+**MVP Target**: All MUST stories complete and tested before Phase 6_DELIVERY
 
-## Backlog Structure
+## Priority Levels (MoSCoW)
 
-This backlog is organized by epic (feature area) and prioritized for MVP (v0.1) delivery. Items marked with **🚀 MVP** are in scope for the first release; others are deferred to v0.2+ or treated as nice-to-haves.
-
----
-
-## Epic 1: Authentication & User Management 🚀 MVP
-
-### US-1.1: User Registration via Email Invitation 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 8  
-**Description:**  
-As a family owner, I want to invite family members via email so that they can join our household financial management without manual account setup.
-
-**Acceptance Criteria:**
-- [ ] Owner clicks "Invite Member" button
-- [ ] Owner enters member email address
-- [ ] System sends invitation email with unique acceptance link/token
-- [ ] Email arrives within 5 minutes (99% of invitations)
-- [ ] Link is valid for 7 days
-- [ ] Member clicks link and is prompted to create password
-- [ ] System validates email uniqueness (no duplicate invitations)
-- [ ] Owner receives confirmation that invitation was sent
-
-**Tasks:** (for engineering team)
-- [ ] Email template design
-- [ ] Invitation token generation & storage (DB)
-- [ ] Email service setup (AWS SES or SendGrid)
-- [ ] Frontend: invitation form UI
-- [ ] Backend: POST /invite endpoint
-- [ ] Backend: GET /accept-invite/:token endpoint
+- **MUST** (P0): Essential for MVP v1.0 launch; blocks release if incomplete
+- **SHOULD** (P1): High-value features for MVP; implement if time allows
+- **COULD** (P2): Nice-to-have; suitable for v1.1+ if MVP timeline is tight
+- **WON'T** (P3): Explicitly out of v1.x scope; defer to v2.0+
 
 ---
 
-### US-1.2: Superadmin Account & Family Creation 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a superadmin, I want to create new families and invite initial owners via email so that each family has a starting point for household financial management.
+## Story Group 1: Authentication & Account Setup (Foundation)
 
-**Acceptance Criteria:**
-- [ ] Superadmin can login with default credentials (superadmin/admin123)
-- [ ] Superadmin can create a new family (name, description)
-- [ ] System generates unique family ID
-- [ ] Superadmin can invite owner via email from family creation flow
-- [ ] Owner invitation includes family details
-- [ ] Only superadmin can create families (no other users)
-- [ ] Superadmin can list all families and their members
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-1.1** | Superadmin Login | MUST | PENDING | M | System bootstrap | Default account: superadmin/admin123; forced password change on first login |
+| **US-1.2** | User Registration via Email Invitation | MUST | PENDING | L | Email service, US-1.1 | Invitation link valid 7 days; email confirmation required; new owners/members force password change on first login |
+| **US-1.3** | User Login | MUST | PENDING | M | US-1.1, US-1.2 | Email/password login; family selector if multiple families; no auto-timeout |
+| **US-1.4** | Password Reset | SHOULD | PENDING | M | US-1.3 | Forgot password flow; reset link expires 1 hour; deferred to v1.1 if time-constrained |
 
-**Tasks:**
-- [ ] Database schema for families & roles
-- [ ] Superadmin login flow
-- [ ] Family creation API (POST /families)
-- [ ] Permission middleware (superadmin-only checks)
-- [ ] Family settings page (superadmin panel)
+**Acceptance Criteria (Group 1):**
+- [ ] Superadmin can log in and is prompted to change password (security requirement)
+- [ ] Owner can receive email invitation, accept, and set password before accessing family data
+- [ ] New members inherit password-change-on-first-login requirement
+- [ ] User can log in with email and password
+- [ ] Users with multiple families see family selector at login
+- [ ] Users with one family log directly into dashboard
+- [ ] Sessions persist until manual logout (no automatic timeout)
 
 ---
 
-### US-1.3: Password Reset & Account Recovery 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 5  
-**Description:**  
-As a user, I want to reset my password via email so that I can regain access if I forget my credentials.
+## Story Group 2: Family Management (Core Domain)
 
-**Acceptance Criteria:**
-- [ ] User clicks "Forgot Password" link on login page
-- [ ] User enters email address
-- [ ] System sends password reset email with token
-- [ ] Reset link valid for 24 hours
-- [ ] User clicks link and creates new password
-- [ ] New password is validated (length, complexity)
-- [ ] Old password is invalidated after reset
-- [ ] User receives confirmation email
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-2.1** | Create a New Family | MUST | PENDING | M | US-1.3 (owner logged in) | Owner prompted to name family after email acceptance; becomes family owner automatically |
+| **US-2.2** | Add Family Members | MUST | PENDING | L | US-2.1, email invitations | Owner can invite members; email confirmation required; members can belong to multiple families |
+| **US-2.3** | View Family Members | SHOULD | PENDING | S | US-2.2 | Show active members and pending invitations; resend invitation option |
+| **US-2.4** | Disable/Enable Family Members | SHOULD | PENDING | M | US-2.3 | Owner can revoke/restore access; transactions remain (audit trail preserved); disabled members see no data |
 
-**Tasks:**
-- [ ] Password reset token flow
-- [ ] Email template for reset
-- [ ] Frontend: password reset form
-- [ ] Backend: password reset endpoints
-- [ ] Validation logic for password strength
+**Acceptance Criteria (Group 2):**
+- [ ] Superadmin creates family and designates owner (via email invitation)
+- [ ] Owner sets password and can name the family after accepting invitation
+- [ ] Owner can invite members via email
+- [ ] Invited members can accept and set password (forced change on first login)
+- [ ] All family members can see other members and pending invitations
+- [ ] Owner can disable/enable members; disabled members are immediately logged out
+- [ ] Users can switch families in-dashboard via family selector dropdown
 
 ---
 
-### US-1.4: Multi-Family Account Support 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 8  
-**Description:**  
-As a user, I want to belong to multiple families and switch between them without re-logging-in so that I can manage multiple households from one account.
+## Story Group 3: Account (Bank Account) Management (Finance Foundation)
 
-**Acceptance Criteria:**
-- [ ] User can be invited to and accept multiple families
-- [ ] After login, user sees list of families they belong to
-- [ ] User can switch families from dashboard (without re-login)
-- [ ] Each family view is independent (different transactions, categories, members)
-- [ ] System tracks which family is "active" per session
-- [ ] "Switch family" action is clearly visible on dashboard
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-3.1** | Create Bank Account | MUST | PENDING | M | US-2.1 (family exists) | Types: bank, savings, investment, cash; optional initial balance; all members can create |
+| **US-3.2** | View All Accounts | MUST | PENDING | S | US-3.1 | Show all family accounts with current balances; sortable by type/balance; calculated from transactions |
+| **US-3.3** | Edit Account | SHOULD | PENDING | S | US-3.2 | Update account name and type; changes reflected across family; deferred to v1.1 if time-constrained |
 
-**Tasks:**
-- [ ] Database design: family membership (user-to-family mapping)
-- [ ] API endpoint: GET /me/families
-- [ ] API endpoint: POST /switch-family/:familyId
-- [ ] Frontend: family switcher component
-- [ ] Session/context management for active family
-- [ ] Authorization checks on all endpoints (verify family membership)
+**Acceptance Criteria (Group 3):**
+- [ ] User can create account with name, type (bank/savings/investment/cash), and optional initial balance
+- [ ] Account appears in account list visible to all family members
+- [ ] Account balance calculated from non-disabled transactions
+- [ ] User can edit account name and type (changes reflected for all members)
+- [ ] Account type influences transaction category defaults (e.g., investment account shows investment categories)
 
 ---
 
-## Epic 2: Transaction Logging 🚀 MVP
+## Story Group 4: Categories & Transaction Setup (Transaction Foundation)
 
-### US-2.1: Log Income Transaction 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to log an income transaction so that the household income is tracked and visible to all family members.
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-4.1** | View Default Categories | MUST | PENDING | S | US-2.1 (on family creation) | Pre-populate on family creation: Income (Salary, Bonus, Other), Expense (Groceries, Utilities, Entertainment, Transportation, Healthcare, Cash Withdrawal, Other), Investment (Stocks, Bonds, Real Estate, Other) |
+| **US-4.2** | Create Custom Category | SHOULD | PENDING | M | US-4.1, owner role | Owner can add categories; custom categories family-scoped; default categories immutable |
 
-**Acceptance Criteria:**
-- [ ] Member clicks "Add Transaction" → "Income"
-- [ ] Form displays: amount, category (dropdown), date, optional notes
-- [ ] Amount field accepts decimals (e.g., 1500.50)
-- [ ] Date defaults to today but can be changed
-- [ ] Category dropdown shows all active income categories
-- [ ] Notes field is optional, max 500 characters
-- [ ] System auto-fills member name (logged-in user)
-- [ ] Member submits form; transaction created immediately
-- [ ] Transaction visible in family ledger within 1 second
-- [ ] Success message confirms creation
-
-**Tasks:**
-- [ ] API endpoint: POST /transactions (type: "income")
-- [ ] Frontend: transaction creation form
-- [ ] Category dropdown/autocomplete component
-- [ ] Real-time update (WebSocket or polling) for other family members
-- [ ] Validation (amount > 0, category exists, member belongs to family)
-- [ ] Audit logging (who created what, when)
+**Acceptance Criteria (Group 4):**
+- [ ] Default categories pre-populated when family is created
+- [ ] All members can view available categories (income, expense, investment)
+- [ ] Owner can create custom categories
+- [ ] Categories are family-scoped (not shared across families)
+- [ ] Default categories cannot be deleted (immutable protection)
 
 ---
 
-### US-2.2: Log Expense Transaction 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to log an expense transaction so that household spending is tracked and categorized.
+## Story Group 5: Transaction Recording & Lifecycle (Core Business Logic)
 
-**Acceptance Criteria:**
-- [ ] Member clicks "Add Transaction" → "Expense"
-- [ ] Form displays: amount, category (dropdown), date, optional notes
-- [ ] Amount field accepts decimals
-- [ ] Date defaults to today
-- [ ] Category dropdown shows all active expense categories
-- [ ] Notes field optional (e.g., "groceries at Whole Foods")
-- [ ] Member name auto-filled
-- [ ] System validates: amount > 0, category exists, member in family
-- [ ] Transaction created and visible to all family members immediately
-- [ ] Expense reduces household balance (reflected in dashboard)
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-5.1** | Record Income Transaction | MUST | PENDING | M | US-3.1, US-4.1 | Log salary, bonus, gifts; all members can record; amount > 0 validation |
+| **US-5.2** | Record Expense Transaction | MUST | PENDING | M | US-3.1, US-4.1 | Log expenses, including "Cash Withdrawal" as simple category; permit overdraft |
+| **US-5.3** | Record Investment Transaction | SHOULD | PENDING | M | US-3.1, US-4.1 | Log investment purchases; can include optional dates in future; deferred to v1.1 if time-constrained |
+| **US-5.4** | Edit Transaction | MUST | PENDING | M | US-5.1/5.2 | All members can edit any transaction; edit history tracked (who, when, before/after snapshot) |
+| **US-5.5** | Disable/Restore Transaction | SHOULD | PENDING | M | US-5.4 | Members can soft-delete (disable); disabled txns excluded from P&L; only owner can hard-delete; deferred to v1.1 if time-constrained |
 
-**Tasks:**
-- [ ] API endpoint: POST /transactions (type: "expense")
-- [ ] Form validation (amount, category)
-- [ ] Real-time broadcast to family
-- [ ] Dashboard update (total expenses)
+**Acceptance Criteria (Group 5):**
+- [ ] User can record income with amount, date, category, account, optional description
+- [ ] User can record expense with amount, date, category, account, optional description
+- [ ] Amount must be > 0; date can be future-dated
+- [ ] Cash withdrawal is a standard expense category (no detailed sub-tracking)
+- [ ] All family members can view all transactions (full transparency)
+- [ ] All family members can edit any transaction
+- [ ] Edit history shows editor, timestamp, and what changed
+- [ ] Members can disable (soft-delete) transactions; disabled txns hidden from reports
+- [ ] Only owner can permanently delete (hard-delete); action is irreversible
+- [ ] Account balance recalculated from enabled transactions
 
 ---
 
-### US-2.3: Log Cash Withdrawal 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 3  
-**Description:**  
-As a family member, I want to log a cash withdrawal so that household cash spending is tracked.
+## Story Group 6: Dashboard & Reporting (User-Facing Value)
 
-**Acceptance Criteria:**
-- [ ] Member clicks "Add Transaction" → "Cash Withdrawal"
-- [ ] System treats cash withdrawal as an expense (reduces total)
-- [ ] Category defaults to "Cash Withdrawal" (auto-filled)
-- [ ] Form displays: amount, optional notes, date
-- [ ] User can override default category if desired
-- [ ] Transaction created and visible like any other expense
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-6.1** | View Dashboard Summary | MUST | PENDING | L | US-5.1/5.2 (txns exist) | Show total income, expenses, net balance; recent transactions; family context indicator; load < 2 sec |
+| **US-6.2** | View Expense Breakdown by Category | MUST | PENDING | L | US-6.1 | Pie/bar chart with period selector (month/year/custom range); sortable by amount |
+| **US-6.3** | View Income vs. Expense Trends | SHOULD | PENDING | L | US-6.1, US-6.2 | Monthly trend lines; net savings over time; custom date range; deferred to v1.1 if time-constrained |
+| **US-6.4** | Export Financial Report | MUST | PENDING | L | US-6.1, report generation | CSV/PDF export; date-range filtering; includes all selected transactions with categories |
 
-**Tasks:**
-- [ ] "Cash Withdrawal" category created by default in every family
-- [ ] API validation: cash withdrawal → expense type, "Cash Withdrawal" category
-- [ ] Frontend: separate button/path for cash withdrawal (for simplicity)
-
----
-
-### US-2.4: View Transaction History & Ledger 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 8  
-**Description:**  
-As a family member, I want to view all family transactions in a searchable ledger so that I can find specific transactions and understand household financial history.
-
-**Acceptance Criteria:**
-- [ ] Dashboard shows transaction ledger (most recent first)
-- [ ] Each row displays: date, member name, amount, category, notes
-- [ ] Ledger shows last 100 transactions (paginated)
-- [ ] Filter by category (dropdown or chips)
-- [ ] Filter by date range (calendar picker)
-- [ ] Search by member name or notes (text input)
-- [ ] Sort by date, amount, or member name
-- [ ] Ledger updates in real-time when new transactions added
-- [ ] Performance: ledger loads and filters in <500ms
-
-**Tasks:**
-- [ ] API endpoint: GET /transactions (with filters: category, date range, search)
-- [ ] Database indexing on category, date, member for query performance
-- [ ] Frontend: transaction table/list component
-- [ ] Filtering & search UI
-- [ ] Pagination component
-- [ ] Real-time updates (WebSocket subscription)
+**Acceptance Criteria (Group 6):**
+- [ ] Dashboard displays total income (period-selectable: month/year/all-time)
+- [ ] Dashboard displays total expenses
+- [ ] Dashboard displays net savings (income - expenses)
+- [ ] Dashboard shows account balances by account
+- [ ] Dashboard shows recent transaction history (last 5-10 txns)
+- [ ] Dashboard loads in < 2 seconds
+- [ ] Expense breakdown shows pie/bar chart by category
+- [ ] Period selector allows month, year, or custom range
+- [ ] Export function available for transactions and summaries
+- [ ] Export includes date-range filtering
+- [ ] Disabled transactions excluded from all reports and dashboards
 
 ---
 
-### US-2.5: Edit/Delete Own Transactions 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to edit or delete my own transactions so that I can correct mistakes.
+## Story Group 7: Security & Data (Safety & Compliance)
 
-**Acceptance Criteria:**
-- [ ] Member can click edit icon on their transaction
-- [ ] Edit form displays current values (amount, category, date, notes)
-- [ ] Member can change any field
-- [ ] Submit updates transaction immediately
-- [ ] Member can click delete on their transaction
-- [ ] Confirmation dialog appears ("Are you sure?")
-- [ ] Delete removes transaction and recalculates totals
-- [ ] Owner can edit/delete any family member's transaction (with audit log)
-- [ ] Edit/delete operations are logged (who, what, when)
+| ID | User Story | Priority | Status | Complexity | Dependencies | Notes |
+|---|---|---|---|---|---|---|
+| **US-7.1** | Logout | MUST | PENDING | S | US-1.3 (login exists) | Clear session and invalidate token; redirect to login page |
+| **US-7.2** | Session Timeout | COULD | PENDING | M | US-7.1, user decision | Auto-logout after inactivity; **deferred to v1.1** (MVP requires manual logout only per user requirement) |
 
-**Tasks:**
-- [ ] API endpoint: PATCH /transactions/:id (edit)
-- [ ] API endpoint: DELETE /transactions/:id (delete)
-- [ ] Authorization: user can only edit own, owner can edit any
-- [ ] Audit logging table for transaction changes
-- [ ] Frontend: edit modal/form
-- [ ] Frontend: delete confirmation dialog
-- [ ] Update dashboard totals after edit/delete
+**Acceptance Criteria (Group 7):**
+- [ ] User can click "Logout" button
+- [ ] Session is immediately terminated
+- [ ] User redirected to login page
+- [ ] Session cookie/JWT invalidated
+- [ ] User cannot use back-button to access authenticated page
 
 ---
 
-## Epic 3: Categories & Configuration 🚀 MVP
+## Summary: MVP Scope
 
-### US-3.1: Create Custom Income Categories 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a family owner, I want to create custom income categories so that family income can be categorized by source (e.g., "Salary", "Freelance", "Investments").
+### MUST Stories (v1.0 MVP Launch) — 14 stories
 
-**Acceptance Criteria:**
-- [ ] Owner clicks "Add Category" under Income section
-- [ ] Form displays: category name, optional icon/color
-- [ ] Name field required, max 50 characters
-- [ ] Icon/color selection (optional, preset colors)
-- [ ] Submit creates category
-- [ ] New category immediately available in "Log Income" dropdown
-- [ ] Category visible to all family members
-- [ ] Owner can edit category name/icon after creation
-- [ ] Owner can archive category (remove from dropdowns but keep data)
+- **Authentication**: US-1.1, US-1.3 (2)
+- **Family Management**: US-2.1, US-2.2 (2)
+- **Accounts**: US-3.1, US-3.2 (2)
+- **Categories**: US-4.1 (1)
+- **Transactions**: US-5.1, US-5.2, US-5.4 (3)
+- **Dashboard**: US-6.1, US-6.2, US-6.4 (3)
+- **Security**: US-7.1 (1)
 
-**Tasks:**
-- [ ] API endpoint: POST /categories (type: "income")
-- [ ] Database schema: categories table (name, type, family_id, color, icon)
-- [ ] Frontend: category management page
-- [ ] Category creation form
-- [ ] Category list with edit/archive actions
-- [ ] Validation: unique category name per family per type
+**Estimated Effort**: ~150-180 points (assuming standard estimation)  
+**Timeline**: Phase 4_BUILD (Weeks 1-3)  
+**Success Criteria**: All stories implemented, tested (Phase 5), and deployed (Phase 6)
 
----
+### SHOULD Stories (v1.1 Polish) — 5 stories
 
-### US-3.2: Create Custom Expense Categories 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a family owner, I want to create custom expense categories so that household spending can be tracked by category (e.g., "Groceries", "Utilities", "Entertainment").
+- **Authentication**: US-1.4 (1)
+- **Family Management**: US-2.3, US-2.4 (2)
+- **Accounts**: US-3.3 (1)
+- **Transactions**: US-5.3, US-5.5 (2)
+- **Dashboard**: US-6.3 (1)
 
-**Acceptance Criteria:**
-- [ ] Owner navigates to Expense Categories section
-- [ ] Form similar to income categories (name, icon, color)
-- [ ] Submit creates expense category
-- [ ] Immediately available in "Log Expense" dropdown
-- [ ] Visible to all family members
-- [ ] Owner can edit or archive expense categories
-- [ ] Default categories provided on first family setup (Groceries, Utilities, Entertainment, etc.)
+**Estimated Effort**: ~50-70 points  
+**Timeline**: Post-MVP (Phase 6+ or Week 4-5)  
+**Conditions**: Implement if MVP shipped on time; defer if critical bugs found
 
-**Tasks:**
-- [ ] Same API as US-3.1 (POST /categories with type: "expense")
-- [ ] Seeding: default expense categories when family created
-- [ ] Frontend: same as US-3.1 but for expenses
-- [ ] Validation: prevent deletion of categories with transactions (offer archive instead)
+### COULD Stories (v1.2+) — 1 story
+
+- **Security**: US-7.2 Session Timeout (1)
+
+**Deferred to v1.1+**: User requirement specifies manual logout only; auto-timeout not needed for MVP
+
+### WON'T Stories (v2.0+)
+
+- Bill splitting (person-to-person expense tracking)
+- Receipt attachments
+- Bank API auto-import
+- Multi-currency support
+- AI auto-categorization
+- Recurring transactions
+- Mobile native app
 
 ---
 
-### US-3.3: Create Custom Investment Categories 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 5  
-**Description:**  
-As a family owner, I want to track investments in custom categories so that investment portfolio is visible (e.g., "Stock Portfolio", "Retirement Accounts", "Crypto").
+## Implementation Sequencing (Recommended Order)
 
-**Acceptance Criteria:**
-- [ ] Owner can create investment categories like income/expense
-- [ ] Investment transactions are separate from income/expense
-- [ ] Investment category values displayed on dashboard
-- [ ] Categories can be marked as active/inactive
+### Milestone 1: Auth & Family Foundation (Unblocks everything else)
+1. **US-1.1** → Superadmin bootstrap (BE)
+2. **US-1.2** → Email invitations (BE + DELIVERY for email service setup)
+3. **US-1.3** → User login + family selector (BE + FE)
+4. **US-2.1** → Create family (BE + FE)
+5. **US-2.2** → Add members (BE)
 
-**Tasks:**
-- [ ] Extend POST /categories to support type: "investment"
-- [ ] Update transaction schema to support "investment" type
-- [ ] Dashboard update to show investment totals
-- [ ] Frontend: investment category management
+**Duration**: ~2 weeks  
+**Blockers**: Email service (SMTP/SendGrid/etc.) must be configured early
 
----
+### Milestone 2: Finance & Transactions (Core value delivery)
+6. **US-3.1** → Create bank account (BE + FE)
+7. **US-3.2** → View accounts (BE + FE)
+8. **US-4.1** → Seed default categories (BE)
+9. **US-5.1** → Record income transactions (BE + FE)
+10. **US-5.2** → Record expense transactions (BE + FE)
+11. **US-5.4** → Edit transactions (BE + FE)
 
-### US-3.4: View & Edit Family Categories 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to view all family categories and understand available options for categorizing transactions.
+**Duration**: ~2 weeks  
+**Dependencies**: Milestone 1 complete
 
-**Acceptance Criteria:**
-- [ ] Dashboard has "Categories" or "Settings" section
-- [ ] Shows all active categories grouped by type (Income, Expense, Investment)
-- [ ] Owner can edit category details (name, color)
-- [ ] Owner can archive/restore categories
-- [ ] Members see only active categories in dropdowns
-- [ ] Archive is soft-delete (data preserved, category hidden)
+### Milestone 3: Dashboard & Analytics (User-facing value)
+12. **US-6.1** → Dashboard summary (FE + BE)
+13. **US-6.2** → Expense breakdown by category (FE + BE)
+14. **US-6.4** → Export reports (BE + FE)
+15. **US-7.1** → Logout (BE + FE)
 
-**Tasks:**
-- [ ] API endpoint: GET /categories (grouped by type)
-- [ ] API endpoint: PATCH /categories/:id (edit)
-- [ ] API endpoint: DELETE /categories/:id (soft-delete/archive)
-- [ ] Frontend: category management UI (list, edit modal, archive confirmation)
+**Duration**: ~1 week  
+**Dependencies**: Milestone 2 complete; transactions exist
 
----
+### Milestone 4: Polish & Optional (Post-MVP)
+16. **US-1.4** → Password reset (BE + FE)
+17. **US-2.3** → View family members (BE + FE)
+18. **US-2.4** → Disable members (BE + FE)
+19. **US-3.3** → Edit accounts (BE + FE)
+20. **US-4.2** → Custom categories (BE + FE)
+21. **US-5.3** → Investment transactions (BE + FE)
+22. **US-5.5** → Disable transactions (BE + FE)
+23. **US-6.3** → Income vs. Expense trends (FE + BE)
 
-## Epic 4: Dashboard & Analytics 🚀 MVP
-
-### US-4.1: Real-Time Dashboard Overview 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 8  
-**Description:**  
-As a family member, I want to see a real-time dashboard with household financial overview so that I understand household finances at a glance.
-
-**Acceptance Criteria:**
-- [ ] Dashboard shows:
-  - Current month total income
-  - Current month total expenses
-  - Net savings (income - expenses)
-  - Current year total income
-  - Current year total expenses
-  - Current year net savings
-- [ ] Values update in real-time as transactions are added
-- [ ] Dashboard loads in <2 seconds (MVP goal)
-- [ ] Dashboard layout is responsive (mobile, tablet, desktop)
-- [ ] Summary cards are clear and easy to understand
-
-**Tasks:**
-- [ ] API endpoint: GET /dashboard (returns summary stats)
-- [ ] Database query optimization (aggregations on indexed columns)
-- [ ] Frontend: dashboard layout & styling
-- [ ] Real-time updates (WebSocket subscription to transaction changes)
-- [ ] Performance testing (load in <2 seconds with 1000+ transactions)
+**Duration**: ~1-2 weeks (v1.1+)  
+**Dependencies**: v1.0 MVP shipped
 
 ---
 
-### US-4.2: Expense Category Breakdown 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to see expense breakdown by category so that I can understand where household money is being spent.
+## Key Constraints & Decisions
 
-**Acceptance Criteria:**
-- [ ] Dashboard displays pie chart or bar chart of expenses by category (current month)
-- [ ] Chart shows category name and amount
-- [ ] Chart is interactive (hover for details)
-- [ ] Legend shows all categories in use
-- [ ] Chart updates in real-time as new expenses added
-- [ ] "No expense data" message if no expenses logged yet
-
-**Tasks:**
-- [ ] API endpoint: GET /dashboard/expenses-by-category (monthly)
-- [ ] Database: aggregation query for expenses by category
-- [ ] Frontend: charting library (Chart.js, Recharts, or similar)
-- [ ] Chart component with tooltip/legend
+1. **Email Invitations**: US-1.2 requires email service (SMTP, SendGrid, etc.); **MUST be configured before Phase 4_BUILD starts**
+2. **Session Management**: User requirement = NO automatic timeout; manual logout only (US-7.1). Auto-timeout deferred to v1.1.
+3. **Account-Centric Model**: All transactions track which account funds come from, NOT person-to-person splitting (v2.0+ feature)
+4. **Full Transparency**: All family members see all transactions; no privacy/access restrictions within family (design decision per user)
+5. **Role-Based Access**: Superadmin → Family Owner → Family Member; only owners can create families, manage members, hard-delete transactions
+6. **Edit Audit Trail**: Every transaction edit tracked with editor, timestamp, before/after snapshot (compliance requirement)
+7. **Soft-Delete Pattern**: Members disable (soft-delete); disabled txns excluded from P&L; only owner can hard-delete
+8. **Performance Target**: Dashboard < 2 seconds; requires query optimization, pagination for large transaction lists
 
 ---
 
-### US-4.3: Monthly Spending Trends 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to see spending trends over time so that I can identify patterns and plan ahead.
+## Dependency Map
 
-**Acceptance Criteria:**
-- [ ] Dashboard shows line chart: income and expenses over last 6-12 months
-- [ ] X-axis: months, Y-axis: amount
-- [ ] Separate lines for income (green) and expenses (red)
-- [ ] Hover to see exact values for each month
-- [ ] Chart updates with new data automatically
+```
+Milestone 1 (Auth & Family)
+├─ US-1.1 (Superadmin bootstrap)
+├─ US-1.2 (Email invitations) [blocks family invites]
+├─ US-1.3 (Login) [blocks all user flows]
+├─ US-2.1 (Create family) [blocks account/transaction recording]
+└─ US-2.2 (Add members) [blocks member workflows]
+   │
+   └──────────────────────┐
+                          │
+Milestone 2 (Finance)     │
+├─ US-3.1 (Create account)├─ blocks transaction recording
+├─ US-3.2 (View accounts)
+├─ US-4.1 (Default categories) [blocks transaction creation]
+├─ US-5.1 (Income)
+├─ US-5.2 (Expense)
+└─ US-5.4 (Edit)
+   │
+   └──────────────────────┐
+                          │
+Milestone 3 (Dashboard)   │
+├─ US-6.1 (Dashboard)     ├─ blocks analytics
+├─ US-6.2 (Breakdown)
+├─ US-6.4 (Export)
+└─ US-7.1 (Logout)
 
-**Tasks:**
-- [ ] API endpoint: GET /dashboard/trends (6 or 12 months)
-- [ ] Database aggregation: monthly sums
-- [ ] Frontend: line chart component
-- [ ] Tooltip/legend for clarity
-
----
-
-### US-4.4: Family Member Activity Feed 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 5  
-**Description:**  
-As a family member, I want to see recent activity (who added what transactions) so that I can stay informed about household finances.
-
-**Acceptance Criteria:**
-- [ ] Dashboard shows activity feed: "Alice added $50 in Groceries", "Bob added $100 salary", etc.
-- [ ] Feed shows last 20 transactions (most recent first)
-- [ ] Displays: member name, transaction type, amount, category, date/time
-- [ ] Feed updates in real-time as new transactions added
-- [ ] Clicking transaction shows full details (if needed)
-
-**Tasks:**
-- [ ] API endpoint: GET /dashboard/activity-feed
-- [ ] Frontend: activity feed component (list of recent transactions with formatted text)
-- [ ] Real-time updates
-
----
-
-### US-4.5: Savings Rate Calculation 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 3  
-**Description:**  
-As a family member, I want to see household savings rate so that I understand how much of income is being saved vs spent.
-
-**Acceptance Criteria:**
-- [ ] Dashboard displays: "Savings Rate: X%" (calculated as (Income - Expenses) / Income * 100)
-- [ ] Shown for current month and current year
-- [ ] Updates in real-time
-- [ ] Handles edge case: no income (shows N/A or 0%)
-
-**Tasks:**
-- [ ] Calculation logic in dashboard stats query
-- [ ] Frontend display (card or summary line)
+Milestone 4 (Polish) — All of the above must complete first
+├─ US-1.4 (Password reset)
+├─ US-2.3 (View members)
+├─ US-2.4 (Disable members)
+├─ US-3.3 (Edit accounts)
+├─ US-4.2 (Custom categories)
+├─ US-5.3 (Investment)
+├─ US-5.5 (Disable transaction)
+└─ US-6.3 (Trends)
+```
 
 ---
 
-## Epic 5: Family Management 🚀 MVP
+## References
 
-### US-5.1: Create Family (Superadmin) 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a superadmin, I want to create a new family so that a household can start using NestFi.
-
-**Acceptance Criteria:**
-- [ ] Superadmin navigates to "Create Family"
-- [ ] Form displays: family name, optional description
-- [ ] Submit creates family with unique ID
-- [ ] System automatically invites initial owner (superadmin enters owner email)
-- [ ] Confirmation shows family created and invitation sent
-
-**Tasks:**
-- [ ] API endpoint: POST /families (superadmin-only)
-- [ ] Superadmin dashboard page
-- [ ] Family creation form
-- [ ] Trigger email invitation to initial owner
+- **Full story details**: See `docs/business/USER_STORIES.md` (28 detailed user stories with edge cases and AC)
+- **Product requirements**: See `docs/product/PRD.md` (vision, features, acceptance criteria)
+- **UX flows**: See `docs/product/UX_FLOW.md` (wireflows and navigation)
+- **Architecture**: See `docs/architecture/SOLUTION_ARCHITECTURE.md` (API contract, database schema)
+- **Roadmap**: See `docs/product/ROADMAP.md` (v1.0/1.1/1.2/2.0 phases and timeline)
 
 ---
 
-### US-5.2: View & Manage Family Members 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 8  
-**Description:**  
-As a family owner, I want to view and manage family members so that I can add, remove, and control access to household finances.
+## Next Steps (Phase 3_IMPLEMENTATION_PLANNING)
 
-**Acceptance Criteria:**
-- [ ] Owner sees list of all family members (name, email, role, join date)
-- [ ] Owner can invite new members via email
-- [ ] Owner can remove members (with confirmation)
-- [ ] Member list updates in real-time
-- [ ] Owner cannot remove themselves (unless family has another owner)
-- [ ] Status column shows: "Owner", "Member", "Pending Invite"
-- [ ] Pending invites can be resent or revoked
+1. **BE**: Break down MUST stories into detailed backend tasks (API endpoints, DB schema, validation)
+2. **FE**: Break down MUST stories into detailed frontend tasks (pages, components, forms, state mgmt)
+3. **QA**: Write test plan (unit, integration, E2E test cases for all MUST stories)
+4. **DELIVERY**: Prepare docker-compose, deployment script, env vars
+5. **SA**: Confirm API contract details and finalize OpenAPI spec
 
-**Tasks:**
-- [ ] API endpoint: GET /family/:familyId/members
-- [ ] API endpoint: POST /family/:familyId/members (invite)
-- [ ] API endpoint: DELETE /family/:familyId/members/:userId (remove)
-- [ ] Member management UI
-- [ ] Invite/remove confirmation dialogs
-- [ ] Real-time member list updates
-
----
-
-### US-5.3: Accept Family Invitation 🚀 MVP
-**Priority:** P0 (Critical)  
-**Story Points:** 5  
-**Description:**  
-As a new user, I want to accept a family invitation and join the household so that I can start logging and viewing transactions.
-
-**Acceptance Criteria:**
-- [ ] User receives email with invitation link
-- [ ] Clicking link brings user to acceptance page
-- [ ] If not logged in, user prompted to create account (email pre-filled)
-- [ ] If logged in, user can directly accept
-- [ ] After acceptance, user immediately has access to family dashboard
-- [ ] Acceptance confirmation email sent
-- [ ] User added to family member list
-
-**Tasks:**
-- [ ] API endpoint: GET /invite/:token (validate token, return family info)
-- [ ] API endpoint: POST /invite/:token/accept (accept invitation)
-- [ ] Frontend: invitation acceptance page
-- [ ] Redirect to login if needed
-- [ ] Redirect to family dashboard after acceptance
-
----
-
-### US-5.4: Remove Family Member 🚀 MVP
-**Priority:** P1 (High)  
-**Story Points:** 3  
-**Description:**  
-As a family owner, I want to remove a member so that they no longer have access to family finances.
-
-**Acceptance Criteria:**
-- [ ] Owner clicks "Remove" next to member name
-- [ ] Confirmation dialog: "This user will lose access to all family data"
-- [ ] After confirmation, member is removed
-- [ ] Member can no longer see family in their dashboard
-- [ ] All historical transactions remain (for audit)
-- [ ] Member's previous transactions remain visible but are marked (e.g., "former member")
-
-**Tasks:**
-- [ ] API endpoint: DELETE /family/:familyId/members/:userId
-- [ ] Authorization: only owner can remove
-- [ ] Frontend: remove button & confirmation
-- [ ] Transaction history: preserve but mark removed members
-
----
-
-## Backlog Summary
-
-| Epic | Status | # Stories | # MVP | Estimated Points |
-|---|---|---|---|---|
-| 1. Authentication | — | 4 | 4 | 26 |
-| 2. Transactions | — | 5 | 5 | 26 |
-| 3. Categories | — | 4 | 4 | 20 |
-| 4. Dashboard | — | 5 | 5 | 26 |
-| 5. Family Management | — | 4 | 4 | 21 |
-| **TOTAL (MVP v0.1)** | — | **22** | **22** | **119 points** |
-
----
-
-## Nice-to-Have Backlog (v0.2+)
-
-- [ ] US-6.1: Bank Account Management (add/edit accounts, assign transactions)
-- [ ] US-6.2: Transaction Bulk Upload (CSV import)
-- [ ] US-6.3: Spending Alerts (email notification when overspend)
-- [ ] US-6.4: Budget Tracking (set monthly budgets per category, track vs actual)
-- [ ] US-6.5: Export to PDF/CSV (generate financial report)
-- [ ] US-6.6: Dark Mode UI Theme
-- [ ] US-6.7: Bill Splitting (split transaction among multiple members)
-- [ ] US-6.8: Financial Goal Setting (savings goals, track progress)
-- [ ] US-6.9: Multi-Currency Support (USD, EUR, VND, etc.)
-- [ ] US-6.10: Mobile App (iOS/Android native)
-
----
-
-## Change Log
-
-| Date | Author | Change |
-|---|---|---|
-| 2026-05-16 | PM | Created detailed backlog with 22 MVP user stories (119 points) |
+**Gate Before Phase 4_BUILD**: All MUST stories must have clear AC, dependencies resolved, team alignment confirmed.
 

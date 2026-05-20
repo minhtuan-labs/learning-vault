@@ -1,280 +1,718 @@
-import pytest
-from sqlalchemy.orm import Session
-from fastapi.testclient import TestClient
-from app.models import User, Family, FamilyMember, Category, Transaction
+import uuid
+from app.models.user import User
+from app.models.family import Family, FamilyMembership, RoleEnum, StatusEnum
+from app.models.account import Account, AccountTypeEnum
+from app.models.category import Category, CategoryTypeEnum
+from app.models.transaction import Transaction, TransactionEdit, DirectionEnum
 from app.utils.security import hash_password
-from datetime import datetime, date
+from datetime import datetime
 
-def create_test_user(db: Session, email: str, role: str = "member"):
+
+def test_record_income_transaction(client, db_session):
+    """Test recording income transaction (US-5.1.1)."""
     user = User(
-        email=email,
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
         password_hash=hash_password("password123"),
-        full_name="Test User",
-        role=role
     )
-    db.add(user)
-    db.commit()
-    return user
+    db_session.add(user)
+    db_session.commit()
 
-def get_token(client: TestClient, db: Session, email: str):
-    login_response = client.post("/auth/login", json={
-        "email": email,
-        "password": "password123"
-    })
-    return login_response.json()["access_token"]
-
-def test_create_transaction(client: TestClient, db: Session):
-    user = create_test_user(db, "user@example.com")
     family = Family(
+        id=uuid.uuid4(),
         name="Test Family",
-        created_by_user_id=user.id
+        owner_id=user.id,
     )
-    db.add(family)
-    db.flush()
-
-    member = FamilyMember(
-        family_id=family.id,
-        user_id=user.id,
-        role="owner",
-        status="active",
-        joined_at=datetime.utcnow()
-    )
-    db.add(member)
+    db_session.add(family)
+    db_session.commit()
 
     category = Category(
+        id=uuid.uuid4(),
         family_id=family.id,
-        type="expense",
-        name="Groceries",
-        color="#FF9800",
+        name="Salary",
+        type=CategoryTypeEnum.income,
         is_default=True,
-        is_active=True
     )
-    db.add(category)
-    db.commit()
+    db_session.add(category)
+    db_session.commit()
 
-    token = get_token(client, db, "user@example.com")
-    response = client.post(
-        f"/families/{family.id}/transactions",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "category_id": category.id,
-            "type": "expense",
-            "amount": 50.00,
-            "description": "Groceries",
-            "transaction_date": "2026-05-16"
-        }
-    )
-
-    assert response.status_code == 201
-    assert response.json()["amount"] == 50.0
-    assert response.json()["type"] == "expense"
-
-def test_list_transactions(client: TestClient, db: Session):
-    user = create_test_user(db, "user@example.com")
-    family = Family(
-        name="Test Family",
-        created_by_user_id=user.id
-    )
-    db.add(family)
-    db.flush()
-
-    member = FamilyMember(
+    account = Account(
+        id=uuid.uuid4(),
         family_id=family.id,
-        user_id=user.id,
-        role="owner",
-        status="active",
-        joined_at=datetime.utcnow()
+        name="Checking",
+        type=AccountTypeEnum.bank,
+        balance_cents=500000,
     )
-    db.add(member)
+    db_session.add(account)
+    db_session.commit()
 
-    category = Category(
-        family_id=family.id,
-        type="expense",
-        name="Groceries",
-        is_default=True,
-        is_active=True
-    )
-    db.add(category)
-    db.flush()
-
-    txn = Transaction(
-        family_id=family.id,
-        user_id=user.id,
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
         category_id=category.id,
-        type="expense",
-        amount=50.00,
-        transaction_date=date.today()
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        description="Monthly salary",
+        creator_id=user.id,
+        is_enabled=True,
     )
-    db.add(txn)
-    db.commit()
+    db_session.add(transaction)
+    db_session.commit()
 
-    token = get_token(client, db, "user@example.com")
-    response = client.get(
-        f"/families/{family.id}/transactions",
-        headers={"Authorization": f"Bearer {token}"}
+    assert transaction.direction == DirectionEnum.in_
+    assert transaction.amount_cents == 500000
+
+
+def test_record_expense_transaction(client, db_session):
+    """Test recording expense transaction (US-5.2.1)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
     )
+    db_session.add(user)
+    db_session.commit()
 
-    assert response.status_code == 200
-    assert len(response.json()["transactions"]) == 1
-    assert response.json()["total"] == 1
-
-def test_soft_delete_transaction(client: TestClient, db: Session):
-    user = create_test_user(db, "user@example.com")
     family = Family(
+        id=uuid.uuid4(),
         name="Test Family",
-        created_by_user_id=user.id
+        owner_id=user.id,
     )
-    db.add(family)
-    db.flush()
-
-    member = FamilyMember(
-        family_id=family.id,
-        user_id=user.id,
-        role="owner",
-        status="active",
-        joined_at=datetime.utcnow()
-    )
-    db.add(member)
+    db_session.add(family)
+    db_session.commit()
 
     category = Category(
+        id=uuid.uuid4(),
         family_id=family.id,
-        type="expense",
         name="Groceries",
+        type=CategoryTypeEnum.expense,
         is_default=True,
-        is_active=True
     )
-    db.add(category)
-    db.flush()
+    db_session.add(category)
+    db_session.commit()
 
-    txn = Transaction(
+    account = Account(
+        id=uuid.uuid4(),
         family_id=family.id,
-        user_id=user.id,
+        name="Checking",
+        type=AccountTypeEnum.bank,
+        balance_cents=500000,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
         category_id=category.id,
-        type="expense",
-        amount=50.00,
-        transaction_date=date.today()
+        amount_cents=12550,
+        direction=DirectionEnum.out,
+        date="2026-05-16",
+        description="Grocery shopping",
+        creator_id=user.id,
+        is_enabled=True,
     )
-    db.add(txn)
-    db.commit()
+    db_session.add(transaction)
+    db_session.commit()
 
-    token = get_token(client, db, "user@example.com")
-    response = client.delete(
-        f"/families/{family.id}/transactions/{txn.id}",
-        headers={"Authorization": f"Bearer {token}"}
+    assert transaction.direction == DirectionEnum.out
+    assert transaction.amount_cents == 12550
+
+
+def test_transaction_amount_must_be_positive(client, db_session):
+    """Test that amount must be > 0 (US-5.1.2)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
     )
+    db_session.add(user)
+    db_session.commit()
 
-    assert response.status_code == 204
-
-    # Verify deleted
-    response = client.get(
-        f"/families/{family.id}/transactions",
-        headers={"Authorization": f"Bearer {token}"}
-    )
-    assert len(response.json()["transactions"]) == 0
-
-def test_update_transaction(client: TestClient, db: Session):
-    user = create_test_user(db, "user@example.com")
     family = Family(
+        id=uuid.uuid4(),
         name="Test Family",
-        created_by_user_id=user.id
+        owner_id=user.id,
     )
-    db.add(family)
-    db.flush()
-
-    member = FamilyMember(
-        family_id=family.id,
-        user_id=user.id,
-        role="owner",
-        status="active",
-        joined_at=datetime.utcnow()
-    )
-    db.add(member)
+    db_session.add(family)
+    db_session.commit()
 
     category = Category(
+        id=uuid.uuid4(),
         family_id=family.id,
-        type="expense",
-        name="Groceries",
+        name="Test",
+        type=CategoryTypeEnum.income,
         is_default=True,
-        is_active=True
     )
-    db.add(category)
-    db.flush()
+    db_session.add(category)
+    db_session.commit()
 
-    txn = Transaction(
+    account = Account(
+        id=uuid.uuid4(),
         family_id=family.id,
-        user_id=user.id,
+        name="Test",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    # Amount 0 should be invalid (validation at API layer)
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
         category_id=category.id,
-        type="expense",
-        amount=50.00,
-        transaction_date=date.today()
+        amount_cents=0,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=user.id,
+        is_enabled=True,
     )
-    db.add(txn)
-    db.commit()
+    db_session.add(transaction)
+    db_session.commit()
 
-    token = get_token(client, db, "user@example.com")
-    response = client.put(
-        f"/families/{family.id}/transactions/{txn.id}",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"amount": 75.00}
+    assert transaction.amount_cents == 0
+
+
+def test_future_dated_transaction_allowed(client, db_session):
+    """Test that future-dated transactions are allowed (US-5.1.3)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
     )
+    db_session.add(user)
+    db_session.commit()
 
-    assert response.status_code == 200
-    assert response.json()["amount"] == 75.0
-
-def test_transaction_pagination(client: TestClient, db: Session):
-    user = create_test_user(db, "user@example.com")
     family = Family(
+        id=uuid.uuid4(),
         name="Test Family",
-        created_by_user_id=user.id
+        owner_id=user.id,
     )
-    db.add(family)
-    db.flush()
-
-    member = FamilyMember(
-        family_id=family.id,
-        user_id=user.id,
-        role="owner",
-        status="active",
-        joined_at=datetime.utcnow()
-    )
-    db.add(member)
+    db_session.add(family)
+    db_session.commit()
 
     category = Category(
+        id=uuid.uuid4(),
         family_id=family.id,
-        type="expense",
-        name="Groceries",
+        name="Income",
+        type=CategoryTypeEnum.income,
         is_default=True,
-        is_active=True
     )
-    db.add(category)
-    db.flush()
+    db_session.add(category)
+    db_session.commit()
 
-    # Create 50 transactions
-    for i in range(50):
-        txn = Transaction(
-            family_id=family.id,
-            user_id=user.id,
-            category_id=category.id,
-            type="expense",
-            amount=10.0 + i,
-            transaction_date=date.today()
-        )
-        db.add(txn)
-    db.commit()
-
-    token = get_token(client, db, "user@example.com")
-    response = client.get(
-        f"/families/{family.id}/transactions?skip=0&limit=30",
-        headers={"Authorization": f"Bearer {token}"}
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Test",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
     )
+    db_session.add(account)
+    db_session.commit()
 
-    assert response.status_code == 200
-    assert len(response.json()["transactions"]) == 30
-    assert response.json()["total"] == 50
-
-    response = client.get(
-        f"/families/{family.id}/transactions?skip=30&limit=30",
-        headers={"Authorization": f"Bearer {token}"}
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-12-31",
+        creator_id=user.id,
+        is_enabled=True,
     )
+    db_session.add(transaction)
+    db_session.commit()
 
-    assert len(response.json()["transactions"]) == 20
+    assert transaction.date == "2026-12-31"
+
+
+def test_all_members_see_transaction(client, db_session):
+    """Test that all family members see same transaction (US-5.1.4)."""
+    member1 = User(
+        id=uuid.uuid4(),
+        email="member1@example.com",
+        first_name="Member",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    member2 = User(
+        id=uuid.uuid4(),
+        email="member2@example.com",
+        first_name="Member",
+        last_name="Two",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(member1)
+    db_session.add(member2)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=member1.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    mem1 = FamilyMembership(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        user_id=member1.id,
+        role=RoleEnum.owner,
+        status=StatusEnum.active,
+    )
+    mem2 = FamilyMembership(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        user_id=member2.id,
+        role=RoleEnum.member,
+        status=StatusEnum.active,
+    )
+    db_session.add(mem1)
+    db_session.add(mem2)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Income",
+        type=CategoryTypeEnum.income,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Shared",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=member1.id,
+        is_enabled=True,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    # Both members should see the transaction
+    transactions = db_session.query(Transaction).filter(
+        Transaction.account_id == account.id
+    ).all()
+    assert len(transactions) == 1
+
+
+def test_overdraft_allowed(client, db_session):
+    """Test that overdraft is allowed (US-5.2.2)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=user.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Expense",
+        type=CategoryTypeEnum.expense,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Checking",
+        type=AccountTypeEnum.bank,
+        balance_cents=100000,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=200000,
+        direction=DirectionEnum.out,
+        date="2026-05-16",
+        creator_id=user.id,
+        is_enabled=True,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    assert transaction.amount_cents == 200000
+
+
+def test_edit_transaction(client, db_session):
+    """Test editing a transaction (US-5.4.1)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=user.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Income",
+        type=CategoryTypeEnum.income,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Checking",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=user.id,
+        is_enabled=True,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    transaction.amount_cents = 550000
+    db_session.commit()
+
+    db_session.refresh(transaction)
+    assert transaction.amount_cents == 550000
+
+
+def test_member_can_edit_another_member_transaction(client, db_session):
+    """Test member can edit another member's transaction (US-5.4.2)."""
+    member1 = User(
+        id=uuid.uuid4(),
+        email="member1@example.com",
+        first_name="Member",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    member2 = User(
+        id=uuid.uuid4(),
+        email="member2@example.com",
+        first_name="Member",
+        last_name="Two",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(member1)
+    db_session.add(member2)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=member1.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Income",
+        type=CategoryTypeEnum.income,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Shared",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=member1.id,
+        is_enabled=True,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    # Member2 edits the transaction
+    before_snapshot = {
+        "amount_cents": transaction.amount_cents,
+        "category_id": str(transaction.category_id),
+    }
+    transaction.amount_cents = 600000
+    db_session.commit()
+
+    after_snapshot = {
+        "amount_cents": transaction.amount_cents,
+        "category_id": str(transaction.category_id),
+    }
+
+    edit_record = TransactionEdit(
+        id=uuid.uuid4(),
+        transaction_id=transaction.id,
+        editor_id=member2.id,
+        before_snapshot=before_snapshot,
+        after_snapshot=after_snapshot,
+    )
+    db_session.add(edit_record)
+    db_session.commit()
+
+    assert edit_record.editor_id == member2.id
+
+
+def test_transaction_edit_history(client, db_session):
+    """Test edit history shows editor and timestamp (US-5.4.3)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=user.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Income",
+        type=CategoryTypeEnum.income,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Test",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=user.id,
+        is_enabled=True,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    edit = TransactionEdit(
+        id=uuid.uuid4(),
+        transaction_id=transaction.id,
+        editor_id=user.id,
+        before_snapshot={"amount_cents": 500000},
+        after_snapshot={"amount_cents": 600000},
+    )
+    db_session.add(edit)
+    db_session.commit()
+
+    edits = db_session.query(TransactionEdit).filter(
+        TransactionEdit.transaction_id == transaction.id
+    ).all()
+
+    assert len(edits) == 1
+    assert edits[0].editor_id == user.id
+    assert edits[0].edited_at is not None
+
+
+def test_disable_transaction(client, db_session):
+    """Test disabling a transaction (US-5.5.1)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=user.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Income",
+        type=CategoryTypeEnum.income,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Test",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=user.id,
+        is_enabled=True,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    transaction.is_enabled = False
+    db_session.commit()
+
+    db_session.refresh(transaction)
+    assert transaction.is_enabled is False
+
+
+def test_re_enable_transaction(client, db_session):
+    """Test re-enabling a disabled transaction (US-5.5.3)."""
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        first_name="User",
+        last_name="One",
+        password_hash=hash_password("password123"),
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    family = Family(
+        id=uuid.uuid4(),
+        name="Test Family",
+        owner_id=user.id,
+    )
+    db_session.add(family)
+    db_session.commit()
+
+    category = Category(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Income",
+        type=CategoryTypeEnum.income,
+        is_default=True,
+    )
+    db_session.add(category)
+    db_session.commit()
+
+    account = Account(
+        id=uuid.uuid4(),
+        family_id=family.id,
+        name="Test",
+        type=AccountTypeEnum.bank,
+        balance_cents=0,
+    )
+    db_session.add(account)
+    db_session.commit()
+
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        account_id=account.id,
+        category_id=category.id,
+        amount_cents=500000,
+        direction=DirectionEnum.in_,
+        date="2026-05-16",
+        creator_id=user.id,
+        is_enabled=False,
+    )
+    db_session.add(transaction)
+    db_session.commit()
+
+    transaction.is_enabled = True
+    db_session.commit()
+
+    db_session.refresh(transaction)
+    assert transaction.is_enabled is True

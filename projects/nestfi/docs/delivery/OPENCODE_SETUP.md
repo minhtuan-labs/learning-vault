@@ -1,4 +1,25 @@
-# Engine Setup — v10.12
+# Engine Setup — v10.20
+
+> **What's new since v10.12** (see `VERSION.md`):
+>
+> - **v10.16 `--free` flag**: pass `--free` to source
+>   `config/engines/<engine>-free.env`, an overlay that forces every
+>   role to a free-tier model. For OpenCode, the default free model
+>   is `opencode/big-pickle` (confirmed working in the user's fork);
+>   `OPENCODE_FREE_MODEL` env var overrides. For Claude, the overlay
+>   forces all roles to `claude-haiku-4-5`. Use this for iterating
+>   on the workflow without burning paid credits.
+> - **v10.16.2 `<engine>-free` shorthand**: `check_models.sh
+>   opencode-free` is equivalent to `check_models.sh opencode --free`.
+> - **Claude auth warning** (v10.12+): `start_agents_tmux.sh --engine
+>   claude` refuses to launch if `ANTHROPIC_API_KEY` is set
+>   (prevents accidental API billing for Pro/Max subscribers).
+>   Override only with `CLAUDE_API_MODE_ACK=1` if you genuinely want
+>   metered API billing.
+> - **v10.19 PATH guard for Orchestrator**: engine-agnostic.
+>   Engineering commands blocked at shell level when running in the
+>   Orchestrator pane only.
+
 
 The framework supports two engines as of v10.12. Pick at session start:
 
