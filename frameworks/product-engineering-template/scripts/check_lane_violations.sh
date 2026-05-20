@@ -119,4 +119,48 @@ echo "each file. If you see edits to files outside the Orchestrator's"
 echo "allowed list (TASK.md, memory/_PROJECT_STATE.md, memory/ORCHESTRATOR.md)"
 echo "right after an Orchestrator turn — and no route_to_pane.sh call"
 echo "preceded them — that's a likely Stay-in-lane violation."
+
+# v10.19 — Action-level audit. Scan PATH-guard log + recent shell
+# history for engineering commands the Orchestrator may have run
+# (or attempted).
+echo
+echo "================================================================"
+echo " Action-level audit (v10.19)"
+echo "================================================================"
+
+# Hard-guard hits (Orchestrator attempts blocked at PATH level)
+GUARD_LOG="${TMPDIR:-/tmp}/orchestrator_guard.log"
+if [[ -f "$GUARD_LOG" ]]; then
+  RECENT_BLOCKS=$(tail -n 20 "$GUARD_LOG" 2>/dev/null)
+  if [[ -n "$RECENT_BLOCKS" ]]; then
+    echo
+    echo "Recent PATH-guard blocks (Orchestrator tried engineering commands):"
+    echo "$RECENT_BLOCKS" | sed 's/^/  /'
+  fi
+fi
+
+# Detect engineering processes that ran recently as Orchestrator's child
+# (best-effort — uses ps + heuristics).
+if [[ -f .agent_panes ]]; then
+  ORCH_PANE=$(grep '^ORCHESTRATOR=' .agent_panes | cut -d= -f2-)
+  if [[ -n "$ORCH_PANE" ]] && command -v tmux >/dev/null 2>&1; then
+    ORCH_PID=$(tmux display-message -p -t "$ORCH_PANE" '#{pane_pid}' 2>/dev/null || true)
+    if [[ -n "$ORCH_PID" ]]; then
+      # Find all descendants of ORCH_PID and check their cmd names
+      DESCENDANTS=$(pgrep -P "$ORCH_PID" 2>/dev/null || true)
+      if [[ -n "$DESCENDANTS" ]]; then
+        echo
+        echo "Live descendants of Orchestrator pane PID=$ORCH_PID:"
+        ps -p "$DESCENDANTS" -o pid,comm 2>/dev/null | sed 's/^/  /'
+        # Flag any engineering commands among them
+        FLAGGED=$(ps -p "$DESCENDANTS" -o comm= 2>/dev/null | grep -E '^(docker|psql|mongo|node|python|pip|npm|yarn|kubectl)' || true)
+        if [[ -n "$FLAGGED" ]]; then
+          echo
+          echo "  ⚠️  Engineering processes running under Orchestrator — likely lane violation in progress."
+        fi
+      fi
+    fi
+  fi
+fi
+
 echo "================================================================"

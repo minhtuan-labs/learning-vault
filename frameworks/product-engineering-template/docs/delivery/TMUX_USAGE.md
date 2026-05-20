@@ -1,4 +1,28 @@
-# TMUX Usage — v10.12
+# TMUX Usage — v10.23
+
+> **What's new since v10.12** (see `VERSION.md`):
+>
+> - **v10.21 Banner shows PaneC + display names**: the pane banner
+>   now lists `AGENT:` (internal ID), `DISPLAY:` (conversational
+>   name — Orches / Deli / etc.), and `TEAM: PaneC (9-pane crew)`.
+> - **v10.23 Write/Edit hook** — Orchestrator pane has a PreToolUse
+>   hook registered in `.claude/settings.json` that rejects
+>   Write/Edit on owner-specific paths. Worker panes unaffected.
+>
+> - **Prefix + W** (v10.18): manual wake nudge for the Orchestrator
+>   pane via `scripts/wake_orchestrator.sh`. Useful when auto-wake
+>   misses on Claude. Types `.` + Enter into pane 0 to trigger the
+>   mandatory turn-start inbox check.
+> - **`bash scripts/stop_agents_tmux.sh`** (v10.18): clean shutdown
+>   that kills the watcher_daemon (via `.watcher.pid`) before
+>   `tmux kill-session`. Use this instead of bare `tmux kill-session`
+>   so the background daemon doesn't orphan.
+> - **PATH guards** (v10.19): the Orchestrator pane runs with
+>   `scripts/guards/` prepended to PATH. Worker panes don't. Means
+>   `docker`/`psql`/`python`/`npm`/etc. in the Orchestrator pane
+>   prints `BLOCKED — Orchestrator cannot execute engineering
+>   commands` and exits 126. Worker panes use real binaries.
+
 
 ## Start
 

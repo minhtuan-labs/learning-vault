@@ -1,9 +1,17 @@
-# Agent Model Mapping — v10.12
+# Agent Model Mapping — v10.23
 
-The framework supports two CLI engines as of v10.12. Each engine has
-its own per-role model configuration file under `config/engines/`.
-This document is the human-readable mapping for reference; the
-authoritative source for code is `config/engines/<engine>.env`.
+The framework supports two CLI engines (since v10.12) plus a free-tier
+overlay (since v10.16). Each engine has its own per-role model
+configuration file under `config/engines/`. This document is the
+human-readable mapping for reference; the authoritative source for
+code is `config/engines/<engine>.env`.
+
+**Team identity (v10.21)**: the 9 agents are collectively called
+**PaneC**. Display names: **Orches** = ORCHESTRATOR, **Deli** =
+DELIVERY, the rest keep their two-letter codes. Internal `AGENT_NAME`
+env vars stay uppercase (zero breaking change). The mapping below
+uses internal identifiers because that's what `config/engines/*.env`
+uses.
 
 ## Engine A — OpenCode (default)
 
@@ -46,6 +54,28 @@ Strategy: coarser-grained, only 3 tiers available — haiku for cheap
 roles, sonnet for balanced, opus for strong. Single-vendor setup, one
 API key.
 
+## Engine A/B FREE overlay (v10.16+)
+
+Pass `--free` to `start_agents_tmux.sh` to source
+`config/engines/<engine>-free.env`, an overlay that forces every role
+to a free-tier model. Useful for iterating on the workflow without
+burning paid credits.
+
+### `config/engines/opencode-free.env`
+
+Default: `opencode/big-pickle` for all 9 roles (confirmed working in
+the opencode-go fork). Override per-session via `OPENCODE_FREE_MODEL=…`
+or edit the overlay file. Discovery: `bash scripts/list_free_models.sh`.
+
+### `config/engines/claude-free.env`
+
+All 9 roles → `claude-haiku-4-5`. Claude has no $0 tier; for Pro/Max
+subscribers, haiku usage counts against monthly quota, not metered API.
+
+`FREE_MODE` is persisted into `.agent_session` so `route_to_pane.sh`,
+`run_agent_task.sh`, and `check_models.sh` all keep using the overlay
+on subsequent re-routes.
+
 ## Validation
 
 ```bash
@@ -55,6 +85,11 @@ bash scripts/check_models.sh opencode
 
 # Claude:
 bash scripts/check_models.sh claude
+
+# v10.16.2 — <engine>-free shorthand
+bash scripts/check_models.sh opencode-free
+bash scripts/check_models.sh claude-free
+# (equivalent to: bash scripts/check_models.sh <engine> --free)
 ```
 
 OpenCode uses **dynamic** validation (it calls `opencode models`).

@@ -1,8 +1,9 @@
-# Engine Permission Policy — v10.12
+# Engine Permission Policy — v10.23
 
 > Filename kept as `OPENCODE_PERMISSION_POLICY.md` for backward
 > compatibility — content now covers both engines (OpenCode + Claude
-> Code) as of v10.12.
+> Code) as of v10.12, plus the v10.19 PATH guard and v10.23 PreToolUse
+> hook for Orchestrator lane enforcement.
 
 ## Purpose
 
@@ -135,6 +136,51 @@ session restarts, edit the heredoc inside that script (look for
 
 For one-off bypass, choose "Always allow this command" in the prompt —
 Claude Code stores it in `~/.claude/settings.local.json`.
+
+### v10.23 — PreToolUse hook for Orchestrator lane discipline
+
+`.claude/settings.json` now also registers a hook on `Write`/`Edit`
+tool calls:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/guards/check_file_lane.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The hook script:
+
+- Reads `$AGENT_NAME`. **Exits 0 immediately for any non-Orchestrator
+  pane** — workers (BE/FE/QA/DELIVERY/etc.) are unaffected.
+- For the Orchestrator pane, parses the target `file_path` from the
+  tool's JSON input on stdin.
+- Allow-list short-circuit for files Orches IS permitted to edit:
+  `TASK.md`, `PRODUCT_IDEA.md`, `memory/_PROJECT_STATE.md`,
+  `memory/ORCHESTRATOR.md`, runtime `.pane_*` / `.agent_*` artifacts.
+- Block-list match (`backend/*` → BE, `frontend/*` → FE,
+  `docs/qa/*` → QA, etc.) → exit 2 with BLOCKED message containing
+  the correct `route_to_pane.sh` invocation.
+
+This closes the v10.19 loophole where Claude's Write/Edit tools
+bypassed the PATH guard (which only intercepts shell commands).
+Single settings.json, all 9 panes share it — per-pane behaviour comes
+from `$AGENT_NAME` check inside the hook.
+
+OpenCode is unaffected (different tool model, no equivalent hook
+mechanism). The PATH guard (v10.19) covers both engines for shell
+commands.
 
 ## Route-to-pane rule (unchanged for either engine)
 

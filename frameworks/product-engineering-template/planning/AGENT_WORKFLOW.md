@@ -1,4 +1,39 @@
-# Agent Workflow and Delegation Protocol — v10.12
+# Agent Workflow and Delegation Protocol — v10.23
+
+> **What's new since v10.12** (see `VERSION.md` for full changelog):
+>
+> - **v10.21 PaneC team** — team of 9 = PaneC. Orches (display) /
+>   ORCHESTRATOR (internal). Deli (display) / DELIVERY (internal).
+>   PM/SA/BA/UX/BE/FE/QA keep two-letter codes for both.
+> - **v10.22 Deli port protocol** — exhaustive port scan (host +
+>   running docker + stopped docker + nearby compose files) before
+>   every compose-up, post-up `--verify` probe before
+>   `RUNNING_APP.md` write.
+> - **v10.23 Layer-4 hook** — `PreToolUse` hook on Write/Edit blocks
+>   Orchestrator from editing owner-specific files via Claude's
+>   native tools (PATH guard alone doesn't cover this). Workers
+>   unaffected.
+>
+> - **v10.13 Complete-and-notify mandate**: every worker MUST call
+>   `notify_orchestrator.sh <ROLE> "Done — <paths>. Summary: …"` as
+>   the last action before exit, even when the worker thinks it's
+>   "obviously done". v10.18 added a framework safety net that
+>   auto-fires this notify if the worker forgot.
+> - **v10.14 Auto-resume on dependency unlock**: workers blocked on
+>   a missing upstream file call `scripts/file_watch.sh <ROLE> <FILE> "<task>"`
+>   and exit. The background `scripts/watcher_daemon.sh` auto-reroutes
+>   them when `<FILE>` lands.
+> - **v10.16 `--free` overlay**: `start_agents_tmux.sh --free` sources
+>   `config/engines/<engine>-free.env` to force every role to a
+>   free-tier model. Useful for workflow iteration without burning
+>   paid credits.
+> - **v10.18 Heartbeat for long-running tasks**: worker shell wrapper
+>   `touch`es `.pane_heartbeats/<ROLE>.beat` every 10s; the watcher
+>   daemon flags stalls > 90s old.
+> - **v10.19/20 Stay-in-lane hardening**: Orchestrator PATH guard
+>   blocks engineering commands; DELIVERY has a hard Port
+>   Configuration Protocol.
+
 
 ## Runtime
 
