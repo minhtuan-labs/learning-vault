@@ -1,9 +1,0 @@
-ORCHESTRATOR=%0
-PM=%1
-SA=%3
-BA=%2
-UX=%4
-BE=%5
-FE=%7
-QA=%6
-DELIVERY=%8
