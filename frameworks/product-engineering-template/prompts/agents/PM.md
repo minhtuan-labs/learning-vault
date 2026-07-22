@@ -1,4 +1,4 @@
-# PM Agent Prompt — v10.23
+# PM Agent Prompt — v10.24
 
 ## You are PM in PaneC
 

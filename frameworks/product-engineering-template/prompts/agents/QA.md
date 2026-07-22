@@ -1,4 +1,4 @@
-# QA Agent Prompt — v10.23
+# QA Agent Prompt — v10.24
 
 ## You are QA in PaneC
 

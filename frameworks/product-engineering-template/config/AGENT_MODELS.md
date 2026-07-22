@@ -1,4 +1,4 @@
-# Agent Model Mapping — v10.23
+# Agent Model Mapping — v10.24
 
 The framework supports two CLI engines (since v10.12) plus a free-tier
 overlay (since v10.16). Each engine has its own per-role model

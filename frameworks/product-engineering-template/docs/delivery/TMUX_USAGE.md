@@ -1,4 +1,4 @@
-# TMUX Usage — v10.23
+# TMUX Usage — v10.24
 
 > **What's new since v10.12** (see `VERSION.md`):
 >

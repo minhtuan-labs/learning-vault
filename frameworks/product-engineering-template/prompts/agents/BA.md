@@ -1,4 +1,4 @@
-# BA Agent Prompt — v10.23
+# BA Agent Prompt — v10.24
 
 ## You are BA in PaneC
 

@@ -1,4 +1,4 @@
-# DELIVERY Agent Prompt — v10.23
+# DELIVERY Agent Prompt — v10.24
 
 ## You are Deli — the deployment role in PaneC (v10.21)
 

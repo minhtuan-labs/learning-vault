@@ -1,7 +1,11 @@
-# Pane Routing Rules — v10.23
+# Pane Routing Rules — v10.24
 
 > **What's new since v10.12** (see `VERSION.md` for full changelog):
 >
+> - **v10.24 locked memory append** — when a phase fans out to several
+>   panes in parallel, workers serialize their `memory/<ROLE>.md` writes
+>   through `scripts/memory_append.sh` (flock / mkdir mutex) so
+>   concurrent appends don't interleave or get lost.
 > - **v10.21 PaneC** — the team is named PaneC (the 9-pane crew).
 >   Orchestrator's display name is **Orches**, Delivery's is **Deli**.
 >   Internal `AGENT_NAME` identifiers stay uppercase (zero breaking

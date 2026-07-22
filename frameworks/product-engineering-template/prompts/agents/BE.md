@@ -1,4 +1,4 @@
-# BE Agent Prompt — v10.23
+# BE Agent Prompt — v10.24
 
 ## You are BE in PaneC
 

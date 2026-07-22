@@ -1,6 +1,81 @@
 # Template Version
 
-Version: 10.23
+Version: 10.24
+
+## Patch v10.24 (over v10.23) — Observability, self-tests, memory hygiene, content gate
+
+Five additive upgrades. No existing behaviour changes; all new scripts,
+plus one advisory hook into `check_phase_gate.sh` and one instruction
+tweak in `route_to_pane.sh`'s task template.
+
+### 1. Cost report — measure the cost-mix the framework was built to save
+
+The whole premise ("don't pay for one strong model to do nine jobs") was
+never actually measured. New `scripts/cost_report.sh` parses the routing
+receipts + per-run logs that `route_to_pane.sh` already writes and
+estimates spend per **role**, per **phase**, and per **model**.
+
+- Token counts are estimated from character counts (engines in
+  `--print`/`run` mode don't emit a trustworthy usage line), so the
+  report is a relative comparison, not an invoice — clearly labelled as
+  ESTIMATE.
+- Phase attribution comes from the `advanced to <phase>` lines in
+  `memory/_PROJECT_STATE.md`.
+- Prices live in editable `config/model_prices.env` (USD per 1M
+  in/out tokens; Claude tiers seeded, opencode-go tiers at 0, a
+  non-zero `DEFAULT` so unknown models don't read as free).
+- Modes: summary (default), `--by-run`, `--json`.
+
+### 2. Test harness — catch script regressions before a live session does
+
+The changelog is full of script edits that silently broke the framework
+(v10.12.1 auto-wake, v10.18.1 pane detection). New `tests/run_tests.sh`:
+Phase 1 runs `bash -n` on every script; Phase 2 runs each
+`tests/test_*.sh` in an isolated sandbox (temp dir seeded with
+`scripts/` + `config/`) so tests never touch the real tree. Tiny
+dependency-free assertion lib in `tests/lib.sh`. Ships tests for all the
+v10.24 scripts, including a 30-way concurrent-append race test.
+
+### 3. Memory compaction — keep the durable layer lean
+
+`memory/<ROLE>.md` is append-only and grows unbounded, quietly defeating
+v10.6's read-cost goal. New `scripts/compact_memory.sh` keeps the newest
+N entries (default 12) in place and archives older ones to
+`memory/archive/`, preserving the file header and leaving a pointer.
+Deterministic (no LLM call), with `--dry-run`, `--keep N`, `--force`.
+
+### 4. Locked memory append — no lost writes on parallel fan-out
+
+When a phase fans out to several panes (or the watcher_daemon
+auto-resumes a worker mid-task), two processes can `>>` the same memory
+file at once and interleave bytes. New `scripts/memory_append.sh`
+serializes writes with a mutex (`flock` on Linux, atomic `mkdir`
+fallback on macOS bash 3.2) and writes the standard entry format.
+`route_to_pane.sh`'s STEP 4 now points workers at it (manual append
+remains an accepted fallback).
+
+### 5. Content-quality gate + peer review — judge substance, not just bytes
+
+`check_phase_gate.sh` only proved a file existed and exceeded a byte
+threshold. New `scripts/check_doc_schema.sh` checks that key docs
+contain their required SECTIONS/MARKERS (PRD has success metrics,
+USER_STORIES has acceptance criteria, TECH_STACK has "Confirmed by
+user", etc.). Wired into `check_phase_gate.sh` as **advisory** by
+default; set `STRICT_SCHEMA=1` to make incomplete docs fail the gate.
+New `scripts/request_peer_review.sh` routes a verdicted cross-role
+review of a design doc to a *different* pane (PRD→SA, API_CONTRACT→FE,
+…), never the author's own role.
+
+### Files
+
+New: `scripts/cost_report.sh`, `scripts/compact_memory.sh`,
+`scripts/memory_append.sh`, `scripts/check_doc_schema.sh`,
+`scripts/request_peer_review.sh`, `config/model_prices.env`,
+`tests/run_tests.sh`, `tests/lib.sh`, `tests/test_*.sh`.
+Edited (surgical, additive): `scripts/route_to_pane.sh` (STEP 4 helper
+mention), `scripts/check_phase_gate.sh` (advisory schema check).
+
+---
 
 ## Patch v10.23 (over v10.22) — Layer-4 hook blocks Orchestrator Write/Edit
 

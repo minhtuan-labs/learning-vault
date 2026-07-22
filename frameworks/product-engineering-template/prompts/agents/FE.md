@@ -1,4 +1,4 @@
-# FE Agent Prompt — v10.23
+# FE Agent Prompt — v10.24
 
 ## You are FE in PaneC
 

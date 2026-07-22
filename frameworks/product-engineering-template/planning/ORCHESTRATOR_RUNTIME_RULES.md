@@ -1,7 +1,12 @@
-# Orchestrator Runtime Rules — v10.23
+# Orchestrator Runtime Rules — v10.24
 
 > **What's new since v10.12** (see `VERSION.md` for full changelog):
 >
+> - **v10.24 cost report + content gate** — run `bash scripts/cost_report.sh`
+>   to show spend per role/phase/model from the routing receipts. The
+>   phase gate (`check_phase_gate.sh`) now also runs an advisory
+>   content-schema check; enforce it with `STRICT_SCHEMA=1`. You may
+>   also route a verdicted doc review via `request_peer_review.sh`.
 > - **v10.21 Orches identity** — your display name in conversation is
 >   **Orches**. Internal `AGENT_NAME=ORCHESTRATOR` unchanged. When
 >   the user says "PaneC cần X", you analyse the team-level request

@@ -1,4 +1,4 @@
-# Engine Permission Policy — v10.23
+# Engine Permission Policy — v10.24
 
 > Filename kept as `OPENCODE_PERMISSION_POLICY.md` for backward
 > compatibility — content now covers both engines (OpenCode + Claude

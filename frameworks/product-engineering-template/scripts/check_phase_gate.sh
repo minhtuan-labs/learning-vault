@@ -239,6 +239,32 @@ else
   check_one_phase "$PHASE" || overall_rc=1
 fi
 
+# v10.24 — content-quality (schema) check. Existence is verified above;
+# this judges whether present docs actually contain their required
+# sections. ADVISORY by default (prints warnings, does not change the
+# gate result) so existing behaviour is unchanged. Set STRICT_SCHEMA=1
+# to make an incomplete doc fail the gate too.
+if [[ -x scripts/check_doc_schema.sh ]]; then
+  echo
+  schema_rc=0
+  if $THROUGH; then
+    for p in "${ALL_PHASES[@]}"; do
+      bash scripts/check_doc_schema.sh "$p" || schema_rc=1
+      [[ "$p" == "$PHASE" ]] && break
+    done
+  else
+    bash scripts/check_doc_schema.sh "$PHASE" || schema_rc=1
+  fi
+  if (( schema_rc != 0 )); then
+    if [[ "${STRICT_SCHEMA:-0}" == "1" ]]; then
+      echo " STRICT_SCHEMA=1 — content-schema failures count against the gate."
+      overall_rc=1
+    else
+      echo " (Advisory) content-schema gaps above. Set STRICT_SCHEMA=1 to enforce."
+    fi
+  fi
+fi
+
 echo "================================================================"
 if (( overall_rc == 0 )); then
   if $THROUGH; then

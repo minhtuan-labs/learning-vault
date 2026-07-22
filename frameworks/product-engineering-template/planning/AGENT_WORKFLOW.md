@@ -1,7 +1,12 @@
-# Agent Workflow and Delegation Protocol — v10.23
+# Agent Workflow and Delegation Protocol — v10.24
 
 > **What's new since v10.12** (see `VERSION.md` for full changelog):
 >
+> - **v10.24 memory-append lock + self-tests** — STEP 4 of every routed
+>   task now prefers `scripts/memory_append.sh <ROLE> "<title>" "<body>"`
+>   (mutex-serialized) so parallel fan-out / auto-resume can't interleave
+>   memory entries; manual append remains a fallback. `tests/run_tests.sh`
+>   adds a `bash -n` + sandboxed regression net over the scripts.
 > - **v10.21 PaneC team** — team of 9 = PaneC. Orches (display) /
 >   ORCHESTRATOR (internal). Deli (display) / DELIVERY (internal).
 >   PM/SA/BA/UX/BE/FE/QA keep two-letter codes for both.

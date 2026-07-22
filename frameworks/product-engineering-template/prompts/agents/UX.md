@@ -1,4 +1,4 @@
-# UX Agent Prompt — v10.23
+# UX Agent Prompt — v10.24
 
 ## You are UX in PaneC
 

@@ -1,4 +1,4 @@
-# Engine Setup — v10.23
+# Engine Setup — v10.24
 
 > **What's new since v10.12** (see `VERSION.md`):
 >

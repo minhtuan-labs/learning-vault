@@ -276,9 +276,18 @@ Use this format:
     ### YYYY-MM-DD HH:MM — <short title>
     <2-5 line summary>
 
-If nothing notable happened, append a single line:
+PREFER the locked append helper (v10.24) so a parallel fan-out worker
+or an auto-resumed task can't interleave bytes into your entry:
 
-    ### YYYY-MM-DD HH:MM — routine task, no new entries
+    bash scripts/memory_append.sh $TARGET "<short title>" "<2-5 line summary>"
+
+(It serializes writes with a mutex and writes the same format. A plain
+manual append to memory/$TARGET.md is an acceptable fallback if the
+helper is unavailable.)
+
+If nothing notable happened, still record it:
+
+    bash scripts/memory_append.sh $TARGET "routine task, no new entries"
 
 NEVER exit silently without touching memory/$TARGET.md. Tomorrow's
 session may load with no other clue of what happened today.

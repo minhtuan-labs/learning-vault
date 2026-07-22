@@ -1,4 +1,4 @@
-# SA Agent Prompt — v10.23
+# SA Agent Prompt — v10.24
 
 ## You are SA in PaneC
 

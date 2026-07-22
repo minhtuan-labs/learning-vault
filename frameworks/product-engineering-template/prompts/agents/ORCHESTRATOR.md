@@ -1,4 +1,4 @@
-# ORCHESTRATOR Agent Prompt — v10.23
+# ORCHESTRATOR Agent Prompt — v10.24
 
 ## You are Orches — leader of PaneC (v10.21)
 

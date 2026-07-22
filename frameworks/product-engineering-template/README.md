@@ -1,4 +1,4 @@
-# Product Engineering Agent Template — v10.23
+# Product Engineering Agent Template — v10.24
 
 > A tmux-based, multi-model agent framework for running an entire
 > product-engineering team — Orchestrator, PM, SA, BA, UX, BE, FE, QA,
@@ -457,7 +457,13 @@ the Orchestrator pane, the framework is broken — file an issue.
 │   │   └── README.md               how to add an engine
 │   ├── agent_models.env            (legacy, replaced by engines/opencode.env)
 │   ├── opencode.env                runtime flags
+│   ├── model_prices.env            USD per 1M tokens, per model (cost_report) — v10.24
 │   └── OPENCODE_PERMISSION_POLICY.md
+│
+├── tests/                          framework self-tests (v10.24)
+│   ├── run_tests.sh                bash -n + sandboxed behaviour tests
+│   ├── lib.sh                      tiny assertion helpers
+│   └── test_*.sh                   one per v10.24 script
 │
 ├── planning/
 │   ├── AGENT_WORKFLOW.md
@@ -510,6 +516,13 @@ the Orchestrator pane, the framework is broken — file an issue.
     ├── check_port_conflicts.sh     4 modes: check / --exhaustive / --suggest /
     │                                --verify (host + docker + stopped + nearby
     │                                compose files + post-deploy bind probe) — v10.20/22
+    ├── cost_report.sh              estimate spend per role/phase/model from
+    │                               routing receipts + logs — v10.24
+    ├── compact_memory.sh           archive old memory/ entries, keep file lean — v10.24
+    ├── memory_append.sh            mutex-locked memory append (no lost writes) — v10.24
+    ├── check_doc_schema.sh         content-schema check for docs (sections,
+    │                               not just bytes) — v10.24
+    ├── request_peer_review.sh      route a verdicted cross-role doc review — v10.24
     ├── file_watch.sh               register a dependency watch — v10.14
     ├── watcher_daemon.sh           background daemon: auto-reroute on
     │                               dependency unlock + detect stalls — v10.14/18
@@ -638,6 +651,21 @@ fix `config/agent_models.env` with IDs from `opencode models`.
 See [`VERSION.md`](VERSION.md) for the full changelog. Most recent
 fixes:
 
+- **v10.24** — **Observability + self-tests + memory hygiene + content
+  gate** (five additive upgrades). `scripts/cost_report.sh` estimates
+  spend per role / phase / model from existing routing receipts + logs
+  (prices in `config/model_prices.env`) — finally measuring the
+  cost-mix the framework exists to optimize. `tests/run_tests.sh`
+  gives a dependency-free regression net (`bash -n` on every script +
+  sandboxed behaviour tests, including a concurrent-append race test).
+  `scripts/compact_memory.sh` archives old `memory/<ROLE>.md` entries
+  so the durable layer stays lean. `scripts/memory_append.sh` serializes
+  memory writes with a mutex (flock / mkdir fallback) so parallel
+  fan-out can't lose or interleave entries. `scripts/check_doc_schema.sh`
+  checks docs for required sections (not just byte size) — advisory in
+  `check_phase_gate.sh`, strict with `STRICT_SCHEMA=1`; and
+  `scripts/request_peer_review.sh` routes a verdicted cross-role review
+  of a design doc. Purely additive.
 - **v10.23** — **Layer-4 hook blocks Orchestrator Write/Edit.**
   Closes the v10.19 loophole where Claude's `Write`/`Edit` tools
   bypassed the PATH guard (which only covers shell commands). New
